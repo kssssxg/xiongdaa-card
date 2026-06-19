@@ -91,33 +91,59 @@ xiongdaa-card/
 | Line ~947 | 音乐封面 | `https://q1.qlogo.cn/g?b=qq&nk=你的QQ号&s=640` | 你的封面URL |
 | Line ~2448 | Bio 头像 | `https://q1.qlogo.cn/g?b=qq&nk=你的QQ号&s=640` | 你的头像URL |
 
-### 修改博客 API
+### 修改生平数据 API
 
-博客 JSON API 已替换为占位符，请替换为可用的 API：
+生平数据 JSON API 已替换为占位符，请替换为可用的 API：
 
 ```javascript
-// 在 index.html 的 <script> 部分找到以下位置
-const BLOG_API = '你的博客API';  // ← 替换为你的博客 JSON API
+// 在 bio.html 的 <script> 部分找到以下位置
+const BIO_API = 'https://cros.xiongdaa.me/?url=' + encodeURIComponent('你的生平数据API');
 ```
 
-#### 📋 博客 JSON 配置文档
+#### 📋 生平数据 JSON 配置文档
 
-页面期望的博客 JSON API 返回以下格式的数据：
+页面期望的生平数据 JSON API 返回以下格式的数据：
 
 ```json
 {
-  "posts": [
+  "name": "姓名",
+  "aka": "别名",
+  "occupation": "职业",
+  "motto": "座右铭",
+  "avatar": "头像 URL",
+  "location": "所在地",
+  "birthday": "生日",
+  "bio": "个人简介",
+  "quote": "名言引用",
+  "skills": [
     {
-      "title": "文章标题",
-      "url": "https://yourblog.com/post/1",
-      "date": "2026-06-20",
-      "excerpt": "文章摘要，最多显示 100 个字符",
-      "tags": ["标签1", "标签2"]
+      "name": "技能名称",
+      "icon": "fa-code",
+      "level": 85
     }
   ],
-  "total": 1,
-  "page": 1,
-  "pageSize": 10
+  "timeline": [
+    {
+      "year": "2020",
+      "event": "事件描述"
+    }
+  ],
+  "projects": [
+    {
+      "name": "项目名称",
+      "url": "https://github.com/xxx",
+      "desc": "项目描述",
+      "lang": "C++"
+    }
+  ],
+  "interests": ["兴趣1", "兴趣2"],
+  "contact": {
+    "github": "https://github.com/xxx",
+    "website": "https://example.com",
+    "email": "email@example.com",
+    "qq": "123456789",
+    "wechat": "your_wechat"
+  }
 }
 ```
 
@@ -125,92 +151,95 @@ const BLOG_API = '你的博客API';  // ← 替换为你的博客 JSON API
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `posts` | Array | ✅ | 文章列表数组 |
-| `posts[].title` | String | ✅ | 文章标题 |
-| `posts[].url` | String | ✅ | 文章链接（完整 URL） |
-| `posts[].date` | String | ✅ | 发布日期（格式：YYYY-MM-DD） |
-| `posts[].excerpt` | String | ❌ | 文章摘要（可选，为空时显示标题） |
-| `posts[].tags` | Array | ❌ | 标签数组（可选） |
-| `total` | Number | ❌ | 文章总数（可选） |
-| `page` | Number | ❌ | 当前页码（可选） |
-| `pageSize` | Number | ❌ | 每页数量（可选） |
+| `name` | String | ✅ | 姓名 |
+| `aka` | String | ❌ | 别名/昵称 |
+| `occupation` | String | ❌ | 职业/身份 |
+| `motto` | String | ❌ | 座右铭 |
+| `avatar` | String | ✅ | 头像 URL |
+| `location` | String | ❌ | 所在地 |
+| `birthday` | String | ❌ | 生日 |
+| `bio` | String | ✅ | 个人简介（支持 HTML） |
+| `quote` | String | ❌ | 名言引用（显示为引用块） |
+| `skills` | Array | ❌ | 技能数组 |
+| `skills[].name` | String | ✅ | 技能名称 |
+| `skills[].icon` | String | ❌ | Font Awesome 图标类名（默认 `fa-code`） |
+| `skills[].level` | Number | ✅ | 熟练度百分比（0-100） |
+| `timeline` | Array | ❌ | 时间线数组 |
+| `timeline[].year` | String | ✅ | 年份 |
+| `timeline[].event` | String | ✅ | 事件描述 |
+| `projects` | Array | ❌ | 项目数组 |
+| `projects[].name` | String | ✅ | 项目名称 |
+| `projects[].url` | String | ✅ | 项目链接 |
+| `projects[].desc` | String | ❌ | 项目描述 |
+| `projects[].lang` | String | ❌ | 主要语言/标签 |
+| `interests` | Array | ❌ | 兴趣标签数组 |
+| `contact` | Object | ❌ | 联系方式 |
+| `contact.github` | String | ❌ | GitHub 链接 |
+| `contact.website` | String | ❌ | 个人网站 |
+| `contact.email` | String | ❌ | 邮箱 |
+| `contact.qq` | String | ❌ | QQ 号 |
+| `contact.wechat` | String | ❌ | 微信号 |
 
 #### 📝 完整示例
 
 ```json
 {
-  "posts": [
+  "name": "xiong da",
+  "aka": "嵌入式开发者",
+  "occupation": "ESP32 嵌入式开发",
+  "motto": "代码改变世界",
+  "avatar": "https://q1.qlogo.cn/g?b=qq&nk=你的QQ号&s=640",
+  "location": "中国",
+  "birthday": "2000-01-01",
+  "bio": "热爱嵌入式开发，专注于 ESP32 系列芯片。喜欢前端技术，追求极致的用户体验。",
+  "quote": "保持好奇心，永远学习新东西。",
+  "skills": [
+    { "name": "C/C++", "icon": "fa-code", "level": 90 },
+    { "name": "Python", "icon": "fa-python", "level": 75 },
+    { "name": "ESP32", "icon": "fa-microchip", "level": 85 },
+    { "name": "前端", "icon": "fa-html5", "level": 70 }
+  ],
+  "timeline": [
+    { "year": "2020", "event": "开始学习嵌入式开发" },
+    { "year": "2023", "event": "创建 ESP32-S3 项目" },
+    { "year": "2026", "event": "发布个人主页 xiongdaa-card" }
+  ],
+  "projects": [
     {
-      "title": "我的第一篇博客",
-      "url": "https://xiongdaa.me/blog/post-1",
-      "date": "2026-06-20",
-      "excerpt": "这是第一篇博客的摘要内容，用来展示在个人主页上。",
-      "tags": ["生活", "随笔"]
+      "name": "ESP32-S3 Cyber OS",
+      "url": "https://github.com/kssssxg/esp32s3-cyber-os",
+      "desc": "基于 ESP32-S3 的 NES 模拟器",
+      "lang": "C++"
     },
     {
-      "title": "ESP32-S3 嵌入式开发笔记",
-      "url": "https://xiongdaa.me/blog/esp32-s3-dev",
-      "date": "2026-06-18",
-      "excerpt": "记录 ESP32-S3 的嵌入式开发过程，包括 GPIO 控制、WiFi 连接等。",
-      "tags": ["嵌入式", "ESP32", "开发"]
-    },
-    {
-      "title": "前端玻璃拟态设计实践",
-      "url": "https://xiongdaa.me/blog/glassmorphism",
-      "date": "2026-06-15",
-      "excerpt": "",
-      "tags": ["前端", "CSS", "设计"]
+      "name": "xiongdaa-card",
+      "url": "https://github.com/kssssxg/xiongdaa-card",
+      "desc": "玻璃拟态风格个人主页",
+      "lang": "HTML/CSS/JS"
     }
   ],
-  "total": 3,
-  "page": 1,
-  "pageSize": 10
+  "interests": ["嵌入式", "前端", "游戏开发", "AI"],
+  "contact": {
+    "github": "https://github.com/kssssxg",
+    "website": "https://xiongdaa.me",
+    "email": "your.email@example.com",
+    "qq": "你的QQ号",
+    "wechat": "你的微信号"
+  }
 }
 ```
-
-#### 🛠️ 如何生成博客 JSON
-
-**方式一：静态博客生成**
-```bash
-# 如果使用 Hexo/Hugo/Jekyll 等静态博客
-# 在构建时生成 posts.json 文件
-hexo generate --json
-# 或手动编写 posts.json 放在博客根目录
-```
-
-**方式二：自建 API 接口**
-```javascript
-// Node.js + Express 示例
-app.get('/api/posts', async (req, res) => {
-  const posts = await db.query('SELECT * FROM posts ORDER BY date DESC LIMIT 10');
-  res.json({
-    posts: posts.map(p => ({
-      title: p.title,
-      url: `https://yourblog.com${p.slug}`,
-      date: p.created_at.split('T')[0],
-      excerpt: p.excerpt,
-      tags: p.tags.split(',')
-    })),
-    total: posts.length
-  });
-});
-```
-
-**方式三：第三方聚合 API**
-- 使用 RSS 转 JSON 服务（如 `https://rss2json.com/`）
-- 使用静态博客托管平台的 API
 
 #### ⚠️ 注意事项
 
 1. **CORS 跨域**：确保 API 支持 CORS，允许从 GitHub Pages 域名访问
 2. **HTTPS**：GitHub Pages 是 HTTPS，API 也必须是 HTTPS
-3. **缓存**：建议在 API 响应中添加缓存头，减少请求频率
+3. **代理服务器**：如果 API 不支持 CORS，可使用代理服务器（如 bio.html 中的 `cros.xiongdaa.me`）
 4. **错误处理**：API 失败时页面会显示错误提示，请确保 API 稳定可用
 
-**推荐的博客 JSON API 源：**
-- 自建博客的 JSON 导出接口
-- 第三方博客聚合 API
-- 静态博客生成的 JSON 文件
+**推荐的使用方式：**
+- 自建 JSON 文件托管在 GitHub/Gitee
+- 使用第三方 JSON 存储服务（如 JSONBin、LowDB）
+- 通过代理服务器解决跨域问题
 
 ### 修改音乐 API
 
