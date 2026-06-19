@@ -22,6 +22,12 @@
 
 ## 🚀 快速开始
 
+### 🌐 在线预览
+
+- **GitHub Pages**: https://xiongdaa.me/xiongdaa-card/
+
+> 💡 每次 `push` 或创建 `PR` 到 `main` 分支后，页面会自动重新部署，约 1-2 分钟生效。
+
 ### 本地运行
 
 ```bash
@@ -29,14 +35,18 @@
 open index.html
 ```
 
-### 部署到 GitHub Pages
+### 部署到 GitHub Pages（已配置自动部署）
+
+本项目已配置 GitHub Actions 自动部署：
 
 ```bash
-# 1. Fork 本仓库
-# 2. 进入 Settings > Pages
-# 3. Source 选择 "Deploy from a branch"，分支选择 main，文件夹选择 /root
-# 4. 保存后等待几分钟即可访问
+# 只需 push 到 main 分支即可自动部署
+git push origin main
 ```
+
+- **触发条件**: 每次 `push` 或创建 `PR` 到 `main` 分支
+- **部署地址**: https://xiongdaa.me/xiongdaa-card/
+- **生效时间**: 约 1-2 分钟
 
 ### 部署到其他平台
 
