@@ -174,3 +174,5 @@ const url = `https://v2.alapi.cn/api/music/search?keyword=...`;
 ---
 
 > ⭐ 如果觉得有用，请点个 Star 支持一下！
+
+<!-- Updated at 2026-06-19 -->
