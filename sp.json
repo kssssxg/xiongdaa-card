@@ -1,0 +1,49 @@
+{
+  "name": "xiong da",
+  "aka": "熊大",
+  "avatar": "https://q1.qlogo.cn/g?b=qq&nk=YOUR_QQ_NUMBER&s=640",
+  "bio": "一只喜欢折腾代码的熊，从嵌入式到前端，从底层到应用，什么都想试一试。偶尔写写猫娘话，偶尔修修 bug，大多数时候在挖坑和填坑之间反复横跳。",
+  "motto": "心之所向，素履以往。",
+  "location": "中国",
+  "birthday": "2000-01-01",
+  "occupation": "全栈开发 / 嵌入式爱好者",
+  "contact": {
+    "github": "https://github.com/kssssxg",
+    "qq": "YOUR_QQ_NUMBER",
+    "wechat": "YOUR_WECHAT_ID",
+    "email": "your@email.com",
+    "website": "https://xiongdaa.me"
+  },
+  "skills": [
+    { "name": "C / C++", "level": 85, "icon": "fa-code" },
+    { "name": "Python", "level": 80, "icon": "fa-python" },
+    { "name": "JavaScript", "level": 75, "icon": "fa-js" },
+    { "name": "嵌入式开发", "level": 88, "icon": "fa-microchip" },
+    { "name": "ESP32 / Arduino", "level": 85, "icon": "fa-bolt" },
+    { "name": "前端", "level": 70, "icon": "fa-globe" },
+    { "name": "Linux / 运维", "level": 75, "icon": "fa-terminal" },
+    { "name": "Git / CI", "level": 78, "icon": "fa-git-alt" }
+  ],
+  "projects": [
+    {
+      "name": "esp32s3-cyber-os",
+      "desc": "ESP32-S3 上的 NES 模拟器，从零手写的嵌入式小系统",
+      "url": "https://github.com/kssssxg/esp32s3-cyber-os",
+      "lang": "C / C++"
+    },
+    {
+      "name": "xiongdaa-card",
+      "desc": "个人主页卡片，毛玻璃风格 + 音乐播放器 + 工具箱",
+      "url": "https://github.com/kssssxg/xiongdaa-card",
+      "lang": "HTML / CSS / JS"
+    }
+  ],
+  "timeline": [
+    { "year": "2023", "event": "开始折腾嵌入式，入手 ESP32-S3" },
+    { "year": "2024", "event": "完成 NES 模拟器核心，在 ESP32 上跑通超级玛丽" },
+    { "year": "2025", "event": "搭建个人主页，玩起毛玻璃和音乐播放器" },
+    { "year": "2026", "event": "持续挖坑，持续填坑，写更多好玩的东西" }
+  ],
+  "interests": ["嵌入式开发", "复古游戏", "折腾新技术", "听歌", "猫娘（划掉）"],
+  "quote": "ai代码写得越多，就越发现自己什么都不会。但没关系，开心就好。"
+}

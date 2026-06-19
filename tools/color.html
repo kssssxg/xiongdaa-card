@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="CSP" content="upgrade-insecure-requests">
+    <title>颜色转换 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* --- 颜色预览 block --- */
+        .color-preview-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+        .color-preview {
+            width: 120px;
+            height: 120px;
+            border-radius: 20px;
+            border: 2px solid var(--glass-border);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4), inset 0 0 40px rgba(255,255,255,0.05);
+            transition: background 0.15s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        /* 棋盘格背景用于透明/半透明颜色 */ 
+        .color-preview::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-conic-gradient(rgba(255,255,255,0.08) 0% 25%, transparent 0% 50%) 0 0 / 14px 14px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .color-preview .color-fill {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            border-radius: 18px;
+            transition: background 0.15s ease;
+        }
+        .color-preview .color-hex-label {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(6px);
+            padding: 3px 12px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            color: #fff;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            letter-spacing: 0.5px;
+            z-index: 2;
+            white-space: nowrap;
+        }
+
+        /* --- 输入行 --- */
+        .color-input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .color-input-row .color-label {
+            width: 44px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--theme-accent);
+            flex-shrink: 0;
+            text-align: right;
+        }
+        .color-input-row input {
+            flex: 1;
+            min-width: 0;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 12px;
+            outline: none;
+            font-size: 0.9rem;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            transition: all 0.2s;
+        }
+        .color-input-row input:focus {
+            border-color: var(--theme-accent);
+            background: rgba(255,255,255,0.12);
+        }
+        .color-input-row input::placeholder {
+            color: rgba(255,255,255,0.3);
+        }
+        .color-input-row .color-type-hint {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            opacity: 0.5;
+            flex-shrink: 0;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* --- 输入分组标题 --- */
+        .section-label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin: 16px 0 10px 0;
+            letter-spacing: 0.3px;
+        }
+        .section-label:first-of-type {
+            margin-top: 0;
+        }
+
+        /* --- 颜色历史 --- */
+        .color-history-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 36px;
+            margin-top: 6px;
+        }
+        .color-history-wrap .history-swatch {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.15);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .color-history-wrap .history-swatch:hover {
+            transform: scale(1.2);
+            border-color: var(--theme-accent);
+            box-shadow: 0 0 12px rgba(165,180,252,0.4);
+        }
+        .color-history-wrap .history-clear {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px dashed rgba(255,255,255,0.2);
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .color-history-wrap .history-clear:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        .color-history-wrap .history-swatch .swatch-tooltip {
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.6rem;
+            color: #fff;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .color-history-wrap .history-swatch:hover .swatch-tooltip {
+            opacity: 1;
+        }
+
+        /* --- 预设色板 --- */
+        .palette-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .palette-tabs .palette-tab {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: var(--text-muted);
+            padding: 4px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+        .palette-tabs .palette-tab:hover {
+            background: rgba(165,180,252,0.12);
+            border-color: var(--theme-accent);
+            color: #fff;
+        }
+        .palette-tabs .palette-tab.active {
+            background: rgba(165,180,252,0.2);
+            border-color: var(--theme-accent);
+            color: #fff;
+        }
+
+        .palette-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-height: 280px;
+            overflow-y: auto;
+            padding: 4px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.15) transparent;
+        }
+        .palette-grid::-webkit-scrollbar {
+            width: 4px;
+        }
+        .palette-grid::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.15);
+            border-radius: 4px;
+        }
+        .palette-grid .palette-swatch {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            transition: all 0.15s;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .palette-grid .palette-swatch:hover {
+            transform: scale(1.25);
+            border-color: var(--theme-accent);
+            box-shadow: 0 0 10px rgba(165,180,252,0.4);
+            z-index: 2;
+        }
+        .palette-grid .palette-swatch .swatch-label {
+            position: absolute;
+            bottom: calc(100% + 4px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.55rem;
+            color: #fff;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .palette-grid .palette-swatch:hover .swatch-label {
+            opacity: 1;
+        }
+
+        /* --- 空状态 --- */
+        .empty-hint {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            opacity: 0.5;
+            padding: 6px 0;
+        }
+
+        /* --- 响应式 --- */
+        @media (max-width: 500px) {
+            .color-preview {
+                width: 90px;
+                height: 90px;
+            }
+            .color-input-row .color-label {
+                width: 34px;
+                font-size: 0.7rem;
+            }
+            .palette-grid .palette-swatch {
+                width: 28px;
+                height: 28px;
+            }
+            .color-history-wrap .history-swatch {
+                width: 28px;
+                height: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="index.html" class="back-home-btn" title="返回工具首页"><i class="fas fa-arrow-left"></i></a>
+
+    <div id="toast"><i class="fas fa-info-circle" style="color: #a5b4fc;"></i><span id="toast-msg">提示信息</span></div>
+
+    <div class="glass-card tool-card">
+        <h1><i class="fas fa-palette"></i> 颜色转换与调色板</h1>
+        <div class="tool-subtitle">HEX / RGB / HSL 实时互转 &amp; 色板工具</div>
+
+        <!-- 颜色预览 -->
+        <div class="color-preview-wrap">
+            <div class="color-preview" id="colorPreview">
+                <div class="color-fill" id="colorFill" style="background:#ff6600;"></div>
+                <div class="color-hex-label" id="colorHexLabel">#FF6600</div>
+            </div>
+        </div>
+
+        <!-- HEX 输入 -->
+        <div class="color-input-row">
+            <span class="color-label">HEX</span>
+            <input type="text" id="hexInput" placeholder="#ff6600" value="#ff6600" spellcheck="false">
+            <span class="color-type-hint">#</span>
+        </div>
+
+        <!-- RGB 输入 -->
+        <div class="color-input-row">
+            <span class="color-label">RGB</span>
+            <input type="text" id="rgbInput" placeholder="rgb(255,102,0)" value="rgb(255,102,0)" spellcheck="false">
+            <span class="color-type-hint">R</span>
+        </div>
+
+        <!-- HSL 输入 -->
+        <div class="color-input-row">
+            <span class="color-label">HSL</span>
+            <input type="text" id="hslInput" placeholder="hsl(24,100%,50%)" value="hsl(24,100%,50%)" spellcheck="false">
+            <span class="color-type-hint">H</span>
+        </div>
+
+        <!-- 颜色历史 -->
+        <div class="section-label"><i class="fas fa-history"></i> 最近使用的颜色</div>
+        <div class="color-history-wrap" id="colorHistory">
+            <span class="empty-hint">还没有使用记录</span>
+        </div>
+
+        <!-- 预设色板 -->
+        <div class="section-label" style="margin-top:20px;"><i class="fas fa-th"></i> 预设色板</div>
+        <div class="palette-tabs" id="paletteTabs">
+            <button class="palette-tab active" data-palette="material">Material Design</button>
+            <button class="palette-tab" data-palette="websafe">Web 安全色</button>
+            <button class="palette-tab" data-palette="flat">Flat UI</button>
+        </div>
+        <div class="palette-grid" id="paletteGrid"></div>
+    </div>
+
+    <div class="author-credit">
+        <p>© 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+    // ============================================================
+    //  颜色转换核心
+    // ============================================================
+
+    // ---- 解析 HEX ----
+    function parseHex(hex) {
+        hex = hex.trim().replace(/^#/, '');
+        // 3-digit shorthand
+        if (hex.length === 3) {
+            hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+        }
+        if (!/^[0-9a-fA-F]{6}$/.test(hex)) return null;
+        return {
+            r: parseInt(hex.slice(0, 2), 16),
+            g: parseInt(hex.slice(2, 4), 16),
+            b: parseInt(hex.slice(4, 6), 16)
+        };
+    }
+
+    // ---- 解析 RGB ----
+    function parseRgb(rgb) {
+        rgb = rgb.trim().toLowerCase();
+        // match: rgb(255,102,0)  or  rgb( 255 , 102 , 0 )
+        const m = rgb.match(/^rgb\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/);
+        if (!m) return null;
+        const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
+        if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) return null;
+        return { r, g, b };
+    }
+
+    // ---- 解析 HSL ----
+    function parseHsl(hsl) {
+        hsl = hsl.trim().toLowerCase();
+        const m = hsl.match(/^hsl\s*\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)%\s*,\s*(\d+(?:\.\d+)?)%\s*\)$/);
+        if (!m) return null;
+        let h = parseFloat(m[1]);
+        const s = parseFloat(m[2]) / 100;
+        const l = parseFloat(m[3]) / 100;
+        if (s < 0 || s > 1 || l < 0 || l > 1) return null;
+        // Normalise hue
+        h = ((h % 360) + 360) % 360;
+        return { h, s, l };
+    }
+
+    // ---- HSL → RGB ----
+    function hslToRgb(h, s, l) {
+        h /= 360;
+        const a = s * Math.min(l, 1 - l);
+        const f = (n) => {
+            const k = (n + h * 12) % 12;
+            return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        };
+        return {
+            r: Math.round(f(0) * 255),
+            g: Math.round(f(8) * 255),
+            b: Math.round(f(4) * 255)
+        };
+    }
+
+    // ---- RGB → HSL ----
+    function rgbToHsl(r, g, b) {
+        r /= 255; g /= 255; b /= 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h = 0, s = 0, l = (max + min) / 2;
+        if (max !== min) {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = ((g - b) / d + (g < b ? 6 : 0)) * 60; break;
+                case g: h = ((b - r) / d + 2) * 60; break;
+                case b: h = ((r - g) / d + 4) * 60; break;
+            }
+        }
+        return {
+            h: Math.round(h),
+            s: Math.round(s * 100),
+            l: Math.round(l * 100)
+        };
+    }
+
+    // ---- RGB → HEX ----
+    function rgbToHex(r, g, b) {
+        return '#' + [r, g, b].map(c => Math.round(c).toString(16).padStart(2, '0').toUpperCase()).join('');
+    }
+
+    // ---- HSL 规范化为字符串 ----
+    function hslToString(h, s, l) {
+        return 'hsl(' + Math.round(h) + ',' + Math.round(s) + '%,' + Math.round(l) + '%)';
+    }
+
+    // ---- RGB 规范化为字符串 ----
+    function rgbToString(r, g, b) {
+        return 'rgb(' + Math.round(r) + ',' + Math.round(g) + ',' + Math.round(b) + ')';
+    }
+
+    // ============================================================
+    //  状态 & 防循环
+    // ============================================================
+
+    let updating = false;          // 防止循环更新
+    const HISTORY_KEY = 'xiongda_color_history';
+
+    // ============================================================
+    //  UI 更新
+    // ============================================================
+
+    function updateAll(hex, r, g, b, hslObj) {
+        // 更新输入框
+        document.getElementById('hexInput').value = hex;
+        document.getElementById('rgbInput').value = rgbToString(r, g, b);
+        document.getElementById('hslInput').value = hslToString(hslObj.h, hslObj.s, hslObj.l);
+
+        // 更新预览
+        document.getElementById('colorFill').style.background = hex;
+        document.getElementById('colorHexLabel').textContent = hex;
+
+        // 更新页面标题中的颜色
+        document.title = hex + ' - 颜色转换';
+    }
+
+    // ---- 从 RGB 更新全部 ----
+    function updateFromRgb(r, g, b) {
+        if (updating) return;
+        updating = true;
+        try {
+            const hex = rgbToHex(r, g, b);
+            const hsl = rgbToHsl(r, g, b);
+            updateAll(hex, r, g, b, hsl);
+        } finally {
+            updating = false;
+        }
+    }
+
+    // ---- 从 HEX 更新全部 ----
+    function updateFromHex(hex) {
+        if (updating) return;
+        updating = true;
+        try {
+            const parsed = parseHex(hex);
+            if (!parsed) return;
+            const { r, g, b } = parsed;
+            const hsl = rgbToHsl(r, g, b);
+            const cleanHex = rgbToHex(r, g, b);
+            updateAll(cleanHex, r, g, b, hsl);
+        } finally {
+            updating = false;
+        }
+    }
+
+    // ---- 从 HSL 更新全部 ----
+    function updateFromHsl(h, s, l) {
+        if (updating) return;
+        updating = true;
+        try {
+            const { r, g, b } = hslToRgb(h, s, l);
+            const hex = rgbToHex(r, g, b);
+            updateAll(hex, r, g, b, { h, s, l });
+        } finally {
+            updating = false;
+        }
+    }
+
+    // ============================================================
+    //  输入事件处理
+    // ============================================================
+
+    function onHexInput() {
+        if (updating) return;
+        const val = document.getElementById('hexInput').value.trim();
+        const parsed = parseHex(val);
+        if (!parsed) return;
+        updateFromHex(val);
+        saveToHistory(rgbToHex(parsed.r, parsed.g, parsed.b));
+    }
+
+    function onRgbInput() {
+        if (updating) return;
+        const val = document.getElementById('rgbInput').value.trim();
+        const parsed = parseRgb(val);
+        if (!parsed) return;
+        updateFromRgb(parsed.r, parsed.g, parsed.b);
+        saveToHistory(rgbToHex(parsed.r, parsed.g, parsed.b));
+    }
+
+    function onHslInput() {
+        if (updating) return;
+        const val = document.getElementById('hslInput').value.trim();
+        const parsed = parseHsl(val);
+        if (!parsed) return;
+        updateFromHsl(parsed.h, parsed.s, parsed.l);
+        const { r, g, b } = hslToRgb(parsed.h, parsed.s, parsed.l);
+        saveToHistory(rgbToHex(r, g, b));
+    }
+
+    // ============================================================
+    //  历史记录 (localStorage)
+    // ============================================================
+
+    function getHistory() {
+        try {
+            const raw = localStorage.getItem(HISTORY_KEY);
+            if (!raw) return [];
+            const arr = JSON.parse(raw);
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveHistory(arr) {
+        try {
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(0, 20)));
+        } catch (e) {}
+    }
+
+    function saveToHistory(hex) {
+        let history = getHistory();
+        // 去重：移除已有相同色
+        history = history.filter(h => h.toUpperCase() !== hex.toUpperCase());
+        // 插入到最前
+        history.unshift(hex);
+        // 限20条
+        if (history.length > 20) history = history.slice(0, 20);
+        saveHistory(history);
+        renderHistory();
+    }
+
+    function renderHistory() {
+        const container = document.getElementById('colorHistory');
+        const history = getHistory();
+        if (history.length === 0) {
+            container.innerHTML = '<span class="empty-hint">还没有使用记录</span>';
+            return;
+        }
+        let html = '';
+        for (const hex of history) {
+            html += '<div class="history-swatch" style="background:' + hex + ';" onclick="applyColor(\'' + hex + '\')" title="' + hex + '">' +
+                    '<span class="swatch-tooltip">' + hex + '</span></div>';
+        }
+        html += '<button class="history-clear" onclick="clearHistory()" title="清空历史"><i class="fas fa-trash-alt" style="font-size:10px;"></i></button>';
+        container.innerHTML = html;
+    }
+
+    function clearHistory() {
+        saveHistory([]);
+        renderHistory();
+        showToast('历史已清空');
+    }
+
+    function applyColor(hex) {
+        document.getElementById('hexInput').value = hex;
+        updateFromHex(hex);
+        showToast('已应用 ' + hex);
+    }
+
+    // ============================================================
+    //  预设色板
+    // ============================================================
+
+    // ---- Material Design 色板 (精选) ----
+    const MATERIAL_COLORS = [
+        '#F44336','#E53935','#D32F2F','#C62828','#B71C1C',
+        '#FF5722','#F4511E','#E64A19','#D84315','#BF360C',
+        '#FF9800','#FB8C00','#F57C00','#EF6C00','#E65100',
+        '#FFC107','#FFB300','#FFA000','#FF8F00','#FF6F00',
+        '#FFEB3B','#FDD835','#FBC02D','#F9A825','#F57F17',
+        '#CDDC39','#C0CA33','#AFB42B','#9E9D24','#827717',
+        '#4CAF50','#43A047','#388E3C','#2E7D32','#1B5E20',
+        '#009688','#00897B','#00796B','#00695C','#004D40',
+        '#00BCD4','#00ACC1','#0097A7','#00838F','#006064',
+        '#03A9F4','#039BE5','#0288D1','#0277BD','#01579B',
+        '#2196F3','#1E88E5','#1976D2','#1565C0','#0D47A1',
+        '#3F51B5','#3949AB','#303F9F','#283593','#1A237E',
+        '#673AB7','#5E35B1','#512DA8','#4527A0','#311B92',
+        '#9C27B0','#8E24AA','#7B1FA2','#6A1B9A','#4A148C',
+        '#E91E63','#D81B60','#C2185B','#AD1457','#880E4F',
+        '#795548','#6D4C41','#5D4037','#4E342E','#3E2723',
+        '#607D8B','#546E7A','#455A64','#37474F','#263238',
+        '#9E9E9E','#757575','#616161','#424242','#212121'
+    ];
+
+    // ---- Web 安全色 (216色) ----
+    const WEB_SAFE_COLORS = (function() {
+        const vals = ['00','33','66','99','CC','FF'];
+        const colors = [];
+        for (let r of vals) {
+            for (let g of vals) {
+                for (let b of vals) {
+                    colors.push('#' + r + g + b);
+                }
+            }
+        }
+        return colors;
+    })();
+
+    // ---- Flat UI 色板 ----
+    const FLAT_COLORS = [
+        '#1ABC9C','#16A085','#2ECC71','#27AE60','#3498DB','#2980B9',
+        '#9B59B6','#8E44AD','#34495E','#2C3E50','#F1C40F','#F39C12',
+        '#E67E22','#D35400','#E74C3C','#C0392B','#ECF0F1','#BDC3C7',
+        '#95A5A6','#7F8C8D','#FF6B6B','#C7F464','#FFD93D','#6BCB77',
+        '#4D96FF','#9B59B6','#FF9FF3','#54A0FF','#5F27CD','#341F97',
+        '#EE5A24','#FDA7DF','#ED4C67','#12CBC4','#B53471','#0652DD',
+        '#FFC312','#C4E538','#F79F1F','#A3CB38','#1289A7','#D980FA',
+        '#B8E994','#E15F41','#FF6348','#7BED9F','#70A1FF','#5352ED'
+    ];
+
+    // ---- 当前选中的色板 ----
+    let currentPalette = 'material';
+
+    function renderPalette(name) {
+        let colors;
+        switch (name) {
+            case 'material': colors = MATERIAL_COLORS; break;
+            case 'websafe':  colors = WEB_SAFE_COLORS; break;
+            case 'flat':     colors = FLAT_COLORS; break;
+            default:         colors = MATERIAL_COLORS;
+        }
+        const grid = document.getElementById('paletteGrid');
+        let html = '';
+        for (const c of colors) {
+            html += '<div class="palette-swatch" style="background:' + c + ';" onclick="applyColor(\'' + c + '\')">' +
+                    '<span class="swatch-label">' + c + '</span></div>';
+        }
+        grid.innerHTML = html;
+        currentPalette = name;
+    }
+
+    // ============================================================
+    //  初始化
+    // ============================================================
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始渲染
+        const hex = document.getElementById('hexInput').value.trim();
+        const parsed = parseHex(hex);
+        if (parsed) {
+            updateFromHex(hex);
+        }
+
+        // 渲染历史
+        renderHistory();
+
+        // 渲染预设色板 (默认 material)
+        renderPalette('material');
+
+        // 色板 tab 切换
+        document.getElementById('paletteTabs').addEventListener('click', function(e) {
+            const tab = e.target.closest('.palette-tab');
+            if (!tab) return;
+            const name = tab.getAttribute('data-palette');
+            if (!name || name === currentPalette) return;
+            document.querySelectorAll('.palette-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            renderPalette(name);
+        });
+
+        // 输入事件：实时联动
+        document.getElementById('hexInput').addEventListener('input', debounce(onHexInput, 80));
+        document.getElementById('rgbInput').addEventListener('input', debounce(onRgbInput, 80));
+        document.getElementById('hslInput').addEventListener('input', debounce(onHslInput, 80));
+
+        // 输入框聚焦时全选
+        document.querySelectorAll('.color-input-row input').forEach(inp => {
+            inp.addEventListener('focus', function() { this.select(); });
+        });
+
+        printLog('颜色转换已初始化', 'HEX / RGB / HSL 实时联动');
+    });
+
+    // ---- 简单的 debounce ----
+    function debounce(fn, delay) {
+        let timer;
+        return function(...args) {
+            clearTimeout(timer);
+            timer = setTimeout(() => fn.apply(this, args), delay);
+        };
+    }
+
+    // ---- 点击特效 ----
+    document.addEventListener('click', createClickEffect);
+    document.addEventListener('touchstart', function(e) {
+        const touch = e.touches[0];
+        createClickEffect({ clientX: touch.clientX, clientY: touch.clientY });
+    }, { passive: true });
+    </script>
+</body>
+</html>

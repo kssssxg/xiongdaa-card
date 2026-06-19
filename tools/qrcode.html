@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="CSP" content="upgrade-insecure-requests">
+    <title>二维码生成器 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* 输入区域 */
+        .qr-input-area {
+            margin-bottom: 20px;
+        }
+
+        /* 尺寸选项 */
+        .size-selector {
+            display: flex; gap: 8px; margin-bottom: 15px;
+        }
+        .size-selector .size-btn {
+            flex: 1; padding: 10px; border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.05); border-radius: 10px;
+            color: var(--text-muted); cursor: pointer; font-size: 0.85rem;
+            text-align: center; transition: all 0.2s;
+        }
+        .size-selector .size-btn:hover { background: rgba(255,255,255,0.1); }
+        .size-selector .size-btn.active {
+            background: rgba(165,180,252,0.2); border-color: var(--theme-accent); color: #fff;
+        }
+        .size-selector .size-btn i { display: block; font-size: 1.1rem; margin-bottom: 4px; }
+
+        /* 颜色选择器 */
+        .color-row {
+            display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;
+        }
+        .color-group {
+            flex: 1; min-width: 120px;
+        }
+        .color-group label {
+            display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;
+        }
+        .color-group .color-input-wrapper {
+            display: flex; align-items: center; gap: 8px;
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px; padding: 6px 10px;
+        }
+        .color-group .color-input-wrapper input[type="color"] {
+            width: 36px; height: 36px; border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 8px; cursor: pointer; background: none; padding: 0;
+        }
+        .color-group .color-input-wrapper input[type="text"] {
+            flex: 1; background: none; border: none; color: #fff;
+            font-size: 0.85rem; outline: none; font-family: 'Cascadia Code', 'Fira Code', monospace;
+        }
+        .color-group .color-input-wrapper input[type="text"]::placeholder {
+            color: rgba(255,255,255,0.3);
+        }
+
+        /* QR 码展示区域 */
+        .qr-display-area {
+            display: flex; flex-direction: column; align-items: center;
+            padding: 30px; background: rgba(0,0,0,0.15); border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08); margin: 15px 0; min-height: 220px;
+            justify-content: center;
+        }
+        .qr-display-area #qrcode {
+            display: inline-block;
+        }
+        .qr-display-area #qrcode img, .qr-display-area #qrcode canvas {
+            max-width: 100%; height: auto;
+        }
+        .qr-display-area .qr-placeholder {
+            text-align: center; color: var(--text-muted); font-size: 0.9rem;
+        }
+        .qr-display-area .qr-placeholder i {
+            font-size: 2.5rem; display: block; margin-bottom: 10px; opacity: 0.4;
+        }
+
+        /* 操作按钮 */
+        .qr-actions {
+            display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;
+        }
+        .qr-actions .tool-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .qr-actions .tool-btn i { font-size: 0.95rem; }
+
+        /* 生成动画 */
+        @keyframes qrPop {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .qr-pop {
+            animation: qrPop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* 底部的提示 */
+        .qr-hint {
+            text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 8px;
+        }
+
+        @media (max-width: 600px) {
+            .color-row { gap: 8px; }
+            .color-group { min-width: 100px; }
+            .qr-display-area { padding: 20px 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="index.html" class="back-home-btn" title="返回工具首页"><i class="fas fa-arrow-left"></i></a>
+
+    <div id="toast"><i class="fas fa-info-circle" style="color: #a5b4fc;"></i><span id="toast-msg">提示信息</span></div>
+
+    <div class="glass-card tool-card">
+        <h1><i class="fas fa-qrcode"></i> 二维码生成器</h1>
+        <div class="tool-subtitle">输入文本或链接，快速生成可下载的二维码</div>
+
+        <!-- 输入区域 -->
+        <div class="qr-input-area">
+            <div class="tool-label"><i class="fas fa-pencil-alt"></i> 输入内容</div>
+            <textarea id="qrInput" placeholder="请输入文本或 URL 链接..." rows="3"></textarea>
+        </div>
+
+        <!-- 尺寸选择 -->
+        <div class="tool-label"><i class="fas fa-expand-arrows-alt"></i> 尺寸</div>
+        <div class="size-selector" id="sizeSelector">
+            <button class="size-btn" data-size="160" onclick="selectSize(this)">
+                <i class="fas fa-compress-alt"></i> 小
+            </button>
+            <button class="size-btn active" data-size="240" onclick="selectSize(this)">
+                <i class="fas fa-arrows-alt-h"></i> 中
+            </button>
+            <button class="size-btn" data-size="320" onclick="selectSize(this)">
+                <i class="fas fa-expand-alt"></i> 大
+            </button>
+        </div>
+
+        <!-- 颜色选择 -->
+        <div class="tool-label"><i class="fas fa-palette"></i> 颜色</div>
+        <div class="color-row">
+            <div class="color-group">
+                <label>前景色</label>
+                <div class="color-input-wrapper">
+                    <input type="color" id="fgColorPicker" value="#000000" onchange="syncColorInput('fgColorPicker', 'fgColorText')">
+                    <input type="text" id="fgColorText" value="#000000" placeholder="#000000" maxlength="7" oninput="syncColorText('fgColorText', 'fgColorPicker')">
+                </div>
+            </div>
+            <div class="color-group">
+                <label>背景色</label>
+                <div class="color-input-wrapper">
+                    <input type="color" id="bgColorPicker" value="#ffffff" onchange="syncColorInput('bgColorPicker', 'bgColorText')">
+                    <input type="text" id="bgColorText" value="#ffffff" placeholder="#ffffff" maxlength="7" oninput="syncColorText('bgColorText', 'bgColorPicker')">
+                </div>
+            </div>
+        </div>
+
+        <!-- 生成 & 操作按钮 -->
+        <div class="qr-actions">
+            <button class="tool-btn primary" onclick="generateQRCode()"><i class="fas fa-qrcode"></i> 生成二维码</button>
+            <button class="tool-btn" onclick="downloadQRCode()" id="downloadBtn" disabled><i class="fas fa-download"></i> 下载 PNG</button>
+            <button class="tool-btn" onclick="clearQR()" style="margin-left:auto;"><i class="fas fa-trash-alt"></i> 清空</button>
+        </div>
+
+        <!-- QR 码展示 -->
+        <div class="qr-display-area" id="qrDisplayArea">
+            <div id="qrcode"></div>
+            <div class="qr-placeholder" id="qrPlaceholder">
+                <i class="fas fa-qrcode"></i>
+                <div>输入内容后点击生成</div>
+            </div>
+        </div>
+
+        <div class="qr-hint">
+            <i class="fas fa-info-circle"></i> 支持文本、URL、Wi-Fi 配置等任意内容
+        </div>
+    </div>
+
+    <div class="author-credit">
+        <p>&copy; 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script>
+        // ========== 状态 ==========
+        let currentSize = 240;
+        let qrCodeInstance = null;
+        let currentQRDataURL = null;
+
+        // ========== 尺寸选择 ==========
+        function selectSize(btn) {
+            document.querySelectorAll('#sizeSelector .size-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentSize = parseInt(btn.dataset.size, 10);
+            // 如果有二维码，重新生成
+            const input = document.getElementById('qrInput').value.trim();
+            if (input && qrCodeInstance) {
+                generateQRCode();
+            }
+        }
+
+        // ========== 颜色同步 ==========
+        function syncColorInput(pickerId, textId) {
+            const picker = document.getElementById(pickerId);
+            const text = document.getElementById(textId);
+            text.value = picker.value;
+            // 如果有二维码，重新生成
+            const input = document.getElementById('qrInput').value.trim();
+            if (input && qrCodeInstance) {
+                generateQRCode();
+            }
+        }
+
+        function syncColorText(textId, pickerId) {
+            const text = document.getElementById(textId);
+            const picker = document.getElementById(pickerId);
+            let val = text.value.trim();
+            if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+                picker.value = val;
+                const input = document.getElementById('qrInput').value.trim();
+                if (input && qrCodeInstance) {
+                    generateQRCode();
+                }
+            }
+        }
+
+        // ========== 清空 ==========
+        function clearQR() {
+            document.getElementById('qrInput').value = '';
+            if (qrCodeInstance) {
+                qrCodeInstance.clear();
+                qrCodeInstance = null;
+            }
+            currentQRDataURL = null;
+            document.getElementById('downloadBtn').disabled = true;
+            document.getElementById('qrcode').innerHTML = '';
+            document.getElementById('qrPlaceholder').style.display = '';
+            showToast('已清空');
+        }
+
+        // ========== 生成二维码 ==========
+        function generateQRCode() {
+            const input = document.getElementById('qrInput').value.trim();
+            if (!input) {
+                showToast('请输入内容');
+                return;
+            }
+
+            const fgColor = document.getElementById('fgColorPicker').value;
+            const bgColor = document.getElementById('bgColorPicker').value;
+
+            // 清空旧二维码
+            const container = document.getElementById('qrcode');
+            container.innerHTML = '';
+            document.getElementById('qrPlaceholder').style.display = 'none';
+            if (qrCodeInstance) {
+                qrCodeInstance = null;
+            }
+
+            try {
+                // 创建新的 QRCode 实例
+                qrCodeInstance = new QRCode(container, {
+                    text: input,
+                    width: currentSize,
+                    height: currentSize,
+                    colorDark: fgColor,
+                    colorLight: bgColor,
+                    correctLevel: QRCode.CorrectLevel.H // 最高纠错级别
+                });
+
+                // 添加弹出动画
+                const qrEl = container.querySelector('img') || container.querySelector('canvas');
+                if (qrEl) {
+                    qrEl.classList.add('qr-pop');
+                }
+
+                // 生成完成后获取 data URL 供下载
+                setTimeout(captureQRDataURL, 100);
+
+                document.getElementById('downloadBtn').disabled = false;
+                printLog('QRCode 生成', `内容长度: ${input.length} 尺寸: ${currentSize}x${currentSize}`);
+            } catch (e) {
+                showToast('生成失败：' + e.message);
+                printLog('QRCode 错误', e.message, true);
+            }
+        }
+
+        // ========== 获取 QR 码的 Data URL ==========
+        function captureQRDataURL() {
+            const container = document.getElementById('qrcode');
+            const canvas = container.querySelector('canvas');
+            const img = container.querySelector('img');
+
+            if (canvas) {
+                currentQRDataURL = canvas.toDataURL('image/png');
+            } else if (img) {
+                // 如果 qrcodejs 用了 img 标签（某些情况下），用 canvas 重绘
+                try {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = currentSize;
+                    tempCanvas.height = currentSize;
+                    const ctx = tempCanvas.getContext('2d');
+                    // 填充背景色
+                    ctx.fillStyle = document.getElementById('bgColorPicker').value;
+                    ctx.fillRect(0, 0, currentSize, currentSize);
+                    // 绘制二维码图像
+                    ctx.drawImage(img, 0, 0, currentSize, currentSize);
+                    currentQRDataURL = tempCanvas.toDataURL('image/png');
+                } catch (e) {
+                    printLog('QRCode 截图', '无法捕获 canvas', true);
+                }
+            }
+        }
+
+        // ========== 下载 PNG ==========
+        function downloadQRCode() {
+            if (!currentQRDataURL) {
+                // 如果还没有捕获到，尝试重新捕获
+                captureQRDataURL();
+            }
+            if (!currentQRDataURL) {
+                showToast('请先生成二维码');
+                return;
+            }
+
+            const link = document.createElement('a');
+            link.download = 'qrcode.png';
+            link.href = currentQRDataURL;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('二维码已下载');
+            printLog('QRCode 下载', 'PNG 图片已下载');
+        }
+
+        // ========== 回车生成 ==========
+        document.getElementById('qrInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                generateQRCode();
+            }
+        });
+
+        // ========== 点击特效 ==========
+        document.addEventListener('click', createClickEffect);
+        document.addEventListener('touchstart', function(e) {
+            const touch = e.touches[0];
+            createClickEffect({ clientX: touch.clientX, clientY: touch.clientY });
+        }, { passive: true });
+    </script>
+</body>
+</html>

@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>三合一计时器 - xiongdaa</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* ---------- Timer 专属样式 ---------- */
+        .timer-card { padding: 30px; max-width: 520px; }
+
+        /* 胶囊 Tabs */
+        .tab-bar {
+            display: flex; justify-content: center; gap: 4px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 50px; padding: 4px;
+            margin: 0 auto 28px; max-width: 380px;
+        }
+        .tab-btn {
+            flex: 1; padding: 8px 16px; border: none; border-radius: 50px;
+            background: transparent; color: var(--text-muted);
+            font-size: 0.85rem; font-weight: 500; cursor: pointer;
+            transition: all 0.3s; white-space: nowrap;
+        }
+        .tab-btn:hover { color: #fff; }
+        .tab-btn.active {
+            background: rgba(165,180,252,0.3);
+            color: #fff; box-shadow: 0 2px 8px rgba(165,180,252,0.2);
+        }
+
+        /* 计时器容器 */
+        .timer-panel { display: none; }
+        .timer-panel.active { display: block; animation: slideUpFade 0.4s ease; }
+
+        /* 时间显示 */
+        .time-display {
+            font-size: 4rem; font-weight: 700; text-align: center;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 4px; margin: 20px 0 10px;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+        }
+        .time-display.small { font-size: 2.8rem; }
+
+        /* 状态文字 */
+        .timer-status {
+            text-align: center; font-size: 0.9rem; color: var(--text-muted);
+            margin-bottom: 18px; min-height: 1.4em;
+        }
+        .timer-status .pomodoro-round {
+            display: inline-block; background: rgba(165,180,252,0.15);
+            padding: 2px 12px; border-radius: 50px; font-size: 0.8rem;
+            margin-left: 8px; color: var(--theme-accent);
+        }
+        .timer-status .today-stats {
+            display: block; margin-top: 6px; font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* 设置行 */
+        .timer-settings {
+            display: flex; gap: 12px; justify-content: center;
+            margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .timer-settings label {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.82rem; color: var(--text-muted);
+        }
+        .timer-settings input[type="number"] {
+            width: 60px; background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+            color: #fff; padding: 4px 8px; font-size: 0.85rem;
+            text-align: center; outline: none;
+        }
+        .timer-settings input[type="number"]:focus {
+            border-color: var(--theme-accent);
+        }
+        .timer-settings input[type="datetime-local"] {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+            color: #fff; padding: 6px 10px; font-size: 0.85rem;
+            outline: none; width: 190px; color-scheme: dark;
+        }
+        .timer-settings input[type="datetime-local"]:focus {
+            border-color: var(--theme-accent);
+        }
+
+        /* 按钮组 */
+        .btn-group {
+            display: flex; gap: 10px; justify-content: center;
+            margin: 16px 0; flex-wrap: wrap;
+        }
+        .timer-btn {
+            padding: 10px 28px; border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 50px; background: rgba(255,255,255,0.08);
+            color: #fff; font-size: 0.9rem; cursor: pointer;
+            transition: all 0.25s; font-weight: 500; min-width: 80px;
+        }
+        .timer-btn:hover { background: rgba(255,255,255,0.18); }
+        .timer-btn.primary {
+            background: rgba(165,180,252,0.25); border-color: var(--theme-accent);
+        }
+        .timer-btn.primary:hover { background: rgba(165,180,252,0.4); }
+        .timer-btn.success {
+            background: rgba(52,211,153,0.2); border-color: rgba(52,211,153,0.4);
+        }
+        .timer-btn.success:hover { background: rgba(52,211,153,0.35); }
+        .timer-btn.danger {
+            background: rgba(244,114,182,0.2); border-color: rgba(244,114,182,0.4);
+        }
+        .timer-btn.danger:hover { background: rgba(244,114,182,0.35); }
+        .timer-btn:disabled {
+            opacity: 0.35; cursor: not-allowed; transform: none !important;
+        }
+
+        /* 快速倒计时预设 */
+        .quick-presets {
+            display: flex; gap: 8px; justify-content: center;
+            margin: 8px 0 16px; flex-wrap: wrap;
+        }
+        .quick-presets button {
+            padding: 5px 14px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.05); color: var(--text-muted);
+            font-size: 0.78rem; cursor: pointer; transition: all 0.2s;
+        }
+        .quick-presets button:hover {
+            background: rgba(255,255,255,0.12); color: #fff;
+        }
+
+        /* 计次列表 */
+        .lap-list {
+            max-height: 180px; overflow-y: auto; margin-top: 12px;
+            padding: 0 4px;
+        }
+        .lap-list::-webkit-scrollbar { width: 4px; }
+        .lap-list::-webkit-scrollbar-track { background: transparent; }
+        .lap-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+        .lap-item {
+            display: flex; justify-content: space-between;
+            padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.06);
+            font-size: 0.82rem; color: var(--text-muted);
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+        }
+        .lap-item:first-child { border-top: 1px solid rgba(255,255,255,0.06); }
+        .lap-item .lap-num { color: rgba(255,255,255,0.4); }
+        .lap-item .lap-time { color: var(--text-main); }
+
+        /* 倒计时剩余显示 */
+        .countdown-units {
+            display: flex; justify-content: center; gap: 16px;
+            margin: 10px 0 16px;
+        }
+        .countdown-unit {
+            display: flex; flex-direction: column; align-items: center;
+            min-width: 65px;
+        }
+        .countdown-unit .num {
+            font-size: 2.6rem; font-weight: 700;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+        }
+        .countdown-unit .label {
+            font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;
+        }
+        .countdown-unit .sep {
+            font-size: 2rem; color: var(--text-muted); align-self: center;
+            padding-bottom: 8px;
+        }
+
+        @media (max-width: 480px) {
+            .time-display { font-size: 3rem; }
+            .time-display.small { font-size: 2.2rem; }
+            .countdown-unit .num { font-size: 2rem; }
+            .timer-card { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="overlay"></div>
+    <video id="bg-video" muted loop playsinline></video>
+
+    <!-- 返回按钮 -->
+    <a href="index.html" class="back-home-btn" title="返回主页">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <!-- Toast -->
+    <div id="toast"><span id="toast-msg"></span></div>
+
+    <!-- 主卡片 -->
+    <div class="glass-card tool-card timer-card">
+        <h1><i class="fas fa-clock"></i> 计时器</h1>
+        <p class="tool-subtitle">番茄钟 · 秒表 · 倒计时</p>
+
+        <!-- Tab 胶囊 -->
+        <div class="tab-bar" id="tabBar">
+            <button class="tab-btn active" data-tab="pomodoro"><i class="fas fa-tomato"></i> 番茄钟</button>
+            <button class="tab-btn" data-tab="stopwatch"><i class="fas fa-stopwatch"></i> 秒表</button>
+            <button class="tab-btn" data-tab="countdown"><i class="fas fa-hourglass-end"></i> 倒计时</button>
+        </div>
+
+        <!-- ==================== 番茄钟 ==================== -->
+        <div class="timer-panel active" id="panel-pomodoro">
+            <div class="timer-settings">
+                <label>专注 <input type="number" id="pomoFocus" value="25" min="1" max="180"> 分</label>
+                <label>休息 <input type="number" id="pomoBreak" value="5" min="1" max="60"> 分</label>
+            </div>
+            <div class="time-display" id="pomoDisplay">25:00</div>
+            <div class="timer-status" id="pomoStatus">
+                <span id="pomoPhaseText">🍅 专注中</span>
+                <span class="pomodoro-round" id="pomoRound">第 1 轮</span>
+                <span class="today-stats" id="pomoTodayStats">📊 今日完成 0 轮</span>
+            </div>
+            <div class="btn-group">
+                <button class="timer-btn primary" id="pomoStartBtn"><i class="fas fa-play"></i> 开始</button>
+                <button class="timer-btn" id="pomoResetBtn"><i class="fas fa-undo"></i> 重置</button>
+            </div>
+        </div>
+
+        <!-- ==================== 秒表 ==================== -->
+        <div class="timer-panel" id="panel-stopwatch">
+            <div class="time-display small" id="swDisplay">00:00.00</div>
+            <div class="timer-status"><span id="swStatus">⏱️ 准备就绪</span></div>
+            <div class="btn-group">
+                <button class="timer-btn success" id="swStartBtn"><i class="fas fa-play"></i> 开始</button>
+                <button class="timer-btn" id="swLapBtn" disabled><i class="fas fa-flag"></i> 计次</button>
+                <button class="timer-btn danger" id="swResetBtn"><i class="fas fa-undo"></i> 重置</button>
+            </div>
+            <div class="lap-list" id="swLapList"></div>
+        </div>
+
+        <!-- ==================== 倒计时 ==================== -->
+        <div class="timer-panel" id="panel-countdown">
+            <!-- 目标日期模式 -->
+            <div class="timer-settings">
+                <label><i class="far fa-calendar-alt"></i> 目标时间
+                    <input type="datetime-local" id="cdTargetDatetime">
+                </label>
+            </div>
+            <div class="countdown-units" id="cdUnits">
+                <div class="countdown-unit">
+                    <span class="num" id="cdDays">00</span>
+                    <span class="label">天</span>
+                </div>
+                <span class="sep">:</span>
+                <div class="countdown-unit">
+                    <span class="num" id="cdHours">00</span>
+                    <span class="label">时</span>
+                </div>
+                <span class="sep">:</span>
+                <div class="countdown-unit">
+                    <span class="num" id="cdMinutes">00</span>
+                    <span class="label">分</span>
+                </div>
+                <span class="sep">:</span>
+                <div class="countdown-unit">
+                    <span class="num" id="cdSeconds">00</span>
+                    <span class="label">秒</span>
+                </div>
+            </div>
+            <div class="timer-status" id="cdStatus"><span>⏳ 设置目标时间或使用快速倒计时</span></div>
+            <div class="btn-group">
+                <button class="timer-btn primary" id="cdStartBtn"><i class="fas fa-play"></i> 开始</button>
+                <button class="timer-btn danger" id="cdStopBtn" disabled><i class="fas fa-stop"></i> 停止</button>
+            </div>
+            <!-- 快速倒计时 -->
+            <div style="text-align:center;margin-top:8px;font-size:0.82rem;color:var(--text-muted);">— 快速倒计时 —</div>
+            <div class="quick-presets">
+                <button data-minutes="1">1 分</button>
+                <button data-minutes="3">3 分</button>
+                <button data-minutes="5">5 分</button>
+                <button data-minutes="10">10 分</button>
+                <button data-minutes="15">15 分</button>
+                <button data-minutes="30">30 分</button>
+                <button data-minutes="60">60 分</button>
+            </div>
+            <div class="timer-settings" style="margin-top:4px;">
+                <label>自定义 <input type="number" id="cdMinutesInput" value="5" min="1" max="1440"> 分钟
+                    <button class="timer-btn" id="cdQuickGoBtn" style="padding:4px 16px;font-size:0.8rem;">GO</button>
+                </label>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="author-credit">
+        <p>❤️ 三合一计时器 · xiongdaa</p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+    // ============================================================
+    //  三合一计时器主脚本
+    // ============================================================
+
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // ---------- 工具：Web Audio API 提示音 ----------
+        function playBeep(freq, duration, type) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = type || 'sine';
+                osc.frequency.value = freq || 800;
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + (duration || 0.3));
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + (duration || 0.3));
+            } catch(e) {}
+        }
+
+        function playAlert() {
+            // 三连音提示
+            playBeep(660, 0.12, 'sine');
+            setTimeout(() => playBeep(880, 0.12, 'sine'), 150);
+            setTimeout(() => playBeep(1100, 0.25, 'sine'), 300);
+        }
+
+        function playShortBeep() {
+            playBeep(800, 0.15, 'sine');
+        }
+
+        // ---------- Tab 切换 ----------
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const panels = {
+            pomodoro: document.getElementById('panel-pomodoro'),
+            stopwatch: document.getElementById('panel-stopwatch'),
+            countdown: document.getElementById('panel-countdown')
+        };
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                tabBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                Object.values(panels).forEach(p => p.classList.remove('active'));
+                const target = panels[this.dataset.tab];
+                if (target) target.classList.add('active');
+                // 切换番茄钟时刷新今日统计
+                if (this.dataset.tab === 'pomodoro') updateTodayStats();
+            });
+        });
+
+        // ============================================================
+        //  番茄钟模式
+        // ============================================================
+        const pomoFocus = document.getElementById('pomoFocus');
+        const pomoBreak = document.getElementById('pomoBreak');
+        const pomoDisplay = document.getElementById('pomoDisplay');
+        const pomoPhaseText = document.getElementById('pomoPhaseText');
+        const pomoRound = document.getElementById('pomoRound');
+        const pomoTodayStats = document.getElementById('pomoTodayStats');
+        const pomoStartBtn = document.getElementById('pomoStartBtn');
+        const pomoResetBtn = document.getElementById('pomoResetBtn');
+
+        let pomoState = 'idle';       // idle | focus | break
+        let pomoRunning = false;
+        let pomoRemaining = 0;        // 剩余秒数
+        let pomoCurrentRound = 0;     // 已完成轮次（完成一个完整 focus+break 算一轮？这里每完成一个 focus 算一轮）
+        let pomoTimer = null;
+        let pomoOnBreak = false;
+
+        // 今日完成轮次存储
+        const POMO_STORAGE_KEY = 'xiongda_pomo_today';
+        function getTodayStr() {
+            return new Date().toISOString().slice(0, 10);
+        }
+        function loadTodayRounds() {
+            try {
+                const raw = localStorage.getItem(POMO_STORAGE_KEY);
+                if (!raw) return 0;
+                const data = JSON.parse(raw);
+                if (data.date === getTodayStr()) return data.rounds || 0;
+                return 0;
+            } catch(e) { return 0; }
+        }
+        function saveTodayRounds(count) {
+            try {
+                localStorage.setItem(POMO_STORAGE_KEY, JSON.stringify({ date: getTodayStr(), rounds: count }));
+            } catch(e) {}
+        }
+        function updateTodayStats() {
+            const count = loadTodayRounds();
+            pomoTodayStats.textContent = `📊 今日完成 ${count} 轮`;
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        }
+
+        function getPomoTotal() {
+            return pomoOnBreak
+                ? parseInt(pomoBreak.value) * 60
+                : parseInt(pomoFocus.value) * 60;
+        }
+
+        function pomoUpdateDisplay() {
+            pomoDisplay.textContent = formatTime(pomoRemaining);
+            document.title = formatTime(pomoRemaining) + ' - 计时器';
+            if (pomoOnBreak) {
+                pomoPhaseText.textContent = '☕ 休息中';
+            } else {
+                pomoPhaseText.textContent = '🍅 专注中';
+            }
+        }
+
+        function pomoTick() {
+            if (!pomoRunning) return;
+            pomoRemaining--;
+            if (pomoRemaining <= 0) {
+                // 时间到
+                pomoRunning = false;
+                playAlert();
+                if (pomoOnBreak) {
+                    // 休息结束 → 新一轮专注
+                    pomoOnBreak = false;
+                    pomoRemaining = parseInt(pomoFocus.value) * 60;
+                    pomoPhaseText.textContent = '🍅 专注中';
+                    showToast('☕ 休息结束！开始新一轮专注');
+                    // 自动开始
+                    pomoRunning = true;
+                    pomoTimer = setInterval(pomoTick, 1000);
+                    pomoStartBtn.innerHTML = '<i class="fas fa-pause"></i> 暂停';
+                    pomoUpdateDisplay();
+                } else {
+                    // 专注结束 → 进入休息
+                    pomoCurrentRound++;
+                    saveTodayRounds(loadTodayRounds() + 1);
+                    updateTodayStats();
+                    pomoRound.textContent = `第 ${pomoCurrentRound} 轮`;
+                    pomoOnBreak = true;
+                    pomoRemaining = parseInt(pomoBreak.value) * 60;
+                    pomoPhaseText.textContent = '☕ 休息中';
+                    showToast('🍅 专注完成！进入休息时间');
+                    // 自动开始休息
+                    pomoRunning = true;
+                    pomoTimer = setInterval(pomoTick, 1000);
+                    pomoStartBtn.innerHTML = '<i class="fas fa-pause"></i> 暂停';
+                    pomoUpdateDisplay();
+                }
+                return;
+            }
+            pomoUpdateDisplay();
+        }
+
+        function pomoStartPause() {
+            if (pomoState === 'idle') {
+                // 初次开始
+                const focusMin = parseInt(pomoFocus.value);
+                if (isNaN(focusMin) || focusMin < 1) { showToast('请输入有效专注时长'); return; }
+                pomoCurrentRound = loadTodayRounds(); // 从今日数据读取当前轮次基数
+                pomoCurrentRound++; // 开始新一轮
+                // 如果今天已经有完成的轮次，轮次号从已完成+1开始
+                const todayDone = loadTodayRounds();
+                pomoCurrentRound = todayDone + 1;
+                pomoRound.textContent = `第 ${pomoCurrentRound} 轮`;
+                pomoOnBreak = false;
+                pomoRemaining = parseInt(pomoFocus.value) * 60;
+                pomoRunning = true;
+                pomoState = 'active';
+                pomoTimer = setInterval(pomoTick, 1000);
+                pomoStartBtn.innerHTML = '<i class="fas fa-pause"></i> 暂停';
+                pomoUpdateDisplay();
+                pomoFocus.disabled = true;
+                pomoBreak.disabled = true;
+                showToast('🍅 开始专注！');
+                return;
+            }
+            if (pomoRunning) {
+                // 暂停
+                pomoRunning = false;
+                clearInterval(pomoTimer);
+                pomoStartBtn.innerHTML = '<i class="fas fa-play"></i> 继续';
+                showToast('⏸️ 已暂停');
+            } else {
+                // 继续
+                pomoRunning = true;
+                pomoTimer = setInterval(pomoTick, 1000);
+                pomoStartBtn.innerHTML = '<i class="fas fa-pause"></i> 暂停';
+                pomoUpdateDisplay();
+            }
+        }
+
+        function pomoReset() {
+            pomoRunning = false;
+            clearInterval(pomoTimer);
+            pomoState = 'idle';
+            pomoOnBreak = false;
+            pomoRemaining = parseInt(pomoFocus.value) * 60;
+            pomoDisplay.textContent = formatTime(pomoRemaining);
+            pomoPhaseText.textContent = '🍅 专注中';
+            pomoStartBtn.innerHTML = '<i class="fas fa-play"></i> 开始';
+            pomoFocus.disabled = false;
+            pomoBreak.disabled = false;
+            document.title = '三合一计时器 - xiongdaa';
+            const todayDone = loadTodayRounds();
+            pomoCurrentRound = todayDone;
+            pomoRound.textContent = todayDone > 0 ? `第 ${todayDone} 轮（已完成）` : '准备开始';
+            updateTodayStats();
+        }
+
+        pomoStartBtn.addEventListener('click', pomoStartPause);
+        pomoResetBtn.addEventListener('click', pomoReset);
+
+        // 初始化番茄钟显示
+        pomoRemaining = parseInt(pomoFocus.value) * 60;
+        pomoDisplay.textContent = formatTime(pomoRemaining);
+        pomoCurrentRound = loadTodayRounds();
+        if (pomoCurrentRound > 0) {
+            pomoRound.textContent = `第 ${pomoCurrentRound} 轮（已完成）`;
+        } else {
+            pomoRound.textContent = '准备开始';
+        }
+        updateTodayStats();
+
+        // ============================================================
+        //  秒表模式
+        // ============================================================
+        const swDisplay = document.getElementById('swDisplay');
+        const swStatus = document.getElementById('swStatus');
+        const swStartBtn = document.getElementById('swStartBtn');
+        const swLapBtn = document.getElementById('swLapBtn');
+        const swResetBtn = document.getElementById('swResetBtn');
+        const swLapList = document.getElementById('swLapList');
+
+        let swRunning = false;
+        let swStartTime = 0;
+        let swElapsed = 0;      // 累计已过时间(ms)
+        let swTimer = null;
+        let swLaps = [];
+        let swLastLapTime = 0;
+
+        function swFormatTime(ms) {
+            const totalSec = ms / 1000;
+            const min = Math.floor(totalSec / 60);
+            const sec = Math.floor(totalSec % 60);
+            const cent = Math.floor((ms % 1000) / 10);
+            return String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0') + '.' + String(cent).padStart(2, '0');
+        }
+
+        function swUpdateDisplay() {
+            const now = Date.now();
+            const total = swElapsed + (swRunning ? (now - swStartTime) : 0);
+            swDisplay.textContent = swFormatTime(total);
+            document.title = swFormatTime(total) + ' - 计时器';
+        }
+
+        function swTick() {
+            swUpdateDisplay();
+        }
+
+        function swStartPause() {
+            if (!swRunning) {
+                // 开始/继续
+                swStartTime = Date.now();
+                swRunning = true;
+                swTimer = setInterval(swTick, 20);
+                swStartBtn.innerHTML = '<i class="fas fa-pause"></i> 暂停';
+                swLapBtn.disabled = false;
+                swStatus.textContent = '⏱️ 计时中';
+                showToast('⏱️ 秒表开始');
+            } else {
+                // 暂停
+                swRunning = false;
+                clearInterval(swTimer);
+                swElapsed += Date.now() - swStartTime;
+                swStartBtn.innerHTML = '<i class="fas fa-play"></i> 继续';
+                swLapBtn.disabled = true;
+                swStatus.textContent = '⏸️ 已暂停';
+                showToast('⏸️ 已暂停');
+            }
+        }
+
+        function swLap() {
+            if (!swRunning) return;
+            const now = Date.now();
+            const total = swElapsed + (now - swStartTime);
+            const lapTime = total - swLastLapTime;
+            swLastLapTime = total;
+            swLaps.push(lapTime);
+
+            // 显示计次
+            const item = document.createElement('div');
+            item.className = 'lap-item';
+            item.innerHTML = `<span class="lap-num">计次 ${swLaps.length}</span><span class="lap-time">+${swFormatTime(lapTime)}</span>`;
+            swLapList.insertBefore(item, swLapList.firstChild);
+            swStatus.textContent = `⏱️ 计次 ${swLaps.length}`;
+            playShortBeep();
+        }
+
+        function swReset() {
+            swRunning = false;
+            clearInterval(swTimer);
+            swElapsed = 0;
+            swStartTime = 0;
+            swLastLapTime = 0;
+            swLaps = [];
+            swDisplay.textContent = '00:00.00';
+            swStartBtn.innerHTML = '<i class="fas fa-play"></i> 开始';
+            swLapBtn.disabled = true;
+            swStatus.textContent = '⏱️ 准备就绪';
+            swLapList.innerHTML = '';
+            document.title = '三合一计时器 - xiongdaa';
+        }
+
+        swStartBtn.addEventListener('click', swStartPause);
+        swLapBtn.addEventListener('click', swLap);
+        swResetBtn.addEventListener('click', swReset);
+
+        // ============================================================
+        //  倒计时模式
+        // ============================================================
+        const cdTargetDatetime = document.getElementById('cdTargetDatetime');
+        const cdDays = document.getElementById('cdDays');
+        const cdHours = document.getElementById('cdHours');
+        const cdMinutes = document.getElementById('cdMinutes');
+        const cdSeconds = document.getElementById('cdSeconds');
+        const cdStatus = document.getElementById('cdStatus');
+        const cdStartBtn = document.getElementById('cdStartBtn');
+        const cdStopBtn = document.getElementById('cdStopBtn');
+        const cdMinutesInput = document.getElementById('cdMinutesInput');
+        const cdQuickGoBtn = document.getElementById('cdQuickGoBtn');
+
+        let cdTimer = null;
+        let cdTargetTime = 0;  // timestamp
+        let cdRunning = false;
+
+        // 设置默认目标时间为明天
+        function setDefaultDatetime() {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+            const iso = tomorrow.toISOString().slice(0, 16);
+            cdTargetDatetime.value = iso;
+        }
+        setDefaultDatetime();
+
+        function cdUpdateDisplay() {
+            const now = Date.now();
+            const diff = cdTargetTime - now;
+            if (diff <= 0) {
+                // 倒计时结束
+                cdDays.textContent = '00';
+                cdHours.textContent = '00';
+                cdMinutes.textContent = '00';
+                cdSeconds.textContent = '00';
+                if (cdRunning) {
+                    cdRunning = false;
+                    clearInterval(cdTimer);
+                    cdTimer = null;
+                    cdStatus.textContent = '🔔 倒计时结束！';
+                    cdStartBtn.disabled = false;
+                    cdStopBtn.disabled = true;
+                    playAlert();
+                    showToast('⏰ 倒计时结束！');
+                    document.title = '三合一计时器 - xiongdaa';
+                }
+                return;
+            }
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const secs = Math.floor((diff % (1000 * 60)) / 1000);
+            cdDays.textContent = String(days).padStart(2, '0');
+            cdHours.textContent = String(hours).padStart(2, '0');
+            cdMinutes.textContent = String(mins).padStart(2, '0');
+            cdSeconds.textContent = String(secs).padStart(2, '0');
+            document.title = `${String(days).padStart(2,'0')}:${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')} - 计时器`;
+        }
+
+        function cdTick() {
+            cdUpdateDisplay();
+        }
+
+        function cdStart() {
+            if (cdRunning) return;
+            const val = cdTargetDatetime.value;
+            if (!val) { showToast('请设置目标时间'); return; }
+            cdTargetTime = new Date(val).getTime();
+            const now = Date.now();
+            if (cdTargetTime <= now) {
+                showToast('目标时间必须在未来');
+                return;
+            }
+            cdRunning = true;
+            cdTimer = setInterval(cdTick, 200);
+            cdStartBtn.disabled = true;
+            cdStopBtn.disabled = false;
+            cdTargetDatetime.disabled = true;
+            cdStatus.textContent = '⏳ 倒计时进行中...';
+            showToast('⏳ 倒计时开始');
+            cdUpdateDisplay();
+        }
+
+        function cdStop() {
+            cdRunning = false;
+            clearInterval(cdTimer);
+            cdTimer = null;
+            cdStartBtn.disabled = false;
+            cdStopBtn.disabled = true;
+            cdTargetDatetime.disabled = false;
+            cdStatus.textContent = '⏸️ 已停止';
+            document.title = '三合一计时器 - xiongdaa';
+        }
+
+        cdStartBtn.addEventListener('click', cdStart);
+        cdStopBtn.addEventListener('click', cdStop);
+
+        // 快速倒计时
+        function startQuickCountdown(minutes) {
+            const now = new Date();
+            const target = new Date(now.getTime() + minutes * 60 * 1000);
+            const iso = target.toISOString().slice(0, 16);
+            cdTargetDatetime.value = iso;
+            cdStart();
+        }
+
+        document.querySelectorAll('.quick-presets button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const mins = parseInt(this.dataset.minutes);
+                startQuickCountdown(mins);
+            });
+        });
+
+        cdQuickGoBtn.addEventListener('click', function() {
+            const mins = parseInt(cdMinutesInput.value);
+            if (isNaN(mins) || mins < 1) { showToast('请输入有效分钟数'); return; }
+            startQuickCountdown(mins);
+        });
+
+        // 当用户手动输入 datetime-local 时，如果倒计时没在运行，更新显示
+        cdTargetDatetime.addEventListener('change', function() {
+            if (cdRunning) return;
+            const val = this.value;
+            if (!val) return;
+            const t = new Date(val).getTime();
+            const now = Date.now();
+            if (t > now) {
+                cdTargetTime = t;
+                cdUpdateDisplay();
+                cdStatus.textContent = '⏳ 已设置目标时间，点击「开始」';
+            } else {
+                cdStatus.textContent = '⚠️ 目标时间必须在未来';
+            }
+        });
+
+        // 初始化倒计时显示
+        cdTargetTime = new Date(cdTargetDatetime.value).getTime();
+        cdUpdateDisplay();
+
+        // ---------- 清理定时器（页面关闭时） ----------
+        window.addEventListener('beforeunload', function() {
+            if (pomoTimer) clearInterval(pomoTimer);
+            if (swTimer) clearInterval(swTimer);
+            if (cdTimer) clearInterval(cdTimer);
+        });
+
+    });
+    </script>
+</body>
+</html>

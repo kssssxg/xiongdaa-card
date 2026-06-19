@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="CSP" content="upgrade-insecure-requests">
+    <title>Unicode 查询 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .uni-mode-switch { display: flex; gap: 10px; margin-bottom: 20px; }
+        .uni-mode-switch button {
+            flex: 1; padding: 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+            background: rgba(255,255,255,0.05); color: var(--text-muted); cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+        }
+        .uni-mode-switch button.active { background: rgba(165,180,252,0.2); color: #fff; border-color: var(--theme-accent); }
+        .uni-mode-switch button:hover:not(.active) { background: rgba(255,255,255,0.1); }
+        .uni-result { margin-top: 15px; }
+        .uni-detail { display: flex; align-items: center; gap: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 10px; }
+        .uni-detail .char { font-size: 3rem; min-width: 60px; text-align: center; }
+        .uni-detail .info { flex: 1; }
+        .uni-detail .info div { margin: 3px 0; font-size: 0.85rem; }
+        .uni-detail .info .label { color: var(--text-muted); font-size: 0.75rem; }
+        .uni-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        .uni-table th { background: rgba(255,255,255,0.08); padding: 8px 12px; text-align: left; color: var(--text-muted); font-weight: 500; }
+        .uni-table td { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: monospace; }
+        .uni-table tr:hover td { background: rgba(255,255,255,0.03); }
+        .uni-char-display { font-size: 1.4rem; font-family: 'Noto Sans SC', sans-serif; }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="index.html" class="back-home-btn" title="返回工具首页"><i class="fas fa-arrow-left"></i></a>
+
+    <div id="toast"><i class="fas fa-info-circle" style="color: #a5b4fc;"></i><span id="toast-msg">提示信息</span></div>
+
+    <div class="glass-card tool-card">
+        <h1><i class="fas fa-font"></i> Unicode 查询</h1>
+        <div class="tool-subtitle">字符与 Unicode 码点互查，支持 Emoji</div>
+
+        <div class="uni-mode-switch">
+            <button id="uniCharMode" class="active" onclick="setUniMode('char')"><i class="fas fa-font"></i> 字符 → 码点</button>
+            <button id="uniCodeMode" onclick="setUniMode('code')"><i class="fas fa-hashtag"></i> 码点 → 字符</button>
+        </div>
+
+        <!-- 字符 → 码点 -->
+        <div id="uniCharPanel">
+            <div class="tool-label"><i class="fas fa-pencil-alt"></i> 输入字符（支持多个）</div>
+            <div class="tool-row">
+                <input type="text" id="uniCharInput" placeholder="输入要查询的字符，如：你好世界🌍" style="flex:1;min-width:0;">
+                <button class="tool-btn primary" onclick="charToUnicode()"><i class="fas fa-search"></i> 查询</button>
+            </div>
+            <div id="uniCharResult" class="uni-result"></div>
+        </div>
+
+        <!-- 码点 → 字符 -->
+        <div id="uniCodePanel" style="display:none;">
+            <div class="tool-label"><i class="fas fa-hashtag"></i> 输入 Unicode 码点（支持多个，逗号或空格分隔）</div>
+            <div class="tool-row">
+                <input type="text" id="uniCodeInput" placeholder="例如：U+4E2D, U+56FD 或 20013, 22269" style="flex:1;min-width:0;">
+                <button class="tool-btn primary" onclick="unicodeToChar()"><i class="fas fa-search"></i> 查询</button>
+            </div>
+            <div id="uniCodeResult" class="uni-result"></div>
+        </div>
+
+        <!-- 快速参考 -->
+        <div class="tool-label" style="margin-top:25px;"><i class="fas fa-book"></i> 常用字符参考</div>
+        <table class="uni-table">
+            <thead><tr><th>字符</th><th>名称</th><th>十进制</th><th>十六进制</th></tr></thead>
+            <tbody>
+                <tr><td class="uni-char-display">😀</td><td> grinning face</td><td>128512</td><td>U+1F600</td></tr>
+                <tr><td class="uni-char-display">❤️</td><td> red heart</td><td>10084</td><td>U+2764</td></tr>
+                <tr><td class="uni-char-display">中</td><td>CJK 统一表意文字</td><td>20013</td><td>U+4E2D</td></tr>
+                <tr><td class="uni-char-display">国</td><td>CJK 统一表意文字</td><td>22269</td><td>U+56FD</td></tr>
+                <tr><td class="uni-char-display">A</td><td>拉丁大写字母 A</td><td>65</td><td>U+0041</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="author-credit">
+        <p>© 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        function setUniMode(mode) {
+            document.getElementById('uniCharMode').classList.toggle('active', mode === 'char');
+            document.getElementById('uniCodeMode').classList.toggle('active', mode === 'code');
+            document.getElementById('uniCharPanel').style.display = mode === 'char' ? 'block' : 'none';
+            document.getElementById('uniCodePanel').style.display = mode === 'code' ? 'block' : 'none';
+        }
+
+        function charToUnicode() {
+            const input = document.getElementById('uniCharInput').value;
+            if (!input) { showToast('请输入要查询的字符'); return; }
+            const chars = [...input]; // spread handles surrogates correctly
+            let html = '<table class="uni-table"><thead><tr><th>字符</th><th>Unicode 名称</th><th>十进制</th><th>十六进制</th><th>HTML 实体</th></tr></thead><tbody>';
+            chars.forEach(ch => {
+                const code = ch.codePointAt(0);
+                const hex = 'U+' + code.toString(16).toUpperCase().padStart(4, '0');
+                const name = getUnicodeName(code);
+                const htmlEntity = code > 0xFFFF ? `&#x${code.toString(16)};` : `&#${code};`;
+                html += `<tr><td style="font-size:1.8rem;text-align:center;">${ch}</td><td>${name}</td><td>${code}</td><td>${hex}</td><td style="font-family:monospace;">${htmlEntity}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('uniCharResult').innerHTML = html;
+            printLog('Unicode 查询', `查询 ${chars.length} 个字符`);
+        }
+
+        function unicodeToChar() {
+            const input = document.getElementById('uniCodeInput').value.trim();
+            if (!input) { showToast('请输入 Unicode 码点'); return; }
+            // 解析 U+XXXX, 0xXXXX, 十进制数
+            const parts = input.split(/[,，\s]+/);
+            let html = '<table class="uni-table"><thead><tr><th>输入</th><th>字符</th><th>名称</th></tr></thead><tbody>';
+            parts.forEach(p => {
+                p = p.trim();
+                if (!p) return;
+                let code;
+                if (p.toUpperCase().startsWith('U+')) code = parseInt(p.substring(2), 16);
+                else if (p.toLowerCase().startsWith('0x')) code = parseInt(p.substring(2), 16);
+                else code = parseInt(p);
+                if (isNaN(code) || code < 0 || code > 0x10FFFF) {
+                    html += `<tr><td>${escapeHtml(p)}</td><td colspan="2" style="color:#ff4757;">无效码点</td></tr>`;
+                    return;
+                }
+                const ch = String.fromCodePoint(code);
+                const name = getUnicodeName(code);
+                html += `<tr><td style="font-family:monospace;">${escapeHtml(p)}</td><td style="font-size:1.8rem;text-align:center;">${ch}</td><td>${name}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('uniCodeResult').innerHTML = html;
+            printLog('Unicode 反查', `查询 ${parts.length} 个码点`);
+        }
+
+        function getUnicodeName(code) {
+            // 基本区块判断
+            if (code >= 0x4E00 && code <= 0x9FFF) return 'CJK 统一表意文字';
+            if (code >= 0x3040 && code <= 0x309F) return '平假名';
+            if (code >= 0x30A0 && code <= 0x30FF) return '片假名';
+            if (code >= 0xAC00 && code <= 0xD7AF) return '韩文音节';
+            if (code >= 0x0600 && code <= 0x06FF) return '阿拉伯文';
+            if (code >= 0x0400 && code <= 0x04FF) return '西里尔文';
+            if (code >= 0x1F300 && code <= 0x1F9FF) return '杂项符号和 pictograph / Emoji';
+            if (code >= 0x2000 && code <= 0x206F) return '通用标点符号';
+            if (code >= 0x2100 && code <= 0x214F) return '类字母符号';
+            if (code >= 0x2150 && code <= 0x218F) return '数字形式';
+            if (code >= 0x2190 && code <= 0x21FF) return '箭头';
+            if (code >= 0x2200 && code <= 0x22FF) return '数学运算符';
+            if (code >= 0x2460 && code <= 0x24FF) return '带圈数字';
+            if (code >= 0x2500 && code <= 0x257F) return '制表符';
+            if (code >= 0x2580 && code <= 0x259F) return '区块元素';
+            if (code >= 0x25A0 && code <= 0x25FF) return '几何形状';
+            if (code >= 0x2600 && code <= 0x26FF) return '杂项符号';
+            if (code >= 0x2700 && code <= 0x27BF) return '装饰符号';
+            if (code >= 0xFE00 && code <= 0xFE0F) return '变体选择符';
+            if (code >= 0x200D) return '零宽连接符 / 组合标记';
+            if (code >= 0x0000 && code <= 0x007F) {
+                if (code >= 0x41 && code <= 0x5A) return '拉丁大写字母';
+                if (code >= 0x61 && code <= 0x7A) return '拉丁小写字母';
+                if (code >= 0x30 && code <= 0x39) return '数字';
+                return '基本拉丁字母 / 控制字符';
+            }
+            if (code >= 0x0080 && code <= 0x00FF) return '拉丁文补充-1';
+            if (code >= 0x0100 && code <= 0x024F) return '拉丁文扩展';
+            if (code >= 0x0250 && code <= 0x02AF) return '国际音标扩展';
+            if (code >= 0x02B0 && code <= 0x02FF) return '修饰字母';
+            if (code >= 0x0300 && code <= 0x036F) return '组合变音标记';
+            if (code >= 0x0370 && code <= 0x03FF) return '希腊文';
+            if (code >= 0x10A0 && code <= 0x10FF) return '格鲁吉亚文';
+            if (code >= 0x1100 && code <= 0x11FF) return '韩文辅音/元音';
+            if (code >= 0x1F000 && code <= 0x1F02F) return '麻将牌';
+            if (code >= 0x1F0A0 && code <= 0x1F0FF) return '扑克牌';
+            if (code >= 0x1FA00 && code <= 0x1FA6F) return '象棋符号';
+            return `U+${code.toString(16).toUpperCase().padStart(4, '0')}`;
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+        }
+
+        // Enter 键查询
+        document.getElementById('uniCharInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); charToUnicode(); }
+        });
+        document.getElementById('uniCodeInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); unicodeToChar(); }
+        });
+
+        // 点击特效
+        document.addEventListener('click', createClickEffect);
+        document.addEventListener('touchstart', function(e) {
+            const touch = e.touches[0];
+            createClickEffect({ clientX: touch.clientX, clientY: touch.clientY });
+        }, { passive: true });
+    </script>
+</body>
+</html>

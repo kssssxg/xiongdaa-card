@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="CSP" content="upgrade-insecure-requests">
+    <title>JSON 格式化 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="index.html" class="back-home-btn" title="返回工具首页"><i class="fas fa-arrow-left"></i></a>
+
+    <div id="toast"><i class="fas fa-info-circle" style="color: #a5b4fc;"></i><span id="toast-msg">提示信息</span></div>
+
+    <div class="glass-card tool-card">
+        <h1><i class="fas fa-code"></i> JSON 格式化</h1>
+        <div class="tool-subtitle">JSON 美化、压缩与校验</div>
+
+        <!-- 输入 -->
+        <div class="tool-label"><i class="fas fa-pencil-alt"></i> 输入 JSON</div>
+        <div class="tool-row">
+            <textarea id="jsonInput" placeholder='粘贴你的 JSON 字符串... 例如：{"name":"xiong","age":18}' rows="6" style="flex:1;font-size:0.85rem;"></textarea>
+        </div>
+
+        <div class="tool-actions">
+            <button class="tool-btn primary" onclick="jsonFormat()"><i class="fas fa-paint-brush"></i> 美化 (2空格)</button>
+            <button class="tool-btn" onclick="jsonFormat4()"><i class="fas fa-indent"></i> 美化 (4空格)</button>
+            <button class="tool-btn" onclick="jsonCompact()"><i class="fas fa-compress-alt"></i> 压缩</button>
+            <button class="tool-btn" onclick="jsonValidate()"><i class="fas fa-check-circle"></i> 校验</button>
+            <button class="tool-btn" onclick="clearJson()"><i class="fas fa-eraser"></i> 清空</button>
+        </div>
+
+        <!-- 结果 -->
+        <div class="tool-label"><i class="fas fa-file-alt"></i> 结果 <span style="font-size:0.75rem;color:var(--text-muted);">（点击复制）</span></div>
+        <textarea id="jsonOutput" readonly placeholder="格式化结果显示在这里..." rows="6" style="flex:1;cursor:pointer;font-size:0.85rem;" onclick="copyJsonOutput()"></textarea>
+
+        <!-- 状态 -->
+        <div id="jsonStatus" style="margin-top:10px;font-size:0.85rem;color:var(--text-muted);text-align:center;">等待输入...</div>
+
+        <!-- 示例 -->
+        <div class="tool-label" style="margin-top:20px;"><i class="fas fa-lightbulb"></i> 快捷示例</div>
+        <div class="tool-actions">
+            <button class="tool-btn" onclick="loadExample('simple')">简单对象</button>
+            <button class="tool-btn" onclick="loadExample('array')">数组</button>
+            <button class="tool-btn" onclick="loadExample('nested')">嵌套</button>
+        </div>
+    </div>
+
+    <div class="author-credit">
+        <p>© 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        function jsonFormat() { formatJson(2); }
+        function jsonFormat4() { formatJson(4); }
+
+        function formatJson(spaces) {
+            const input = document.getElementById('jsonInput').value.trim();
+            if (!input) { showToast('请输入 JSON 字符串'); return; }
+            try {
+                const parsed = JSON.parse(input);
+                const result = JSON.stringify(parsed, null, spaces);
+                document.getElementById('jsonOutput').value = result;
+                document.getElementById('jsonStatus').innerHTML = '<span style="color:#4ade80;">✓ 有效 JSON</span> | 原始长度: ' + input.length + ' | 格式化后: ' + result.length;
+                printLog('JSON 格式化', `空格: ${spaces}, 长度: ${result.length}`);
+            } catch (e) {
+                document.getElementById('jsonOutput').value = '';
+                document.getElementById('jsonStatus').innerHTML = '<span style="color:#ff4757;">✗ JSON 无效: ' + escapeHtml(e.message) + '</span>';
+                showToast('JSON 解析失败');
+                printLog('JSON 错误', e.message, true);
+            }
+        }
+
+        function jsonCompact() {
+            const input = document.getElementById('jsonInput').value.trim();
+            if (!input) { showToast('请输入 JSON 字符串'); return; }
+            try {
+                const parsed = JSON.parse(input);
+                const result = JSON.stringify(parsed);
+                document.getElementById('jsonOutput').value = result;
+                document.getElementById('jsonStatus').innerHTML = '<span style="color:#4ade80;">✓ 已压缩</span> | 原始长度: ' + input.length + ' | 压缩后: ' + result.length + ' (减少 ' + (input.length - result.length) + ' 字符)';
+            } catch (e) {
+                document.getElementById('jsonStatus').innerHTML = '<span style="color:#ff4757;">✗ JSON 无效: ' + escapeHtml(e.message) + '</span>';
+                showToast('JSON 解析失败');
+            }
+        }
+
+        function jsonValidate() {
+            const input = document.getElementById('jsonInput').value.trim();
+            if (!input) { showToast('请输入 JSON 字符串'); return; }
+            try {
+                const parsed = JSON.parse(input);
+                const type = Array.isArray(parsed) ? '数组' : typeof parsed === 'object' ? '对象' : typeof parsed;
+                const keys = typeof parsed === 'object' && parsed !== null ? (Array.isArray(parsed) ? parsed.length + ' 个元素' : Object.keys(parsed).length + ' 个键') : '-';
+                document.getElementById('jsonStatus').innerHTML = `
+                    <span style="color:#4ade80;">✓ 有效 JSON</span>
+                    | 类型: ${type}
+                    | ${keys}
+                    | 根层级: ${typeof parsed === 'object' ? '{}' : typeof parsed}
+                `;
+                document.getElementById('jsonOutput').value = '✓ JSON 格式有效';
+                showToast('JSON 有效 ✔');
+            } catch (e) {
+                const errPos = e.message.match(/position\s+(\d+)/);
+                let extra = '';
+                if (errPos) {
+                    const pos = parseInt(errPos[1]);
+                    const start = Math.max(0, pos - 20);
+                    const end = Math.min(input.length, pos + 20);
+                    extra = `\n\n出错位置附近:\n${input.substring(start, end)}\n${' '.repeat(Math.min(20, pos - start))}↑`;
+                }
+                document.getElementById('jsonOutput').value = '✗ ' + e.message + extra;
+                document.getElementById('jsonStatus').innerHTML = '<span style="color:#ff4757;">✗ JSON 无效: ' + escapeHtml(e.message) + '</span>';
+            }
+        }
+
+        function copyJsonOutput() {
+            const val = document.getElementById('jsonOutput').value;
+            if (val) copyText(val);
+            else showToast('没有内容可复制');
+        }
+
+        function clearJson() {
+            document.getElementById('jsonInput').value = '';
+            document.getElementById('jsonOutput').value = '';
+            document.getElementById('jsonStatus').textContent = '等待输入...';
+        }
+
+        function loadExample(type) {
+            const examples = {
+                simple: JSON.stringify({ name: "xiong da", age: 18, github: "kssssxg", isCool: true, website: "xiongdaa.me" }, null, 2),
+                array: JSON.stringify([
+                    { id: 1, name: "奈奈", role: "猫娘", skill: "撒娇" },
+                    { id: 2, name: "主人", role: "大佬", skill: "写代码" },
+                    { id: 3, name: "GitHub", role: "平台", skill: "托管代码" }
+                ], null, 2),
+                nested: JSON.stringify({
+                    project: "xiongdaa-card",
+                    version: "2.0",
+                    features: {
+                        sidebar: { enabled: true, position: "left" },
+                        music: { player: true, sources: ["QQ音乐", "网易云"] },
+                        background: { type: "动态", presets: ["ACG", "Bing"] }
+                    },
+                    stats: { visits: 12345, users: 678 }
+                }, null, 2)
+            };
+            document.getElementById('jsonInput').value = examples[type] || examples.simple;
+            jsonFormat();
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+        }
+
+        // Ctrl+Enter 格式化
+        document.getElementById('jsonInput').addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); jsonFormat(); }
+        });
+
+        // 点击特效
+        document.addEventListener('click', createClickEffect);
+        document.addEventListener('touchstart', function(e) {
+            const touch = e.touches[0];
+            createClickEffect({ clientX: touch.clientX, clientY: touch.clientY });
+        }, { passive: true });
+    </script>
+</body>
+</html>

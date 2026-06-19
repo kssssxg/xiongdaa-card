@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <title>游戏专区 - xiong da</title>
+    <link rel="stylesheet" href="../tools/common.css">
+    <style>
+        /* ===== 游戏首页专属样式 ===== */
+
+        /* --- 搜索框 --- */
+        .search-wrap {
+            position: relative;
+            margin-bottom: 28px;
+        }
+        .search-wrap i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            pointer-events: none;
+            transition: color 0.3s;
+        }
+        .search-wrap input {
+            width: 100%;
+            padding: 14px 16px 14px 44px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+        }
+        .search-wrap input::placeholder {
+            color: rgba(255,255,255,0.35);
+        }
+        .search-wrap input:focus {
+            border-color: var(--theme-accent);
+            background: rgba(255,255,255,0.12);
+            box-shadow: 0 0 0 3px rgba(165,180,252,0.15);
+        }
+        .search-wrap input:focus ~ i {
+            color: var(--theme-accent);
+        }
+        .search-clear {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+            background: none;
+            border: none;
+            padding: 4px;
+        }
+        .search-clear.visible {
+            opacity: 1;
+        }
+        .search-clear:hover {
+            color: #fff;
+        }
+
+        /* --- 游戏网格 3列布局 --- */
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 0;
+        }
+
+        /* --- 游戏卡片 --- */
+        .game-item {
+            position: relative;
+            padding: 26px 20px 22px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 18px;
+            text-align: center;
+            text-decoration: none;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 卡片伪背景渐变 — hover 时浮现 */
+        .game-item::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 18px;
+            background: linear-gradient(
+                135deg,
+                rgba(165,180,252,0.08) 0%,
+                rgba(165,180,252,0.02) 50%,
+                transparent 100%
+            );
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+
+        .game-item:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: var(--theme-accent);
+            transform: translateY(-5px);
+            box-shadow:
+                0 12px 35px rgba(0,0,0,0.3),
+                0 0 0 1px rgba(165,180,252,0.15);
+        }
+
+        .game-item:hover::before {
+            opacity: 1;
+        }
+
+        /* 卡片被搜索隐藏 */
+        .game-item.hidden {
+            display: none;
+        }
+
+        /* --- 图标 + 浮动动画 --- */
+        .game-item .icon {
+            position: relative;
+            z-index: 1;
+            font-size: 2.2rem;
+            color: var(--theme-accent);
+            margin-bottom: 12px;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: inline-block;
+        }
+
+        .game-item:hover .icon {
+            transform: translateY(-6px) scale(1.15);
+        }
+
+        /* --- 名称 --- */
+        .game-item .name {
+            position: relative;
+            z-index: 1;
+            font-size: 1.02rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: 0.3px;
+        }
+
+        /* --- 简短描述 --- */
+        .game-item .desc {
+            position: relative;
+            z-index: 1;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        /* --- 功能点列表 --- */
+        .game-item .features {
+            position: relative;
+            z-index: 1;
+            list-style: none;
+            padding: 0;
+            margin: 0 0 4px;
+            width: 100%;
+        }
+        .game-item .features li {
+            font-size: 0.68rem;
+            color: rgba(255,255,255,0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 2px 0;
+            line-height: 1.5;
+        }
+        .game-item .features li i {
+            font-size: 0.55rem;
+            color: var(--theme-accent);
+            opacity: 0.7;
+            width: 14px;
+            text-align: center;
+        }
+
+        /* --- "即将推出" 标签 --- */
+        .game-item .coming-soon {
+            position: relative;
+            z-index: 1;
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            background: rgba(251, 191, 36, 0.15);
+            border: 1px solid rgba(251, 191, 36, 0.25);
+            color: #fbbf24;
+            font-size: 0.65rem;
+            font-weight: 500;
+            margin-top: 6px;
+        }
+
+        /* 不可点击状态 */
+        .game-item.disabled {
+            cursor: default;
+            opacity: 0.8;
+        }
+        .game-item.disabled:hover {
+            transform: none;
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.1);
+            box-shadow: none;
+        }
+        .game-item.disabled:hover::before {
+            opacity: 0;
+        }
+
+        /* --- 右下角小箭头 --- */
+        .game-item .arrow {
+            position: absolute;
+            right: 12px;
+            bottom: 10px;
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.25);
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+
+        .game-item:hover .arrow {
+            color: var(--theme-accent);
+            transform: translate(2px, -2px);
+        }
+
+        /* --- 统计底部 --- */
+        .game-stats {
+            text-align: center;
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+        .game-stats span {
+            color: var(--theme-accent);
+            font-weight: 500;
+        }
+        .game-stats .sep {
+            color: rgba(255,255,255,0.15);
+            margin: 0 10px;
+        }
+
+        /* --- 空结果提示 --- */
+        .no-results {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            display: none;
+        }
+        .no-results i {
+            font-size: 2rem;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+        .no-results.visible {
+            display: block;
+        }
+
+        /* --- 卡片入场动画 --- */
+        .game-item {
+            animation: cardFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        .game-item:nth-child(1) { animation-delay: 0.02s; }
+        .game-item:nth-child(2) { animation-delay: 0.06s; }
+        .game-item:nth-child(3) { animation-delay: 0.10s; }
+
+        @keyframes cardFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(24px) scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 768px) {
+            .games-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+            .game-item {
+                padding: 22px 16px 18px;
+            }
+            .game-item .icon {
+                font-size: 1.8rem;
+            }
+            .game-item .name {
+                font-size: 0.92rem;
+            }
+            .game-item .features li {
+                font-size: 0.62rem;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .games-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            .game-item {
+                padding: 18px 12px 16px;
+            }
+            .game-item .icon {
+                font-size: 1.6rem;
+                margin-bottom: 8px;
+            }
+            .game-item .name {
+                font-size: 0.85rem;
+            }
+            .game-item .features li {
+                font-size: 0.58rem;
+            }
+            .game-stats {
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="../index.html" class="back-home-btn" title="返回主页">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <div id="toast">
+        <i class="fas fa-info-circle" style="color: #a5b4fc;"></i>
+        <span id="toast-msg">提示信息</span>
+    </div>
+
+    <div class="glass-card tool-card">
+        <h1><i class="fas fa-gamepad"></i> 游戏专区</h1>
+        <div class="tool-subtitle">休闲小游戏，放松一下</div>
+
+        <!-- 搜索框 -->
+        <div class="search-wrap">
+            <input type="text" id="search-input" placeholder="搜索游戏名称…" autocomplete="off">
+            <i class="fas fa-search"></i>
+            <button class="search-clear" id="search-clear" aria-label="清除搜索"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="games-grid" id="games-grid">
+            <a href="tictactoe.html" class="game-item" data-name="井字棋" data-tags="tic tac toe 三子棋 益智 双人">
+                <div class="icon"><i class="fas fa-times"></i></div>
+                <div class="name">井字棋</div>
+                <div class="desc">经典三连棋，双人对战</div>
+                <ul class="features">
+                    <li><i class="fas fa-chevron-right"></i> X / O 双人轮流下棋</li>
+                    <li><i class="fas fa-chevron-right"></i> 三连胜利检测</li>
+                    <li><i class="fas fa-chevron-right"></i> 计分板记录胜负</li>
+                </ul>
+                <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+            </a>
+
+            <a href="2048.html" class="game-item" data-name="2048" data-tags="2048 数字 合并 益智 休闲">
+                <div class="icon"><i class="fas fa-th"></i></div>
+                <div class="name">2048</div>
+                <div class="desc">方向键合并数字，冲向 2048</div>
+                <ul class="features">
+                    <li><i class="fas fa-chevron-right"></i> 键盘上下左右控制</li>
+                    <li><i class="fas fa-chevron-right"></i> 自动合并相同数字</li>
+                    <li><i class="fas fa-chevron-right"></i> 本地最高分记录</li>
+                </ul>
+                <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+            </a>
+
+            <a href="gomoku.html" class="game-item" data-name="五子棋" data-tags="gomoku 五子连珠 棋类 双人">
+                <div class="icon"><i class="fas fa-chess-board"></i></div>
+                <div class="name">五子棋</div>
+                <div class="desc">15×15 棋盘，五子连珠</div>
+                <ul class="features">
+                    <li><i class="fas fa-chevron-right"></i> 双人对战模式</li>
+                    <li><i class="fas fa-chevron-right"></i> 五子连珠判定</li>
+                    <li><i class="fas fa-chevron-right"></i> 回合历史回放</li>
+                </ul>
+                <span class="arrow"><i class="fas fa-arrow-right"></i></span>
+            </a>
+        </div>
+
+        <!-- 空结果 -->
+        <div class="no-results" id="no-results">
+            <i class="fas fa-search-minus"></i>
+            <p>未找到匹配的游戏</p>
+        </div>
+
+        <!-- 统计条 -->
+        <div class="game-stats">
+            共 <span id="game-count">4</span> 款游戏 <span class="sep">·</span> 选一款玩玩
+        </div>
+    </div>
+
+    <div class="author-credit">
+        <p>© 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="../tools/common.js"></script>
+    <script>
+        // ===== 搜索实时过滤 =====
+        (function() {
+            const input = document.getElementById('search-input');
+            const clearBtn = document.getElementById('search-clear');
+            const grid = document.getElementById('games-grid');
+            const items = Array.from(grid.querySelectorAll('.game-item'));
+            const countEl = document.getElementById('game-count');
+            const noResults = document.getElementById('no-results');
+
+            function filterCards(query) {
+                const trimmed = query.trim().toLowerCase();
+                let visibleCount = 0;
+
+                items.forEach(function(item) {
+                    const name = item.getAttribute('data-name') || '';
+                    const tags = item.getAttribute('data-tags') || '';
+                    const desc = (item.querySelector('.desc')?.textContent || '');
+                    const searchable = (name + ' ' + tags + ' ' + desc).toLowerCase();
+
+                    if (!trimmed || searchable.includes(trimmed)) {
+                        item.classList.remove('hidden');
+                        visibleCount++;
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                });
+
+                countEl.textContent = visibleCount;
+
+                if (visibleCount === 0 && trimmed) {
+                    noResults.classList.add('visible');
+                } else {
+                    noResults.classList.remove('visible');
+                }
+
+                if (trimmed) {
+                    clearBtn.classList.add('visible');
+                } else {
+                    clearBtn.classList.remove('visible');
+                }
+            }
+
+            input.addEventListener('input', function() {
+                filterCards(this.value);
+            });
+
+            clearBtn.addEventListener('click', function() {
+                input.value = '';
+                input.focus();
+                filterCards('');
+            });
+
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    this.value = '';
+                    filterCards('');
+                    this.blur();
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

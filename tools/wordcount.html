@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>字数统计 · 文本分析器</title>
+<link rel="stylesheet" href="common.css">
+<style>
+/* ---- 页面特有样式 ---- */
+body {
+    background-image: url('https://img.8845.top/acg');
+    justify-content: flex-start;
+    padding-top: 80px;
+}
+
+/* 统计卡片网格 */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 14px;
+    margin: 22px 0 0;
+}
+
+.stat-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    padding: 18px 16px 16px;
+    text-align: center;
+    animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+    transition: transform 0.25s, border-color 0.25s;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--theme-accent);
+}
+
+.stat-card:nth-child(1) { animation-delay: 0.02s; }
+.stat-card:nth-child(2) { animation-delay: 0.06s; }
+.stat-card:nth-child(3) { animation-delay: 0.10s; }
+.stat-card:nth-child(4) { animation-delay: 0.14s; }
+.stat-card:nth-child(5) { animation-delay: 0.18s; }
+.stat-card:nth-child(6) { animation-delay: 0.22s; }
+.stat-card:nth-child(7) { animation-delay: 0.26s; }
+.stat-card:nth-child(8) { animation-delay: 0.30s; }
+.stat-card:nth-child(9) { animation-delay: 0.34s; }
+
+.stat-icon {
+    font-size: 1.5rem;
+    margin-bottom: 6px;
+    color: var(--theme-accent);
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+.stat-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* TOP10 特殊 */
+.top10-card {
+    grid-column: span 2;
+}
+
+.top10-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 10px;
+    margin-top: 10px;
+}
+
+.top10-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.82rem;
+    background: rgba(255,255,255,0.06);
+    padding: 3px 10px 3px 8px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.top10-rank {
+    color: var(--theme-accent);
+    font-weight: 700;
+    font-size: 0.7rem;
+    min-width: 16px;
+    text-align: center;
+}
+
+.top10-char {
+    font-weight: 600;
+}
+
+.top10-count {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+
+/* 文本输入区 */
+#text-input {
+    width: 100%;
+    min-height: 220px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #fff;
+    padding: 18px 20px;
+    border-radius: 16px;
+    outline: none;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    resize: vertical;
+    transition: all 0.3s;
+    font-family: 'Noto Sans SC', 'PingFang SC', sans-serif;
+}
+
+#text-input:focus {
+    border-color: var(--theme-accent);
+    background: rgba(255,255,255,0.10);
+}
+
+#text-input::placeholder {
+    color: rgba(255,255,255,0.3);
+}
+
+.textarea-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.toolbar-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.10);
+    color: var(--text-muted);
+    padding: 8px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.toolbar-btn:hover {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border-color: var(--theme-accent);
+}
+
+.toolbar-btn i {
+    font-size: 0.85rem;
+}
+
+/* 标题区域 */
+.tool-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 8px;
+}
+
+.tool-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+/* 空状态提示 */
+.empty-hint {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 30px 0 10px;
+    opacity: 0.6;
+}
+
+/* 阅读时间说明 */
+.reading-note {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* small screens */
+@media (max-width: 560px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .top10-card {
+        grid-column: span 2;
+    }
+    .stat-value { font-size: 1.4rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="overlay"></div>
+
+<!-- 视频背景占位 -->
+<video id="bg-video" muted loop playsinline></video>
+<div id="bg-video-overlay"></div>
+
+<!-- Toast -->
+<div id="toast"><span id="toast-msg"></span></div>
+
+<!-- 返回按钮 -->
+<a href="../index.html" class="back-home-btn" title="返回主页">
+    <i class="fas fa-arrow-left"></i>
+</a>
+
+<!-- 主卡片 -->
+<div class="glass-card tool-card" style="max-width:800px;">
+    <div class="tool-header">
+        <h1><i class="fas fa-calculator" style="color:var(--theme-accent);margin-right:8px;"></i>字数统计</h1>
+    </div>
+    <p class="tool-subtitle">实时文本分析 · 中英文混排统计 · 阅读时间估算</p>
+
+    <!-- 输入区 -->
+    <textarea id="text-input" placeholder="在此输入或粘贴文本，实时统计…" spellcheck="false"></textarea>
+
+    <div class="textarea-toolbar">
+        <button class="toolbar-btn" onclick="clearText()"><i class="fas fa-trash-alt"></i> 清空</button>
+        <button class="toolbar-btn" onclick="pasteText()"><i class="fas fa-paste"></i> 粘贴</button>
+        <button class="toolbar-btn" onclick="loadSample()"><i class="fas fa-file-alt"></i> 示例文本</button>
+    </div>
+
+    <!-- 统计卡片网格 -->
+    <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-font"></i></div>
+            <div class="stat-value" id="stat-words">0</div>
+            <div class="stat-label">字数</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-text-height"></i></div>
+            <div class="stat-value" id="stat-chars">0</div>
+            <div class="stat-label">字符数（含空格）</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-text-width"></i></div>
+            <div class="stat-value" id="stat-chars-nospace">0</div>
+            <div class="stat-label">字符数（无空格）</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-paragraph"></i></div>
+            <div class="stat-value" id="stat-paragraphs">0</div>
+            <div class="stat-label">段落数</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-grip-lines"></i></div>
+            <div class="stat-value" id="stat-lines">0</div>
+            <div class="stat-label">行数</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-language"></i></div>
+            <div class="stat-value" id="stat-cn-words">0</div>
+            <div class="stat-label">中文词数</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-spell-check"></i></div>
+            <div class="stat-value" id="stat-en-words">0</div>
+            <div class="stat-label">英文词数</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+            <div class="stat-value" id="stat-read-time">--</div>
+            <div class="stat-label">阅读时间</div>
+            <div class="reading-note">约 300 字/分钟</div>
+        </div>
+        <div class="stat-card top10-card">
+            <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+            <div class="stat-label" style="margin:0 0 2px;font-size:0.85rem;">最常出现字词 TOP10</div>
+            <div class="top10-list" id="top10-list">
+                <span style="color:var(--text-muted);font-size:0.8rem;">输入文本后自动显示</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 空状态提示 -->
+    <div class="empty-hint" id="empty-hint">
+        <i class="fas fa-edit"></i> 在上方输入文本，实时统计即刻呈现
+    </div>
+</div>
+
+<footer class="author-credit">
+    <p>✍️ 字数统计 · 文本分析器 &nbsp;|&nbsp; <a href="../index.html">返回主页</a></p>
+</footer>
+
+<script src="common.js"></script>
+<script>
+// ==================== 字数统计核心 ====================
+
+const inputEl = document.getElementById('text-input');
+const statsGrid = document.getElementById('stats-grid');
+const emptyHint = document.getElementById('empty-hint');
+
+// DOM 引用
+const elWords          = document.getElementById('stat-words');
+const elChars          = document.getElementById('stat-chars');
+const elCharsNoSpace   = document.getElementById('stat-chars-nospace');
+const elParagraphs     = document.getElementById('stat-paragraphs');
+const elLines          = document.getElementById('stat-lines');
+const elCnWords        = document.getElementById('stat-cn-words');
+const elEnWords        = document.getElementById('stat-en-words');
+const elReadTime       = document.getElementById('stat-read-time');
+const elTop10          = document.getElementById('top10-list');
+
+/** 判断是否为中文字符 */
+function isChineseChar(ch) {
+    return /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/.test(ch);
+}
+
+/** 判断是否为英文字母 */
+function isEnglishChar(ch) {
+    return /[a-zA-Z]/.test(ch);
+}
+
+/** 获取中文词数：连续中文字符算一个词 */
+function countChineseWords(text) {
+    const matches = text.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]+/g);
+    return matches ? matches.length : 0;
+}
+
+/** 获取英文词数：连续英文字母组成的单词 */
+function countEnglishWords(text) {
+    const matches = text.match(/[a-zA-Z]+(?:['-][a-zA-Z]+)*/g);
+    return matches ? matches.length : 0;
+}
+
+/** 获取 TOP10 高频字词 */
+function getTop10(text) {
+    // 只保留中英文和数字
+    const cleaned = text.replace(/[^\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaffa-zA-Z0-9]/g, '');
+    if (!cleaned) return [];
+
+    const freq = {};
+    // 对每个字符统计（中文单字 + 英文+数字按单字符统计）
+    for (const ch of cleaned) {
+        freq[ch] = (freq[ch] || 0) + 1;
+    }
+
+    // 同时也统计英文单词（完整词频，更高优先级展示）
+    const enWords = text.match(/[a-zA-Z]+(?:['-][a-zA-Z]+)*/g);
+    if (enWords) {
+        for (const w of enWords) {
+            const lower = w.toLowerCase();
+            freq[lower] = (freq[lower] || 0) + 1;
+        }
+    }
+
+    return Object.entries(freq)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+}
+
+/** 估算阅读时间 */
+function estimateReadTime(text) {
+    const trimmed = text.trim();
+    if (!trimmed) return { minutes: 0, seconds: 0, display: '--' };
+    // 统计总字符数（中文+英文单词折算）
+    const cnChars = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g) || []).length;
+    const enWords = countEnglishWords(text);
+    // 中文阅读速度 ~300 字/分钟，英文 ~200 词/分钟
+    // 加权折算：1 英文词 ≈ 2 中文字
+    const totalWeight = cnChars + enWords * 2;
+    const minutes = totalWeight / 300;
+    if (minutes < 1) {
+        const secs = Math.round(minutes * 60);
+        return { minutes: 0, seconds: secs, display: secs < 60 ? `${secs} 秒` : '不足 1 分钟' };
+    }
+    const wholeMin = Math.floor(minutes);
+    const remainderSec = Math.round((minutes - wholeMin) * 60);
+    const display = remainderSec > 0 ? `${wholeMin} 分 ${remainderSec} 秒` : `${wholeMin} 分钟`;
+    return { minutes, seconds: Math.round(minutes * 60), display };
+}
+
+/** 核心统计函数 */
+function analyzeText(text) {
+    const trimmed = text || '';
+
+    // --- 字数 ---
+    // 字数 = 以空白分隔的"词"数量 + 中文连续串分别计数
+    const words = trimmed.trim() ? trimmed.trim().split(/\s+/).filter(w => w.length > 0) : [];
+    // 更精确的字数：中文连续块 + 英文单词 + 其他非空片段
+    let wordCount = 0;
+    if (trimmed.trim()) {
+        const cnBlocks = trimmed.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]+/g);
+        wordCount += cnBlocks ? cnBlocks.reduce((sum, b) => sum + b.length, 0) : 0;
+        const nonCn = trimmed.replace(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]+/g, ' ').trim();
+        if (nonCn) {
+            wordCount += nonCn.split(/\s+/).filter(w => w.length > 0).length;
+        }
+    }
+
+    // --- 字符数 ---
+    const charCount = trimmed.length;
+    const charNoSpace = trimmed.replace(/\s/g, '').length;
+
+    // --- 段落数 ---
+    const paragraphs = trimmed.trim() ? trimmed.split(/\n+/).filter(p => p.trim().length > 0).length : 0;
+
+    // --- 行数 ---
+    const lines = trimmed.length > 0 ? trimmed.split(/\n/).length : 0;
+
+    // --- 中文词数 ---
+    const cnWords = countChineseWords(trimmed);
+
+    // --- 英文词数 ---
+    const enWords = countEnglishWords(trimmed);
+
+    // --- 阅读时间 ---
+    const readTime = estimateReadTime(trimmed);
+
+    // --- TOP10 ---
+    const top10 = getTop10(trimmed);
+
+    // 更新 DOM
+    elWords.textContent        = wordCount.toLocaleString();
+    elChars.textContent        = charCount.toLocaleString();
+    elCharsNoSpace.textContent = charNoSpace.toLocaleString();
+    elParagraphs.textContent   = paragraphs.toLocaleString();
+    elLines.textContent        = lines.toLocaleString();
+    elCnWords.textContent      = cnWords.toLocaleString();
+    elEnWords.textContent      = enWords.toLocaleString();
+    elReadTime.textContent     = readTime.display;
+
+    // 更新 TOP10
+    if (top10.length === 0) {
+        elTop10.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem;">暂无数据</span>';
+    } else {
+        elTop10.innerHTML = top10.map((item, idx) => {
+            const rank = idx + 1;
+            const medalIcon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+            return `<div class="top10-item">
+                <span class="top10-rank">${medalIcon || `#${rank}`}</span>
+                <span class="top10-char">${item[0]}</span>
+                <span class="top10-count">${item[1]}次</span>
+            </div>`;
+        }).join('');
+    }
+
+    // 空状态提示
+    emptyHint.style.display = trimmed.trim() ? 'none' : 'block';
+}
+
+// ==================== 事件绑定 ====================
+
+// 实时输入统计
+inputEl.addEventListener('input', function() {
+    analyzeText(this.value);
+});
+
+// 清空
+function clearText() {
+    inputEl.value = '';
+    analyzeText('');
+    inputEl.focus();
+}
+
+// 粘贴
+async function pasteText() {
+    try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+            inputEl.value = text;
+            analyzeText(text);
+            showToast('已粘贴内容');
+        } else {
+            showToast('剪贴板为空');
+        }
+    } catch (e) {
+        // 降级
+        inputEl.focus();
+        document.execCommand('paste');
+        // execCommand 后手动触发分析
+        setTimeout(() => analyzeText(inputEl.value), 50);
+    }
+}
+
+// 示例文本
+function loadSample() {
+    inputEl.value = `在广袤的宇宙中，有一颗蓝色的星球——地球。这里生活着数十亿的人类，他们创造着文明，书写着历史。从古老的甲骨文到现代的互联网，从屈原的《离骚》到张若虚的《春江花月夜》，中华文明如同一条奔流不息的长河，穿越了五千年的时光。
+
+Technology has transformed the way we live, work, and communicate. From the invention of the wheel to the rise of artificial intelligence, human innovation never stops. The internet connects billions of people across the globe, enabling instant communication and collaboration.
+
+生活不止眼前的苟且，还有诗和远方的田野。在这个快节奏的时代，我们常常需要停下脚步，去感受生活中的美好。一杯清茶，一本好书，一段宁静的时光，都是心灵最好的慰藉。
+
+Machine learning and deep learning are revolutionizing industries. Healthcare, finance, transportation, and entertainment are all being reshaped by intelligent algorithms that can analyze vast amounts of data and make predictions with remarkable accuracy.
+
+海纳百川，有容乃大。壁立千仞，无欲则刚。这些古老的智慧至今仍然闪耀着光芒，指引着我们前行的方向。无论是个人修养还是社会治理，包容与坚持都是不可或缺的品质。
+
+The future belongs to those who believe in the beauty of their dreams. Eleanor Roosevelt once said, "The future belongs to those who believe in the beauty of their dreams." This timeless wisdom reminds us that vision and perseverance are the keys to success.`;
+    analyzeText(inputEl.value);
+    showToast('已加载示例文本');
+}
+
+// 键盘快捷键：Ctrl+Delete 清空
+inputEl.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'Delete') {
+        e.preventDefault();
+        clearText();
+    }
+});
+
+// ==================== 初始化 ====================
+analyzeText('');
+
+// 额外：当 common.js 的 DOMContentLoaded 触发后，确保我们的统计也重新计算一次
+document.addEventListener('DOMContentLoaded', function() {
+    analyzeText(inputEl.value);
+    // 点击特效增强
+    document.addEventListener('click', function(e) {
+        if (typeof createClickEffect === 'function' && !e.target.closest('.toolbar-btn') && !e.target.closest('.back-home-btn')) {
+            createClickEffect(e);
+        }
+    });
+});
+</script>
+</body>
+</html>

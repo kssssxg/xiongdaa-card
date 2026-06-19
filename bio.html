@@ -1,0 +1,501 @@
+1|<!DOCTYPE html>
+2|<html lang="zh-CN">
+3|<head>
+4|    <meta charset="UTF-8">
+5|    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+6|    <meta http-equiv="CSP" content="upgrade-insecure-requests">
+7|    <title>作者生平 - xiong da</title>
+8|    <link rel="stylesheet" href="tools/common.css">
+9|    <style>
+10|        /* === 生平页面专用样式 === */
+11|        .bio-wrap {
+12|            width: 100%; max-width: 780px; margin: 0 auto; padding: 20px 0;
+13|            position: relative; z-index: 10; min-height: 100vh;
+14|            display: flex; flex-direction: column;
+15|        }
+16|
+17|        /* --- 文档头 --- */
+18|        .bio-hero {
+19|            background: var(--glass-bg);
+20|            backdrop-filter: blur(24px) saturate(150%);
+21|            -webkit-backdrop-filter: blur(24px) saturate(150%);
+22|            border: 1px solid var(--glass-border);
+23|            border-radius: 24px; box-shadow: var(--glass-shadow);
+24|            padding: 50px 40px 35px; text-align: center;
+25|            position: relative; overflow: hidden;
+26|            animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+27|        }
+28|        .bio-hero::before {
+29|            content: ''; position: absolute; top: -60px; right: -60px;
+30|            width: 180px; height: 180px; border-radius: 50%;
+31|            background: radial-gradient(circle, rgba(165,180,252,0.08) 0%, transparent 70%);
+32|        }
+33|        .bio-hero-avatar {
+34|            width: 90px; height: 90px; border-radius: 50%; margin: 0 auto 16px;
+35|            border: 3px solid var(--glass-border); object-fit: cover;
+36|            display: block; box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+37|            transition: transform 0.5s;
+38|        }
+39|        .bio-hero-avatar:hover { transform: rotate(360deg); }
+40|        .bio-hero-name { font-size: 2rem; font-weight: 700; letter-spacing: 3px; }
+41|        .bio-hero-aka { font-size: 0.9rem; color: var(--text-muted); margin-top: 4px; }
+42|        .bio-hero-aka::before { content: '『'; }
+43|        .bio-hero-aka::after { content: '』'; }
+44|        .bio-hero-occupation {
+45|            font-size: 0.9rem; color: var(--theme-accent); margin-top: 8px;
+46|            opacity: 0.8;
+47|        }
+48|        .bio-hero-motto {
+49|            margin-top: 16px; display: inline-block;
+50|            padding: 8px 24px; border-radius: 50px;
+51|            background: rgba(165,180,252,0.1);
+52|            border: 1px solid rgba(165,180,252,0.2);
+53|            font-size: 0.9rem; color: var(--theme-accent);
+54|        }
+55|        .bio-hero-meta {
+56|            margin-top: 16px; display: flex; justify-content: center; gap: 20px;
+57|            flex-wrap: wrap; font-size: 0.8rem; color: var(--text-muted);
+58|        }
+59|        .bio-hero-meta span { display: flex; align-items: center; gap: 5px; }
+60|        .bio-hero-meta i { color: var(--theme-accent); width: 14px; }
+61|
+62|        /* --- 文档正文 --- */
+63|        .bio-doc {
+64|            margin-top: 20px;
+65|            background: var(--glass-bg);
+66|            backdrop-filter: blur(24px) saturate(150%);
+67|            -webkit-backdrop-filter: blur(24px) saturate(150%);
+68|            border: 1px solid var(--glass-border);
+69|            border-radius: 24px; box-shadow: var(--glass-shadow);
+70|            padding: 40px;
+71|            animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+72|            animation-delay: 0.1s; opacity: 0;
+73|        }
+74|
+75|        /* --- 区块标题（像 Markdown 的 ##） --- */
+76|        .bio-section {
+77|            margin-top: 36px; padding-top: 32px;
+78|            border-top: 1px solid rgba(255,255,255,0.06);
+79|        }
+80|        .bio-section:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+81|
+82|        .bio-h2 {
+83|            font-size: 1.15rem; font-weight: 600; margin-bottom: 18px;
+84|            display: flex; align-items: center; gap: 10px;
+85|            padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06);
+86|        }
+87|        .bio-h2 i { color: var(--theme-accent); font-size: 1rem; width: 22px; text-align: center; }
+88|        .bio-h2 .h2-extra {
+89|            margin-left: auto; font-size: 0.7rem; font-weight: 400;
+90|            color: var(--text-muted); font-family: monospace;
+91|        }
+92|
+93|        /* --- 段落（像 Markdown 的正文） --- */
+94|        .bio-p {
+95|            font-size: 0.92rem; line-height: 1.8; color: rgba(255,255,255,0.8);
+96|        }
+97|
+98|        /* --- 引用块（像 Markdown 的 >） --- */
+99|        .bio-blockquote {
+100|            margin: 20px 0; padding: 16px 20px 16px 24px;
+101|            background: rgba(0,0,0,0.12);
+102|            border-left: 3px solid var(--theme-accent);
+103|            border-radius: 0 12px 12px 0;
+104|            font-size: 0.92rem; line-height: 1.7;
+105|            color: rgba(255,255,255,0.75); font-style: italic;
+106|            position: relative;
+107|        }
+108|        .bio-blockquote i.fa-quote-left {
+109|            position: absolute; top: 12px; left: 8px;
+110|            font-size: 1.2rem; color: var(--theme-accent); opacity: 0.3;
+111|        }
+112|
+113|        /* --- 内联代码（像 Markdown 的 `code`） --- */
+114|        .bio-code {
+115|            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+116|            background: rgba(255,255,255,0.08); padding: 1px 6px;
+117|            border-radius: 4px; font-size: 0.82rem; color: var(--theme-accent);
+118|        }
+119|
+120|        /* --- 分割线（像 Markdown 的 ---） --- */
+121|        .bio-hr {
+122|            border: none; height: 1px; background: rgba(255,255,255,0.06);
+123|            margin: 32px 0;
+124|        }
+125|
+126|        /* --- 无序列表（像 Markdown 的 -） --- */
+127|        .bio-ul { list-style: none; padding: 0; margin: 0; }
+128|        .bio-ul li {
+129|            padding: 4px 0 4px 20px; position: relative;
+130|            font-size: 0.88rem; color: rgba(255,255,255,0.75); line-height: 1.6;
+131|        }
+132|        .bio-ul li::before {
+133|            content: ''; position: absolute; left: 0; top: 13px;
+134|            width: 6px; height: 6px; border-radius: 50%;
+135|            background: var(--theme-accent); opacity: 0.4;
+136|        }
+137|
+138|        /* --- 技能条 --- */
+139|        .bio-skills { display: flex; flex-direction: column; gap: 12px; }
+140|        .bio-skill-row {
+141|            display: flex; align-items: center; gap: 12px;
+142|        }
+143|        .bio-skill-row .icon {
+144|            width: 28px; text-align: center; color: var(--theme-accent); font-size: 0.9rem;
+145|        }
+146|        .bio-skill-row .name {
+147|            width: 120px; font-size: 0.85rem; font-weight: 500;
+148|            flex-shrink: 0;
+149|        }
+150|        .bio-skill-row .bar {
+151|            flex: 1; height: 7px; background: rgba(255,255,255,0.06);
+152|            border-radius: 4px; overflow: hidden;
+153|        }
+154|        .bio-skill-row .bar .fill {
+155|            height: 100%; border-radius: 4px;
+156|            background: linear-gradient(90deg, var(--theme-accent), #818cf8, #6366f1);
+157|            width: 0; transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+158|        }
+159|        .bio-skill-row .level {
+160|            width: 40px; text-align: right; font-size: 0.75rem;
+161|            color: var(--text-muted); font-family: monospace;
+162|        }
+163|
+164|        /* --- 时间线（竖式） --- */
+165|        .bio-timeline { position: relative; padding: 8px 0; }
+166|        .bio-timeline::before {
+167|            content: ''; position: absolute; left: 14px; top: 0; bottom: 0;
+168|            width: 2px; background: linear-gradient(to bottom, var(--theme-accent), transparent);
+169|            opacity: 0.25;
+170|        }
+171|        .bio-tl-item {
+172|            position: relative; padding: 0 0 24px 44px;
+173|        }
+174|        .bio-tl-item:last-child { padding-bottom: 0; }
+175|        .bio-tl-item::before {
+176|            content: ''; position: absolute; left: 9px; top: 6px;
+177|            width: 12px; height: 12px; border-radius: 50%;
+178|            background: var(--theme-accent);
+179|            border: 3px solid rgba(15,15,20,0.8);
+180|            box-shadow: 0 0 0 2px rgba(165,180,252,0.2);
+181|        }
+182|        .bio-tl-item .year {
+183|            font-size: 0.8rem; font-weight: 700; color: var(--theme-accent);
+184|            font-family: monospace; margin-bottom: 2px;
+185|        }
+186|        .bio-tl-item .event {
+187|            font-size: 0.9rem; line-height: 1.5; color: rgba(255,255,255,0.8);
+188|        }
+189|
+190|        /* --- 项目卡片（横向网格） --- */
+191|        .bio-projects { display: grid; gap: 14px; }
+192|        .bio-project-card {
+193|            padding: 18px 20px;
+194|            background: rgba(255,255,255,0.03);
+195|            border: 1px solid rgba(255,255,255,0.08);
+196|            border-radius: 16px; transition: all 0.25s;
+197|        }
+198|        .bio-project-card:hover {
+199|            background: rgba(255,255,255,0.07);
+200|            border-color: var(--theme-accent);
+201|            transform: translateY(-2px);
+202|            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+203|        }
+204|        .bio-project-card .p-name {
+205|            font-size: 0.95rem; font-weight: 600;
+206|        }
+207|        .bio-project-card .p-name a {
+208|            color: var(--text-main); text-decoration: none;
+209|        }
+210|        .bio-project-card .p-name a:hover { color: var(--theme-accent); }
+211|        .bio-project-card .p-name i { font-size: 0.75rem; margin-right: 6px; color: var(--theme-accent); }
+212|        .bio-project-card .p-desc {
+213|            font-size: 0.83rem; color: var(--text-muted); margin-top: 6px; line-height: 1.5;
+214|        }
+215|        .bio-project-card .p-lang {
+216|            display: inline-block; margin-top: 8px;
+217|            font-size: 0.7rem; padding: 2px 10px; border-radius: 50px;
+218|            background: rgba(165,180,252,0.12);
+219|            border: 1px solid rgba(165,180,252,0.15);
+220|            color: var(--theme-accent);
+221|        }
+222|
+223|        /* --- 标签云 --- */
+224|        .bio-tags {
+225|            display: flex; flex-wrap: wrap; gap: 8px;
+226|        }
+227|        .bio-tag {
+228|            padding: 5px 14px; font-size: 0.82rem;
+229|            border-radius: 50px;
+230|            background: rgba(255,255,255,0.05);
+231|            border: 1px solid rgba(255,255,255,0.1);
+232|            color: rgba(255,255,255,0.7);
+233|            transition: all 0.2s; cursor: default;
+234|        }
+235|        .bio-tag:hover {
+236|            background: rgba(165,180,252,0.1);
+237|            border-color: var(--theme-accent);
+238|            color: var(--theme-accent);
+239|        }
+240|
+241|        /* --- 联系链接 --- */
+242|        .bio-contact {
+243|            display: flex; flex-wrap: wrap; gap: 10px;
+244|        }
+245|        .bio-contact a {
+246|            display: inline-flex; align-items: center; gap: 8px;
+247|            padding: 8px 18px; border-radius: 50px;
+248|            font-size: 0.85rem; text-decoration: none;
+249|            color: var(--text-main);
+250|            background: rgba(255,255,255,0.05);
+251|            border: 1px solid rgba(255,255,255,0.1);
+252|            transition: all 0.25s;
+253|        }
+254|        .bio-contact a:hover {
+255|            background: rgba(255,255,255,0.1);
+256|            border-color: var(--theme-accent);
+257|            transform: translateY(-1px);
+258|        }
+259|        .bio-contact a i { color: var(--theme-accent); width: 16px; text-align: center; }
+260|
+261|        /* --- 浮动目录（右侧锚点） --- */
+262|        .bio-toc {
+263|            position: fixed; right: 24px; top: 50%; transform: translateY(-50%);
+264|            z-index: 50; display: flex; flex-direction: column; gap: 10px;
+265|        }
+266|        .bio-toc a {
+267|            display: flex; align-items: center; gap: 10px;
+268|            text-decoration: none; color: var(--text-muted);
+269|            font-size: 0.75rem; transition: all 0.2s;
+270|            justify-content: flex-end;
+271|        }
+272|        .bio-toc a .dot {
+273|            width: 8px; height: 8px; border-radius: 50%;
+274|            background: rgba(255,255,255,0.15);
+275|            transition: all 0.2s; order: 1;
+276|        }
+277|        .bio-toc a .label {
+278|            opacity: 0; transition: all 0.2s; order: 0;
+279|        }
+280|        .bio-toc a:hover .dot { background: var(--theme-accent); transform: scale(1.3); }
+281|        .bio-toc a:hover .label { opacity: 1; }
+282|        .bio-toc a.active .dot { background: var(--theme-accent); box-shadow: 0 0 8px rgba(165,180,252,0.4); }
+283|
+284|        @media (max-width: 768px) {
+285|            .bio-hero { padding: 35px 25px 25px; }
+286|            .bio-doc { padding: 25px; }
+287|            .bio-hero-name { font-size: 1.5rem; }
+288|            .bio-skill-row .name { width: 90px; font-size: 0.8rem; }
+289|            .bio-toc { display: none; }
+290|            .bio-hero-meta { gap: 12px; font-size: 0.75rem; }
+291|        }
+292|    </style>
+293|</head>
+294|<body>
+295|    <div class="overlay"></div>
+296|    <video id="bg-video" autoplay muted loop playsinline></video>
+297|    <div id="bg-video-overlay"></div>
+298|
+299|    <a href="index.html" class="back-home-btn" title="返回主页"><i class="fas fa-arrow-left"></i></a>
+300|
+301|    <div id="toast"><i class="fas fa-info-circle" style="color: #a5b4fc;"></i><span id="toast-msg">提示信息</span></div>
+302|
+303|    <!-- 浮动目录 -->
+304|    <nav class="bio-toc" id="bioToc"></nav>
+305|
+306|    <div class="bio-wrap">
+307|        <!-- Hero 区域 -->
+308|        <header class="bio-hero" id="sec-hero">
+309|            <img class="bio-hero-avatar" id="bioAvatar" src="" alt="avatar"
+310|                 onerror="this.src='https://q1.qlogo.cn/g?b=qq&nk=YOUR_QQ_NUMBER&s=640'">
+311|            <div class="bio-hero-name" id="bioName"></div>
+312|            <div class="bio-hero-aka" id="bioAka"></div>
+313|            <div class="bio-hero-occupation" id="bioOcc"></div>
+314|            <div class="bio-hero-motto" id="bioMotto"></div>
+315|            <div class="bio-hero-meta" id="bioMeta"></div>
+316|        </header>
+317|
+318|        <!-- 文档正文 -->
+319|        <article class="bio-doc" id="bioDoc"></article>
+320|
+321|        <!-- 底部 -->
+322|        <div class="author-credit" style="margin-top:20px;">
+323|            <p>© 2026 xiong da. All rights reserved.</p>
+324|            <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+325|        </div>
+326|    </div>
+327|
+328|    <script src="tools/common.js"></script>
+329|    <script>
+330|        // ================= 从远程 API 获取生平数据 =================
+331|        let bioData = null;
+332|        const BIO_API = 'https://cros.xiongdaa.me/?url=' + encodeURIComponent('https://iappht.sslqq.cn/user/getApp.php?aid=4662');
+333|
+334|        // ================= 渲染引擎 =================
+335|        function escapeHtml(s) {
+336|            if (!s) return '';
+337|            return String(s).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+338|        }
+339|
+340|        function renderBio() {
+341|            const D = bioData;
+342|
+343|            // --- Hero ---
+344|            document.getElementById('bioAvatar').src = D.avatar || 'https://q1.qlogo.cn/g?b=qq&nk=YOUR_QQ_NUMBER&s=640';
+345|            document.getElementById('bioName').textContent = D.name || '';
+346|            document.getElementById('bioAka').textContent = D.aka || '';
+347|            document.getElementById('bioOcc').textContent = D.occupation || '';
+348|            document.getElementById('bioMotto').textContent = D.motto || '';
+349|
+350|            const meta = [];
+351|            if (D.location) meta.push(`<span><i class="fas fa-map-pin"></i> ${escapeHtml(D.location)}</span>`);
+352|            if (D.birthday) meta.push(`<span><i class="fas fa-birthday-cake"></i> ${escapeHtml(D.birthday)}</span>`);
+353|            document.getElementById('bioMeta').innerHTML = meta.join('');
+354|
+355|            // --- 文档正文 ---
+356|            const sections = [];
+357|
+358|            // 1. 简介
+359|            sections.push(`<div class="bio-section">`);
+360|            sections.push(`<div class="bio-h2"><i class="fas fa-feather-alt"></i> 简介</div>`);
+361|            sections.push(`<div class="bio-p">${escapeHtml(D.bio)}</div>`);
+362|            if (D.quote) {
+363|                sections.push(`<div class="bio-blockquote"><i class="fas fa-quote-left"></i>${escapeHtml(D.quote)}</div>`);
+364|            }
+365|            sections.push(`</div>`);
+366|
+367|            // 2. 技能栈
+368|            if (D.skills && D.skills.length) {
+369|                sections.push(`<div class="bio-section" id="sec-skills">`);
+370|                sections.push(`<div class="bio-h2"><i class="fas fa-cogs"></i> 技能栈 <span class="h2-extra">${D.skills.length} 项</span></div>`);
+371|                sections.push(`<div class="bio-skills">`);
+372|                D.skills.forEach(s => {
+373|                    sections.push(`
+374|                        <div class="bio-skill-row">
+375|                            <div class="icon"><i class="fas ${s.icon || 'fa-code'}"></i></div>
+376|                            <div class="name">${escapeHtml(s.name)}</div>
+377|                            <div class="bar"><div class="fill" data-level="${s.level}"></div></div>
+378|                            <div class="level">${s.level}%</div>
+379|                        </div>
+380|                    `);
+381|                });
+382|                sections.push(`</div></div>`);
+383|            }
+384|
+385|            // 3. 时间线
+386|            if (D.timeline && D.timeline.length) {
+387|                sections.push(`<div class="bio-section" id="sec-timeline">`);
+388|                sections.push(`<div class="bio-h2"><i class="fas fa-history"></i> 时间线 <span class="h2-extra">${D.timeline.length} 个节点</span></div>`);
+389|                sections.push(`<div class="bio-timeline">`);
+390|                D.timeline.forEach(t => {
+391|                    sections.push(`
+392|                        <div class="bio-tl-item">
+393|                            <div class="year">${escapeHtml(t.year)}</div>
+394|                            <div class="event">${escapeHtml(t.event)}</div>
+395|                        </div>
+396|                    `);
+397|                });
+398|                sections.push(`</div></div>`);
+399|            }
+400|
+401|            // 4. 项目
+402|            if (D.projects && D.projects.length) {
+403|                sections.push(`<div class="bio-section" id="sec-projects">`);
+404|                sections.push(`<div class="bio-h2"><i class="fas fa-folder-open"></i> 项目 <span class="h2-extra">${D.projects.length} 个</span></div>`);
+405|                sections.push(`<div class="bio-projects">`);
+406|                D.projects.forEach(p => {
+407|                    sections.push(`
+408|                        <div class="bio-project-card">
+409|                            <div class="p-name"><a href="${escapeHtml(p.url)}" target="_blank"><i class="fas fa-external-link-alt"></i>${escapeHtml(p.name)}</a></div>
+410|                            <div class="p-desc">${escapeHtml(p.desc)}</div>
+411|                            <span class="p-lang">${escapeHtml(p.lang)}</span>
+412|                        </div>
+413|                    `);
+414|                });
+415|                sections.push(`</div></div>`);
+416|            }
+417|
+418|            // 5. 兴趣
+419|            if (D.interests && D.interests.length) {
+420|                sections.push(`<div class="bio-section" id="sec-interests">`);
+421|                sections.push(`<div class="bio-h2"><i class="fas fa-heart"></i> 兴趣 <span class="h2-extra">${D.interests.length} 项</span></div>`);
+422|                sections.push(`<div class="bio-tags">`);
+423|                D.interests.forEach(i => {
+424|                    sections.push(`<span class="bio-tag">${escapeHtml(i)}</span>`);
+425|                });
+426|                sections.push(`</div></div>`);
+427|            }
+428|
+429|            // 6. 联系方式
+430|            if (D.contact) {
+431|                sections.push(`<div class="bio-section" id="sec-contact">`);
+432|                sections.push(`<div class="bio-h2"><i class="fas fa-address-card"></i> 联系方式</div>`);
+433|                sections.push(`<div class="bio-contact">`);
+434|                const c = D.contact;
+435|                if (c.github) sections.push(`<a href="${escapeHtml(c.github)}" target="_blank"><i class="fab fa-github"></i> GitHub</a>`);
+436|                if (c.website) sections.push(`<a href="${escapeHtml(c.website)}" target="_blank"><i class="fas fa-globe"></i> 网站</a>`);
+437|                if (c.email) sections.push(`<a href="mailto:${escapeHtml(c.email)}"><i class="fas fa-envelope"></i> 邮件</a>`);
+438|                if (c.qq) sections.push(`<a href="javascript:void(0)" onclick="copyText('${escapeHtml(c.qq)}')"><i class="fab fa-qq"></i> QQ</a>`);
+439|                if (c.wechat) sections.push(`<a href="javascript:void(0)" onclick="copyText('${escapeHtml(c.wechat)}')"><i class="fab fa-weixin"></i> 微信</a>`);
+440|                sections.push(`</div></div>`);
+441|            }
+442|
+443|            document.getElementById('bioDoc').innerHTML = sections.join('');
+444|
+445|            // --- 技能条动画 ---
+446|            setTimeout(() => {
+447|                document.querySelectorAll('.bio-skill-row .fill').forEach(el => {
+448|                    el.style.width = el.dataset.level + '%';
+449|                });
+450|            }, 300);
+451|
+452|            // --- 浮动目录 ---
+453|            buildToc();
+454|        }
+455|
+456|        // ================= 浮动目录 =================
+457|        function buildToc() {
+458|            const tocNav = document.getElementById('bioToc');
+459|            const items = [
+460|                { id: 'sec-hero', label: '顶部' },
+461|                { id: 'sec-skills', label: '技能' },
+462|                { id: 'sec-timeline', label: '时间线' },
+463|                { id: 'sec-projects', label: '项目' },
+464|                { id: 'sec-interests', label: '兴趣' },
+465|                { id: 'sec-contact', label: '联系' }
+466|            ];
+467|            tocNav.innerHTML = items.map(item => `
+468|                <a href="#${item.id}" class="toc-link" data-target="${item.id}">
+469|                    <span class="label">${item.label}</span>
+470|                    <span class="dot"></span>
+471|                </a>
+472|            `).join('');
+473|
+474|            // 滚动高亮
+475|            const links = tocNav.querySelectorAll('.toc-link');
+476|            const observer = new IntersectionObserver(entries => {
+477|                entries.forEach(entry => {
+478|                    if (entry.isIntersecting) {
+479|                        links.forEach(l => l.classList.remove('active'));
+480|                        const active = tocNav.querySelector(`[data-target="${entry.target.id}"]`);
+481|                        if (active) active.classList.add('active');
+482|                    }
+483|                });
+484|            }, { rootMargin: '-20% 0px -60% 0px' });
+485|
+486|            items.forEach(item => {
+487|                const el = document.getElementById(item.id);
+488|                if (el) observer.observe(el);
+489|            });
+490|
+491|            // 点击平滑滚动
+492|            links.forEach(a => {
+493|                a.addEventListener('click', e => {
+494|                    e.preventDefault();
+495|                    const target = document.getElementById(a.dataset.target);
+496|                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+497|                });
+498|            });
+499|        }
+500|
+501|

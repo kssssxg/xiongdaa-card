@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="CSP" content="upgrade-insecure-requests">
+    <title>Markdown 编辑器 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .md-container {
+            display: flex;
+            gap: 20px;
+            min-height: 480px;
+        }
+
+        .md-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .md-pane-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .md-pane-label i {
+            font-size: 0.85rem;
+        }
+
+        .md-pane-label .count-badge {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+        .md-pane-label .count-badge.warning { color: #f59e0b; }
+        .md-pane-label .count-badge.danger { color: #ef4444; }
+
+        /* 编辑区 */
+        .md-editor {
+            flex: 1;
+            width: 100%;
+            min-height: 420px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            outline: none;
+            font-size: 0.9rem;
+            resize: vertical;
+            transition: all 0.3s;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            line-height: 1.65;
+            tab-size: 4;
+        }
+        .md-editor:focus {
+            border-color: var(--theme-accent);
+            background: rgba(255,255,255,0.1);
+        }
+        .md-editor::placeholder { color: rgba(255,255,255,0.3); }
+
+        /* 预览区 */
+        .md-preview {
+            flex: 1;
+            min-height: 420px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 16px 20px;
+            overflow-y: auto;
+            line-height: 1.7;
+            font-size: 0.92rem;
+            color: var(--text-main);
+        }
+
+        /* 预览区 Markdown 渲染样式 */
+        .md-preview h1 { font-size: 1.6rem; font-weight: 700; margin: 0.5em 0 0.3em; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.25em; }
+        .md-preview h2 { font-size: 1.35rem; font-weight: 700; margin: 0.5em 0 0.25em; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.2em; }
+        .md-preview h3 { font-size: 1.15rem; font-weight: 600; margin: 0.4em 0 0.2em; }
+        .md-preview h4 { font-size: 1.05rem; font-weight: 600; margin: 0.35em 0 0.2em; }
+        .md-preview h5, .md-preview h6 { font-size: 0.95rem; font-weight: 600; margin: 0.3em 0 0.15em; }
+        .md-preview p { margin: 0.5em 0; }
+        .md-preview strong { color: #f0f0ff; }
+        .md-preview em { color: #d0d0f0; }
+        .md-preview a { color: #a5b4fc; text-decoration: underline; transition: color 0.2s; }
+        .md-preview a:hover { color: #c4d0ff; }
+        .md-preview img { max-width: 100%; border-radius: 8px; margin: 0.5em 0; }
+        .md-preview ul, .md-preview ol { padding-left: 1.6em; margin: 0.4em 0; }
+        .md-preview li { margin: 0.2em 0; }
+        .md-preview li > p { margin: 0.2em 0; }
+        .md-preview blockquote {
+            border-left: 3px solid var(--theme-accent);
+            padding: 8px 12px;
+            margin: 0.6em 0;
+            background: rgba(165,180,252,0.08);
+            border-radius: 0 8px 8px 0;
+            color: var(--text-muted);
+        }
+        .md-preview blockquote p { margin: 0.2em 0; }
+        .md-preview hr {
+            border: none;
+            height: 1px;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.2), transparent);
+            margin: 1.2em 0;
+        }
+        .md-preview code {
+            background: rgba(0,0,0,0.3);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            color: #f0e6ff;
+        }
+        .md-preview pre {
+            background: rgba(0,0,0,0.35);
+            padding: 14px 16px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 0.6em 0;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .md-preview pre code {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+            font-size: 0.82em;
+            color: #e0d8f0;
+        }
+        .md-preview table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0.6em 0;
+            font-size: 0.88rem;
+        }
+        .md-preview table th,
+        .md-preview table td {
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .md-preview table th {
+            background: rgba(165,180,252,0.12);
+            font-weight: 600;
+            color: #e0dcff;
+        }
+        .md-preview table tr:nth-child(even) {
+            background: rgba(255,255,255,0.03);
+        }
+        .md-preview table tr:hover {
+            background: rgba(165,180,252,0.06);
+        }
+
+        /* 工具栏 */
+        .md-toolbar {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            padding: 8px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .md-toolbar .tool-btn {
+            padding: 7px 14px;
+            font-size: 0.82rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .md-toolbar .tool-btn i {
+            font-size: 0.85rem;
+        }
+        .md-toolbar .tool-btn.active {
+            background: rgba(165,180,252,0.25);
+            border-color: var(--theme-accent);
+        }
+        .md-toolbar .toolbar-divider {
+            width: 1px;
+            background: rgba(255,255,255,0.1);
+            margin: 4px 6px;
+        }
+        .md-toolbar .toolbar-right {
+            margin-left: auto;
+            display: flex;
+            gap: 6px;
+        }
+
+        /* 提示占位区域（无内容时） */
+        .md-preview-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            min-height: 380px;
+            color: rgba(255,255,255,0.25);
+            text-align: center;
+            gap: 10px;
+        }
+        .md-preview-empty i {
+            font-size: 2.5rem;
+            opacity: 0.4;
+        }
+        .md-preview-empty span {
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            .md-container {
+                flex-direction: column;
+                min-height: auto;
+            }
+            .md-editor, .md-preview {
+                min-height: 300px;
+            }
+            .md-toolbar .toolbar-right {
+                margin-left: 0;
+                width: 100%;
+            }
+            .md-toolbar {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .md-editor, .md-preview {
+                min-height: 240px;
+            }
+            .md-toolbar .tool-btn {
+                padding: 6px 10px;
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="index.html" class="back-home-btn" title="返回工具首页"><i class="fas fa-arrow-left"></i></a>
+
+    <div id="toast"><i class="fas fa-info-circle" style="color: #a5b4fc;"></i><span id="toast-msg">提示信息</span></div>
+
+    <div class="glass-card tool-card" style="max-width: 1100px;">
+        <h1><i class="fas fa-markdown"></i> Markdown 编辑器</h1>
+        <div class="tool-subtitle">实时双栏预览 · 语法高亮 · 一键导出</div>
+
+        <!-- 工具栏 -->
+        <div class="md-toolbar">
+            <button class="tool-btn" onclick="insertMd('**', '**', '粗体文字')" title="加粗"><i class="fas fa-bold"></i> 加粗</button>
+            <button class="tool-btn" onclick="insertMd('*', '*', '斜体文字')" title="斜体"><i class="fas fa-italic"></i> 斜体</button>
+            <button class="tool-btn" onclick="insertMd('### ', '', '标题文字')" title="标题"><i class="fas fa-heading"></i> 标题</button>
+            <button class="tool-btn" onclick="insertMd('- ', '', '列表项')" title="无序列表"><i class="fas fa-list-ul"></i> 列表</button>
+            <button class="tool-btn" onclick="insertMd('> ', '', '引用内容')" title="引用"><i class="fas fa-quote-right"></i> 引用</button>
+            <button class="tool-btn" onclick="insertMd('```\n', '\n```', '代码块')" title="代码块"><i class="fas fa-code"></i> 代码块</button>
+
+            <div class="toolbar-divider"></div>
+
+            <button class="tool-btn" onclick="insertTable()" title="插入表格"><i class="fas fa-table"></i> 表格</button>
+            <button class="tool-btn" onclick="insertLink()" title="链接"><i class="fas fa-link"></i> 链接</button>
+            <button class="tool-btn" onclick="insertImage()" title="图片"><i class="fas fa-image"></i> 图片</button>
+            <button class="tool-btn" onclick="insertHr()" title="分割线"><i class="fas fa-minus"></i> 分割线</button>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-right">
+                <button class="tool-btn" onclick="clearEditor()" title="清空"><i class="fas fa-trash-alt"></i> 清空</button>
+                <button class="tool-btn" onclick="copyMarkdown()" title="复制 Markdown"><i class="fas fa-copy"></i> 复制 MD</button>
+                <button class="tool-btn primary" onclick="copyHtml()" title="复制 HTML"><i class="fas fa-code"></i> 复制 HTML</button>
+            </div>
+        </div>
+
+        <!-- 双栏编辑区域 -->
+        <div class="md-container">
+            <!-- 左侧编辑区 -->
+            <div class="md-pane">
+                <div class="md-pane-label">
+                    <i class="fas fa-pencil-alt"></i> 编辑
+                    <span class="count-badge" id="charCount">0 字符</span>
+                </div>
+                <textarea id="mdInput" class="md-editor" placeholder="在此输入 Markdown...&#10;&#10;支持：标题、粗体、斜体、列表、链接、图片、代码块、引用、表格、分割线"></textarea>
+            </div>
+
+            <!-- 右侧预览区 -->
+            <div class="md-pane">
+                <div class="md-pane-label">
+                    <i class="fas fa-eye"></i> 预览
+                </div>
+                <div class="md-preview" id="mdPreview">
+                    <div class="md-preview-empty" id="emptyHint">
+                        <i class="fas fa-markdown"></i>
+                        <span>输入 Markdown 即可实时预览</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="author-credit">
+        <p>© 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="common.js"></script>
+    <script>
+        // ========== Markdown 渲染 ==========
+        const mdInput = document.getElementById('mdInput');
+        const mdPreview = document.getElementById('mdPreview');
+        const emptyHint = document.getElementById('emptyHint');
+        const charCount = document.getElementById('charCount');
+
+        // 配置 marked
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({
+                breaks: true,
+                gfm: true,
+                headerIds: false,
+                mangle: false,
+                silent: true
+            });
+        }
+
+        function renderMd() {
+            const text = mdInput.value;
+
+            // 字符统计
+            const len = text.length;
+            const bytes = new TextEncoder().encode(text).length;
+            charCount.textContent = `${len.toLocaleString()} 字符${len !== bytes ? `（${bytes.toLocaleString()} 字节）` : ''}`;
+            charCount.classList.remove('warning', 'danger');
+            if (len > 50000) {
+                charCount.classList.add('danger');
+            } else if (len > 10000) {
+                charCount.classList.add('warning');
+            }
+
+            // 预览
+            if (!text.trim()) {
+                mdPreview.innerHTML = '<div class="md-preview-empty" id="emptyHint"><i class="fas fa-markdown"></i><span>输入 Markdown 即可实时预览</span></div>';
+                return;
+            }
+
+            try {
+                let html;
+                if (typeof marked !== 'undefined') {
+                    html = marked.parse(text);
+                } else {
+                    // 降级：简单的行内渲染
+                    html = escapeHtml(text).replace(/\n/g, '<br>');
+                }
+                mdPreview.innerHTML = html;
+            } catch (e) {
+                mdPreview.innerHTML = `<div style="color:#ef4444;padding:12px;"><i class="fas fa-exclamation-triangle"></i> 渲染出错：${escapeHtml(e.message)}</div>`;
+                printLog('Markdown 渲染错误', e.message, true);
+            }
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ========== 插入语法 ==========
+        function insertMd(before, after, placeholder) {
+            const start = mdInput.selectionStart;
+            const end = mdInput.selectionEnd;
+            const selected = mdInput.value.substring(start, end);
+            const text = selected || placeholder;
+            const replacement = before + text + after;
+
+            mdInput.value = mdInput.value.substring(0, start) + replacement + mdInput.value.substring(end);
+            // 设置光标位置
+            const cursorPos = start + before.length + (selected ? text.length : 0);
+            mdInput.selectionStart = mdInput.selectionEnd = cursorPos;
+            mdInput.focus();
+            renderMd();
+        }
+
+        function insertTable() {
+            const tableMd = '\n| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n| 单元格 | 单元格 | 单元格 |\n| 单元格 | 单元格 | 单元格 |\n';
+            const start = mdInput.selectionStart;
+            mdInput.value = mdInput.value.substring(0, start) + tableMd + mdInput.value.substring(mdInput.selectionEnd);
+            const cursorPos = start + tableMd.length;
+            mdInput.selectionStart = mdInput.selectionEnd = cursorPos;
+            mdInput.focus();
+            renderMd();
+            showToast('已插入表格');
+        }
+
+        function insertLink() {
+            const linkMd = '[链接文字](https://example.com)';
+            const start = mdInput.selectionStart;
+            const end = mdInput.selectionEnd;
+            const selected = mdInput.value.substring(start, end);
+            if (selected) {
+                mdInput.value = mdInput.value.substring(0, start) + '[' + selected + '](https://example.com)' + mdInput.value.substring(end);
+            } else {
+                mdInput.value = mdInput.value.substring(0, start) + linkMd + mdInput.value.substring(end);
+            }
+            const cursorPos = start + (selected ? 1 : 0);
+            mdInput.selectionStart = mdInput.selectionEnd = cursorPos;
+            mdInput.focus();
+            renderMd();
+            showToast('已插入链接');
+        }
+
+        function insertImage() {
+            const imgMd = '![图片描述](https://example.com/image.png)';
+            const start = mdInput.selectionStart;
+            mdInput.value = mdInput.value.substring(0, start) + imgMd + mdInput.value.substring(mdInput.selectionEnd);
+            mdInput.selectionStart = mdInput.selectionEnd = start + imgMd.length;
+            mdInput.focus();
+            renderMd();
+            showToast('已插入图片');
+        }
+
+        function insertHr() {
+            const hrMd = '\n---\n';
+            const start = mdInput.selectionStart;
+            mdInput.value = mdInput.value.substring(0, start) + hrMd + mdInput.value.substring(mdInput.selectionEnd);
+            mdInput.selectionStart = mdInput.selectionEnd = start + hrMd.length;
+            mdInput.focus();
+            renderMd();
+        }
+
+        // ========== 清空 ==========
+        function clearEditor() {
+            if (mdInput.value.trim() && !confirm('确定要清空所有内容吗？')) return;
+            mdInput.value = '';
+            renderMd();
+            showToast('已清空');
+        }
+
+        // ========== 复制 ==========
+        function copyMarkdown() {
+            const text = mdInput.value;
+            if (!text.trim()) { showToast('没有内容可复制'); return; }
+            copyText(text);
+        }
+
+        function copyHtml() {
+            const text = mdInput.value;
+            if (!text.trim()) { showToast('没有内容可复制'); return; }
+            let html;
+            try {
+                if (typeof marked !== 'undefined') {
+                    html = marked.parse(text);
+                } else {
+                    html = escapeHtml(text).replace(/\n/g, '<br>');
+                }
+            } catch (e) {
+                html = escapeHtml(text).replace(/\n/g, '<br>');
+            }
+            copyText(html);
+        }
+
+        // ========== 事件监听 ==========
+        mdInput.addEventListener('input', renderMd);
+
+        // 快捷键：Ctrl+S 不提交，只是刷新预览（已经实时）
+        mdInput.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                renderMd();
+                showToast('已刷新预览');
+            }
+            // Tab 键插入 4 空格
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = this.selectionStart;
+                this.value = this.value.substring(0, start) + '    ' + this.value.substring(this.selectionEnd);
+                this.selectionStart = this.selectionEnd = start + 4;
+                renderMd();
+            }
+        });
+
+        // ========== 点击特效 ==========
+        document.addEventListener('click', createClickEffect);
+        document.addEventListener('touchstart', function(e) {
+            const touch = e.touches[0];
+            createClickEffect({ clientX: touch.clientX, clientY: touch.clientY });
+        }, { passive: true });
+
+        // ========== 初始化 ==========
+        // 加载示例内容
+        mdInput.value = '# 欢迎使用 Markdown 编辑器 🎉\n\n' +
+            '这是一个 **实时预览** 的 Markdown 编辑器，支持以下语法：\n\n' +
+            '## 文本样式\n\n' +
+            '- **粗体** 和 *斜体*\n' +
+            '- ~~删除线~~\n' +
+            '- `行内代码`\n\n' +
+            '## 引用\n\n' +
+            '> 生活就像一盒巧克力，你永远不知道下一颗是什么味道。\n\n' +
+            '## 代码块\n\n' +
+            '```javascript\n' +
+            'function hello() {\n' +
+            '    console.log("Hello, Markdown!");\n' +
+            '}\n' +
+            '```\n\n' +
+            '## 表格\n\n' +
+            '| 功能 | 快捷键 | 说明 |\n' +
+            '| --- | --- | --- |\n' +
+            '| 加粗 | Ctrl+B | 选中文字加粗 |\n' +
+            '| 斜体 | Ctrl+I | 选中文字斜体 |\n' +
+            '| 代码 | 工具栏 | 插入代码块 |\n\n' +
+            '## 列表\n\n' +
+            '1. 第一项\n' +
+            '2. 第二项\n' +
+            '3. 第三项\n\n' +
+            '---\n\n' +
+            '试试在左侧编辑，右侧会实时更新！';
+        renderMd();
+    </script>
+</body>
+</html>

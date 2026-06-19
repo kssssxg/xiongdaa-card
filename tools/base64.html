@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="CSP" content="upgrade-insecure-requests">
+    <title>Base64 编解码 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .b64-switch {
+            display: flex; gap: 0; margin-bottom: 20px; border-radius: 12px; overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .b64-switch button {
+            flex: 1; padding: 10px; border: none; background: rgba(255,255,255,0.05);
+            color: var(--text-muted); cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+        }
+        .b64-switch button.active {
+            background: rgba(165,180,252,0.2); color: #fff;
+        }
+        .b64-switch button:not(:last-child) { border-right: 1px solid rgba(255,255,255,0.1); }
+        .b64-switch button:hover:not(.active) { background: rgba(255,255,255,0.1); }
+
+        /* 文件拖放区域 */
+        .drop-zone {
+            border: 2px dashed rgba(255,255,255,0.25);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.03);
+            position: relative;
+        }
+        .drop-zone:hover {
+            border-color: var(--theme-accent);
+            background: rgba(165,180,252,0.08);
+        }
+        .drop-zone.dragover {
+            border-color: var(--theme-accent);
+            background: rgba(165,180,252,0.15);
+            transform: scale(1.02);
+        }
+        .drop-zone .drop-icon {
+            font-size: 2.2rem;
+            color: var(--theme-accent);
+            margin-bottom: 8px;
+        }
+        .drop-zone .drop-text {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .drop-zone .drop-text strong {
+            color: var(--theme-accent);
+        }
+        .drop-zone .drop-hint {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.35);
+            margin-top: 6px;
+        }
+        .drop-zone input[type="file"] {
+            display: none;
+        }
+
+        /* 字符计数 */
+        .char-count {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: right;
+            margin-top: 4px;
+            margin-bottom: 8px;
+            padding-right: 4px;
+            transition: color 0.2s;
+        }
+        .char-count.count-warning {
+            color: #f59e0b;
+        }
+        .char-count.count-danger {
+            color: #ef4444;
+        }
+
+        /* 按钮布局 */
+        .b64-actions {
+            display: flex;
+            gap: 8px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        .b64-actions .tool-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .b64-actions .tool-btn i {
+            font-size: 0.95rem;
+        }
+        .b64-actions-right {
+            margin-left: auto;
+            display: flex;
+            gap: 8px;
+        }
+
+        /* 额外按钮样式 */
+        .tool-btn.swap-btn {
+            background: rgba(52, 211, 153, 0.15);
+            border-color: rgba(52, 211, 153, 0.3);
+        }
+        .tool-btn.swap-btn:hover {
+            background: rgba(52, 211, 153, 0.3);
+        }
+        .tool-btn.danger-btn {
+            background: rgba(239, 68, 68, 0.12);
+            border-color: rgba(239, 68, 68, 0.25);
+        }
+        .tool-btn.danger-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+        .tool-btn.urlsafe-btn {
+            background: rgba(251, 191, 36, 0.12);
+            border-color: rgba(251, 191, 36, 0.25);
+        }
+        .tool-btn.urlsafe-btn.active {
+            background: rgba(251, 191, 36, 0.3);
+            border-color: #fbbf24;
+        }
+        .tool-btn.urlsafe-btn:hover {
+            background: rgba(251, 191, 36, 0.25);
+        }
+
+        /* 互换动画 */
+        @keyframes swapFlash {
+            0% { background: rgba(52, 211, 153, 0.3); }
+            100% { background: transparent; }
+        }
+        .swap-flash {
+            animation: swapFlash 0.5s ease;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 600px) {
+            .b64-actions-right {
+                margin-left: 0;
+                width: 100%;
+                justify-content: flex-start;
+            }
+            .b64-actions {
+                gap: 6px;
+            }
+            .b64-actions .tool-btn {
+                font-size: 0.8rem;
+                padding: 8px 14px;
+            }
+            .drop-zone {
+                padding: 16px;
+            }
+            .drop-zone .drop-icon {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="index.html" class="back-home-btn" title="返回工具首页"><i class="fas fa-arrow-left"></i></a>
+
+    <div id="toast"><i class="fas fa-info-circle" style="color: #a5b4fc;"></i><span id="toast-msg">提示信息</span></div>
+
+    <div class="glass-card tool-card">
+        <h1><i class="fas fa-lock"></i> Base64 编解码</h1>
+        <div class="tool-subtitle">字符串与 Base64 互转，支持中文 / 文件拖拽编码</div>
+
+        <!-- 模式切换 -->
+        <div class="b64-switch">
+            <button id="encodeBtn" class="active" onclick="setMode('encode')"><i class="fas fa-lock"></i> 编码</button>
+            <button id="decodeBtn" onclick="setMode('decode')"><i class="fas fa-unlock"></i> 解码</button>
+        </div>
+
+        <!-- 文件拖放区域 -->
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+            <div class="drop-text">拖拽文件到此处 或 <strong>点击选择</strong></div>
+            <div class="drop-hint">支持图片、文本等任意文件，自动编码为 data: URL 格式</div>
+            <input type="file" id="fileInput" accept="*/*">
+        </div>
+
+        <!-- 输入 -->
+        <div class="tool-label"><i class="fas fa-pencil-alt"></i> <span id="inputLabel">输入原文</span></div>
+        <div class="tool-row">
+            <textarea id="b64Input" placeholder="在此输入要编码的文本..." rows="4" style="flex:1;"></textarea>
+        </div>
+        <div class="char-count" id="inputCharCount">0 字符</div>
+
+        <!-- 操作按钮 -->
+        <div class="b64-actions">
+            <button class="tool-btn primary" onclick="convertB64()"><i class="fas fa-exchange-alt"></i> <span id="convertBtnText">编码</span></button>
+            <button class="tool-btn swap-btn" onclick="swapB64()" title="互换输入和输出"><i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i> 互换</button>
+            <button class="tool-btn urlsafe-btn" id="urlSafeBtn" onclick="toggleUrlSafe()" title="将 +/ 替换为 -_"><i class="fas fa-link"></i> URL Safe</button>
+            <div class="b64-actions-right">
+                <button class="tool-btn" onclick="pasteB64()" title="从剪贴板粘贴"><i class="fas fa-paste"></i> 粘贴</button>
+                <button class="tool-btn danger-btn" onclick="clearAllB64()" title="清空全部内容"><i class="fas fa-trash-alt"></i> 清空全部</button>
+            </div>
+        </div>
+
+        <!-- 输出 -->
+        <div class="tool-label"><i class="fas fa-file-alt"></i> 结果 <span style="font-size:0.75rem;color:var(--text-muted);">（点击结果复制）</span></div>
+        <textarea id="b64Output" readonly placeholder="转换结果将显示在这里..." rows="4" style="flex:1;cursor:pointer;" onclick="copyB64Output()"></textarea>
+        <div class="char-count" id="outputCharCount">0 字符</div>
+    </div>
+
+    <div class="author-credit">
+        <p>© 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        let currentMode = 'encode';
+        let urlSafeMode = false;
+
+        // ========== 模式切换 ==========
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('encodeBtn').classList.toggle('active', mode === 'encode');
+            document.getElementById('decodeBtn').classList.toggle('active', mode === 'decode');
+            document.getElementById('inputLabel').textContent = mode === 'encode' ? '输入原文' : '输入 Base64 字符串';
+            document.getElementById('convertBtnText').textContent = mode === 'encode' ? '编码' : '解码';
+            document.getElementById('b64Input').placeholder = mode === 'encode' ? '在此输入要编码的文本...' : '在此输入 Base64 字符串...';
+        }
+
+        // ========== URL Safe 模式 ==========
+        function toggleUrlSafe() {
+            urlSafeMode = !urlSafeMode;
+            document.getElementById('urlSafeBtn').classList.toggle('active', urlSafeMode);
+            showToast(urlSafeMode ? 'URL Safe 模式已开启（+/ → -_）' : 'URL Safe 模式已关闭');
+            // 如果有输出，重新转换
+            const output = document.getElementById('b64Output').value;
+            if (output.trim()) {
+                convertB64();
+            }
+        }
+
+        function applyUrlSafe(str) {
+            if (!urlSafeMode) return str;
+            return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
+        // ========== 核心编解码 ==========
+        function convertB64() {
+            const input = document.getElementById('b64Input').value;
+            if (!input.trim()) { showToast('请输入内容'); return; }
+            try {
+                if (currentMode === 'encode') {
+                    const bytes = new TextEncoder().encode(input);
+                    let binary = '';
+                    bytes.forEach(b => binary += String.fromCharCode(b));
+                    let result = btoa(binary);
+                    // 应用 URL Safe
+                    result = applyUrlSafe(result);
+                    document.getElementById('b64Output').value = result;
+                    printLog('Base64 编码', `输入 ${input.length} 字符 → 输出 ${result.length} 字符` + (urlSafeMode ? ' [URL Safe]' : ''));
+                } else {
+                    let data = input;
+                    // 如果是 URL Safe 编码的，先还原
+                    if (urlSafeMode) {
+                        data = data.replace(/-/g, '+').replace(/_/g, '/');
+                        // 补全 padding
+                        while (data.length % 4 !== 0) data += '=';
+                    }
+                    const binary = atob(data);
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    const result = new TextDecoder().decode(bytes);
+                    document.getElementById('b64Output').value = result;
+                    printLog('Base64 解码', `输入 ${input.length} 字符 → 输出 ${result.length} 字符` + (urlSafeMode ? ' [URL Safe]' : ''));
+                }
+                updateCharCount();
+            } catch (e) {
+                showToast('转换失败：' + e.message);
+                printLog('Base64 错误', e.message, true);
+            }
+        }
+
+        // ========== 互换 ==========
+        function swapB64() {
+            const input = document.getElementById('b64Input');
+            const output = document.getElementById('b64Output');
+            const temp = input.value;
+            input.value = output.value;
+            output.value = temp;
+            // 添加闪动效果
+            const btn = document.querySelector('.swap-btn');
+            btn.classList.add('swap-flash');
+            setTimeout(() => btn.classList.remove('swap-flash'), 500);
+            updateCharCount();
+            showToast('已互换');
+        }
+
+        // ========== 字符计数 ==========
+        function updateCharCount() {
+            const input = document.getElementById('b64Input').value;
+            const output = document.getElementById('b64Output').value;
+            updateSingleCharCount('inputCharCount', input);
+            updateSingleCharCount('outputCharCount', output);
+        }
+
+        function updateSingleCharCount(elId, text) {
+            const el = document.getElementById(elId);
+            const len = text.length;
+            const bytes = new TextEncoder().encode(text).length;
+            el.textContent = `${len.toLocaleString()} 字符${len !== bytes ? `（${bytes.toLocaleString()} 字节）` : ''}`;
+            // 颜色提示
+            el.classList.remove('count-warning', 'count-danger');
+            if (len > 50000) {
+                el.classList.add('count-danger');
+            } else if (len > 10000) {
+                el.classList.add('count-warning');
+            }
+        }
+
+        // ========== 清空全部 ==========
+        function clearAllB64() {
+            document.getElementById('b64Input').value = '';
+            document.getElementById('b64Output').value = '';
+            updateCharCount();
+            showToast('已清空全部');
+        }
+
+        // ========== 复制 ==========
+        function copyB64Output() {
+            const val = document.getElementById('b64Output').value;
+            if (val) copyText(val);
+            else showToast('没有内容可复制');
+        }
+
+        // ========== 粘贴 ==========
+        function pasteB64() {
+            navigator.clipboard.readText().then(t => {
+                document.getElementById('b64Input').value = t;
+                updateCharCount();
+                showToast('已粘贴');
+            }).catch(() => showToast('粘贴失败，请手动输入'));
+        }
+
+        // ========== 文件拖拽 / 选择 ==========
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        // 点击上传
+        dropZone.addEventListener('click', function(e) {
+            if (e.target !== fileInput) {
+                fileInput.click();
+            }
+        });
+
+        fileInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                handleFile(this.files[0]);
+            }
+        });
+
+        // 拖拽事件
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            // 切换到编码模式
+            if (currentMode !== 'encode') {
+                setMode('encode');
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const dataUrl = e.target.result;
+                document.getElementById('b64Input').value = dataUrl;
+                updateCharCount();
+                // 自动转换输出
+                convertB64();
+                showToast(`已编码文件: ${file.name}`);
+                printLog('Base64 文件编码', `文件 ${file.name} (${(file.size / 1024).toFixed(1)} KB) → data: URL`);
+            };
+            reader.onerror = function() {
+                showToast('文件读取失败');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ========== 实时字符计数（输入监听） ==========
+        document.getElementById('b64Input').addEventListener('input', function() {
+            updateCharCount();
+        });
+
+        // 回车触发转换
+        document.getElementById('b64Input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); convertB64(); }
+        });
+
+        // 点击特效
+        document.addEventListener('click', createClickEffect);
+        document.addEventListener('touchstart', function(e) {
+            const touch = e.touches[0];
+            createClickEffect({ clientX: touch.clientX, clientY: touch.clientY });
+        }, { passive: true });
+
+        // 初始化计数
+        updateCharCount();
+    </script>
+</body>
+</html>

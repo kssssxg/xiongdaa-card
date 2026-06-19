@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日期计算器 - xiongdaa</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* Tab 切换 */
+        .dc-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 25px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 14px;
+            padding: 4px;
+        }
+        .dc-tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 6px;
+            border-radius: 11px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            transition: all 0.25s;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            user-select: none;
+        }
+        .dc-tab:hover { color: #fff; background: rgba(255,255,255,0.06); }
+        .dc-tab.active {
+            background: rgba(165,180,252,0.18);
+            color: var(--theme-accent);
+            font-weight: 500;
+        }
+        .dc-tab i { margin-right: 5px; }
+
+        .dc-panel { display: none; animation: slideUpFade 0.35s ease; }
+        .dc-panel.active { display: block; }
+
+        .dc-panel h2 {
+            font-size: 1.05rem; font-weight: 500; margin-bottom: 18px;
+            color: rgba(255,255,255,0.85);
+        }
+
+        /* 表单字段 */
+        .dc-field {
+            margin-bottom: 14px;
+        }
+        .dc-field label {
+            display: block;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+        .dc-field input[type="date"],
+        .dc-field input[type="number"] {
+            width: 100%;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 10px;
+            outline: none;
+            font-size: 0.95rem;
+            transition: all 0.25s;
+            font-family: inherit;
+            color-scheme: dark;
+        }
+        .dc-field input:focus {
+            border-color: var(--theme-accent);
+            background: rgba(255,255,255,0.12);
+        }
+        .dc-field input[type="number"] { -moz-appearance: textfield; }
+        .dc-field input[type="number"]::-webkit-inner-spin-button,
+        .dc-field input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+        .dc-field-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .dc-field-row .dc-field { flex: 1; margin-bottom: 0; min-width: 100px; }
+
+        /* 选择单位 */
+        .dc-unit-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .dc-unit-btn {
+            padding: 7px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.05);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.82rem;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .dc-unit-btn:hover { border-color: var(--theme-accent); color: #fff; }
+        .dc-unit-btn.active {
+            background: rgba(165,180,252,0.18);
+            border-color: var(--theme-accent);
+            color: var(--theme-accent);
+        }
+
+        /* 包含结束日 */
+        .dc-toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .dc-toggle-row label { font-size: 0.85rem; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .dc-toggle-switch {
+            position: relative;
+            width: 42px; height: 22px;
+            background: rgba(255,255,255,0.12);
+            border-radius: 11px;
+            cursor: pointer;
+            transition: background 0.25s;
+            flex-shrink: 0;
+        }
+        .dc-toggle-switch.active { background: rgba(165,180,252,0.4); }
+        .dc-toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px; left: 2px;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: #fff;
+            transition: transform 0.25s;
+        }
+        .dc-toggle-switch.active::after { transform: translateX(20px); }
+
+        /* 结果卡片 */
+        .dc-result {
+            margin-top: 18px;
+        }
+        .dc-result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 10px;
+        }
+        .dc-result-item {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 14px 10px;
+            text-align: center;
+        }
+        .dc-result-item .r-val {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--theme-accent);
+            line-height: 1.2;
+        }
+        .dc-result-item .r-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .dc-result-breakdown {
+            margin-top: 12px;
+            background: rgba(165,180,252,0.08);
+            border: 1px solid rgba(165,180,252,0.15);
+            border-radius: 12px;
+            padding: 14px 18px;
+            text-align: center;
+            font-size: 1.05rem;
+        }
+
+        /* 星座展示 */
+        .zodiac-display {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-top: 12px;
+        }
+        .zodiac-icon {
+            font-size: 2.4rem;
+            width: 54px;
+            text-align: center;
+        }
+        .zodiac-info { flex: 1; }
+        .zodiac-name { font-size: 1.05rem; font-weight: 500; }
+        .zodiac-date { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+
+        .dc-next-bday {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        .dc-next-bday strong { color: var(--theme-accent); }
+
+        /* 年龄实时结果 */
+        .dc-age-result {
+            margin-top: 14px;
+        }
+        .dc-age-main {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--theme-accent);
+            text-align: center;
+            padding: 18px;
+        }
+        .dc-age-main span { font-size: 1rem; font-weight: 400; color: rgba(255,255,255,0.6); }
+
+        @media (max-width: 480px) {
+            .dc-result-grid { grid-template-columns: repeat(2, 1fr); }
+            .dc-tab { font-size: 0.78rem; padding: 8px 4px; }
+            .dc-tab i { margin-right: 3px; }
+            .dc-age-main { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="overlay"></div>
+<video id="bg-video" muted loop playsinline></video>
+<div id="bg-video-overlay"></div>
+
+<!-- 返回按钮 -->
+<a href="../index.html" class="back-home-btn" title="返回主页">
+    <i class="fas fa-arrow-left"></i>
+</a>
+
+<!-- Toast -->
+<div id="toast"><span id="toast-msg"></span></div>
+
+<!-- 主卡片 -->
+<div class="glass-card tool-card" style="max-width: 580px;">
+    <h1><i class="fas fa-calendar-alt" style="color:var(--theme-accent);margin-right:8px;"></i>日期计算器</h1>
+    <p class="tool-subtitle">日期差 · 日期加减 · 年龄计算</p>
+
+    <!-- Tabs -->
+    <div class="dc-tabs">
+        <button class="dc-tab active" data-tab="tab1"><i class="fas fa-arrows-alt-h"></i> 日期差</button>
+        <button class="dc-tab" data-tab="tab2"><i class="fas fa-plus-circle"></i> 日期加减</button>
+        <button class="dc-tab" data-tab="tab3"><i class="fas fa-birthday-cake"></i> 年龄</button>
+    </div>
+
+    <!-- ========== Panel 1: 日期差 ========== -->
+    <div class="dc-panel active" id="tab1">
+        <h2>计算两个日期之间的差值</h2>
+
+        <div class="dc-field-row">
+            <div class="dc-field">
+                <label>起始日期</label>
+                <input type="date" id="diff-start">
+            </div>
+            <div class="dc-field">
+                <label>结束日期</label>
+                <input type="date" id="diff-end">
+            </div>
+        </div>
+
+        <div class="dc-toggle-row">
+            <label>
+                <span class="dc-toggle-switch" id="toggle-endday"></span>
+                包含结束日
+            </label>
+        </div>
+
+        <div class="tool-actions">
+            <button class="tool-btn primary" id="btn-diff-calc"><i class="fas fa-calculator"></i> 计算</button>
+            <button class="tool-btn" id="btn-diff-today"><i class="fas fa-calendar-day"></i> 到今天</button>
+        </div>
+
+        <div class="dc-result" id="diff-result" style="display:none;">
+            <div class="dc-result-grid">
+                <div class="dc-result-item"><div class="r-val" id="diff-days">0</div><div class="r-label">天</div></div>
+                <div class="dc-result-item"><div class="r-val" id="diff-weeks">0</div><div class="r-label">周</div></div>
+                <div class="dc-result-item"><div class="r-val" id="diff-months">0</div><div class="r-label">月</div></div>
+                <div class="dc-result-item"><div class="r-val" id="diff-years">0</div><div class="r-label">年</div></div>
+            </div>
+            <div class="dc-result-breakdown" id="diff-breakdown"></div>
+        </div>
+    </div>
+
+    <!-- ========== Panel 2: 日期加减 ========== -->
+    <div class="dc-panel" id="tab2">
+        <h2>对指定日期进行加减运算</h2>
+
+        <div class="dc-field">
+            <label>起始日期</label>
+            <input type="date" id="add-start">
+        </div>
+
+        <div class="dc-field-row">
+            <div class="dc-field" style="flex:0 0 120px;">
+                <label>数值</label>
+                <input type="number" id="add-amount" value="7" step="1">
+            </div>
+            <div class="dc-field" style="flex:1;">
+                <label>单位</label>
+                <div class="dc-unit-group">
+                    <button class="dc-unit-btn active" data-unit="days">天</button>
+                    <button class="dc-unit-btn" data-unit="weeks">周</button>
+                    <button class="dc-unit-btn" data-unit="months">月</button>
+                    <button class="dc-unit-btn" data-unit="years">年</button>
+                </div>
+            </div>
+        </div>
+
+        <p style="font-size:0.78rem;color:var(--text-muted);margin:-6px 0 12px;">
+            <i class="fas fa-info-circle"></i> 输入负数可往前推算
+        </p>
+
+        <div class="tool-actions">
+            <button class="tool-btn primary" id="btn-add-calc"><i class="fas fa-calculator"></i> 计算</button>
+            <button class="tool-btn" id="btn-add-today"><i class="fas fa-calendar-day"></i> 从今天</button>
+        </div>
+
+        <div class="dc-result" id="add-result" style="display:none;">
+            <div class="dc-result-grid" style="grid-template-columns:1fr;">
+                <div class="dc-result-item">
+                    <div class="r-val" id="add-result-date" style="font-size:1.6rem;">—</div>
+                    <div class="r-label">计算结果日期</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== Panel 3: 年龄计算 ========== -->
+    <div class="dc-panel" id="tab3">
+        <h2>计算年龄与星座</h2>
+
+        <div class="dc-field">
+            <label>出生日期</label>
+            <input type="date" id="age-birth">
+        </div>
+
+        <div class="dc-age-result" id="age-result" style="display:none;">
+            <div class="dc-age-main" id="age-main">0 <span>岁</span></div>
+
+            <div class="dc-result-grid" style="grid-template-columns:repeat(3,1fr);">
+                <div class="dc-result-item"><div class="r-val" id="age-years">0</div><div class="r-label">年</div></div>
+                <div class="dc-result-item"><div class="r-val" id="age-months">0</div><div class="r-label">月</div></div>
+                <div class="dc-result-item"><div class="r-val" id="age-days">0</div><div class="r-label">天</div></div>
+            </div>
+
+            <div class="zodiac-display" id="zodiac-display">
+                <div class="zodiac-icon" id="zodiac-icon">♈</div>
+                <div class="zodiac-info">
+                    <div class="zodiac-name" id="zodiac-name">白羊座</div>
+                    <div class="zodiac-date" id="zodiac-date">3月21日 - 4月19日</div>
+                </div>
+            </div>
+
+            <div class="dc-next-bday" id="next-bday">
+                <i class="fas fa-gift" style="color:var(--theme-accent);margin-right:5px;"></i>
+                距离下一个生日还有 <strong id="next-bday-days">0</strong> 天
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="author-credit">
+    <p><a href="../index.html">xiongdaa 工具集</a> · 日期计算器</p>
+</div>
+
+<script src="common.js"></script>
+<script>
+(function() {
+    'use strict';
+
+    // ==================== Tab 切换 ====================
+    const tabs = document.querySelectorAll('.dc-tab');
+    const panels = {
+        tab1: document.getElementById('tab1'),
+        tab2: document.getElementById('tab2'),
+        tab3: document.getElementById('tab3')
+    };
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const target = this.dataset.tab;
+            tabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            Object.keys(panels).forEach(k => {
+                panels[k].classList.toggle('active', k === target);
+            });
+        });
+    });
+
+    // ==================== 工具函数 ====================
+    function parseDate(val) {
+        if (!val) return null;
+        const parts = val.split('-');
+        if (parts.length !== 3) return null;
+        return new Date(+parts[0], +parts[1] - 1, +parts[2]);
+    }
+
+    function toDateStr(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    function diffDays(d1, d2) {
+        const t1 = Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate());
+        const t2 = Date.UTC(d2.getFullYear(), d2.getMonth(), d2.getDate());
+        return Math.floor((t2 - t1) / (86400000));
+    }
+
+    function addMonths(d, n) {
+        const r = new Date(d);
+        const targetMonth = r.getMonth() + n;
+        r.setMonth(targetMonth);
+        // Handle overflow (e.g. Jan 31 + 1 month -> Feb 28/29)
+        const expectedMonth = ((targetMonth % 12) + 12) % 12;
+        if (r.getMonth() !== expectedMonth) {
+            r.setDate(0); // last day of previous month
+        }
+        return r;
+    }
+
+    function addYears(d, n) {
+        const r = new Date(d);
+        const targetYear = r.getFullYear() + n;
+        r.setFullYear(targetYear);
+        // Handle Feb 29
+        if (r.getFullYear() !== targetYear) {
+            r.setMonth(r.getMonth() - 1);
+            r.setDate(0);
+        }
+        return r;
+    }
+
+    // ==================== 日期分解计算 ====================
+    function dateBreakdown(start, end, inclusive) {
+        let d1 = new Date(start);
+        let d2 = new Date(end);
+        let offset = inclusive ? 1 : 0;
+
+        let totalDays = diffDays(d1, d2) + offset;
+        if (totalDays < 0) totalDays = 0;
+
+        // Calculate years, months, days
+        let y = d2.getFullYear() - d1.getFullYear();
+        let m = d2.getMonth() - d1.getMonth();
+        let d = d2.getDate() - d1.getDate();
+
+        if (d < 0) {
+            m--;
+            // Get days in previous month of d2
+            const prevMonth = new Date(d2.getFullYear(), d2.getMonth(), 0);
+            d += prevMonth.getDate();
+        }
+        if (m < 0) {
+            y--;
+            m += 12;
+        }
+
+        // If inclusive, add one day and adjust
+        if (inclusive) {
+            // Build a temporary date: start + y years + m months + d days
+            let tmp = new Date(start);
+            tmp = addYears(tmp, y);
+            tmp = addMonths(tmp, m);
+            tmp.setDate(tmp.getDate() + d + 1);
+            // Recalculate more precisely
+            // Simpler: just add 1 to totalDays but keep breakdown as-is mostly
+            // Actually recalc properly:
+            let dd1 = new Date(start);
+            let dd2 = new Date(end);
+            let incDays = diffDays(dd1, dd2) + 1;
+            // Rebuild from incDays approximation
+            // Use same algorithm
+            y = dd2.getFullYear() - dd1.getFullYear();
+            m = dd2.getMonth() - dd1.getMonth();
+            d = dd2.getDate() - dd1.getDate();
+            if (d < 0) { m--; const prevMonth = new Date(dd2.getFullYear(), dd2.getMonth(), 0); d += prevMonth.getDate(); }
+            if (m < 0) { y--; m += 12; }
+            // Add 1 day to the day component
+            d += 1;
+            if (d >= 28) {
+                // Check if d exceeds days in the reference month
+                const refMonth = new Date(dd1.getFullYear() + y, dd1.getMonth() + m, 0);
+                const daysInRef = refMonth.getDate() || 30; // fallback
+                if (d > daysInRef) {
+                    d -= daysInRef;
+                    m++;
+                    if (m >= 12) { m -= 12; y++; }
+                }
+            }
+        }
+
+        return { years: y, months: m, days: d, totalDays: totalDays };
+    }
+
+    // ==================== 星座 ====================
+    function getZodiac(month, day) {
+        const md = month * 100 + day;
+        if (md >= 321 && md <= 419) return { name: '白羊座', symbol: '♈', range: '3月21日 - 4月19日' };
+        if (md >= 420 && md <= 520) return { name: '金牛座', symbol: '♉', range: '4月20日 - 5月20日' };
+        if (md >= 521 && md <= 621) return { name: '双子座', symbol: '♊', range: '5月21日 - 6月21日' };
+        if (md >= 622 && md <= 722) return { name: '巨蟹座', symbol: '♋', range: '6月22日 - 7月22日' };
+        if (md >= 723 && md <= 822) return { name: '狮子座', symbol: '♌', range: '7月23日 - 8月22日' };
+        if (md >= 823 && md <= 922) return { name: '处女座', symbol: '♍', range: '8月23日 - 9月22日' };
+        if (md >= 923 && md <= 1023) return { name: '天秤座', symbol: '♎', range: '9月23日 - 10月23日' };
+        if (md >= 1024 && md <= 1122) return { name: '天蝎座', symbol: '♏', range: '10月24日 - 11月22日' };
+        if (md >= 1123 && md <= 1221) return { name: '射手座', symbol: '♐', range: '11月23日 - 12月21日' };
+        if (md >= 1222 || md <= 119) return { name: '摩羯座', symbol: '♑', range: '12月22日 - 1月19日' };
+        if (md >= 120 && md <= 218) return { name: '水瓶座', symbol: '♒', range: '1月20日 - 2月18日' };
+        return { name: '双鱼座', symbol: '♓', range: '2月19日 - 3月20日' };
+    }
+
+    // ==================== Tab1: 日期差 ====================
+    const diffStart = document.getElementById('diff-start');
+    const diffEnd = document.getElementById('diff-end');
+    const toggleEndday = document.getElementById('toggle-endday');
+    const btnDiffCalc = document.getElementById('btn-diff-calc');
+    const btnDiffToday = document.getElementById('btn-diff-today');
+    const diffResult = document.getElementById('diff-result');
+
+    let includeEndDay = false;
+
+    toggleEndday.addEventListener('click', function() {
+        this.classList.toggle('active');
+        includeEndDay = this.classList.contains('active');
+    });
+
+    function calcDateDiff() {
+        const start = parseDate(diffStart.value);
+        const end = parseDate(diffEnd.value);
+        if (!start || !end) {
+            showToast('请选择起始和结束日期');
+            return;
+        }
+        if (end < start) {
+            showToast('结束日期不能早于起始日期');
+            return;
+        }
+
+        const bd = dateBreakdown(start, end, includeEndDay);
+        const totalDays = bd.totalDays;
+        const weeks = Math.floor(totalDays / 7);
+        const monthsApprox = Math.floor(totalDays / 30.4375);
+        const yearsApprox = Math.floor(totalDays / 365.25);
+
+        document.getElementById('diff-days').textContent = totalDays;
+        document.getElementById('diff-weeks').textContent = weeks;
+        document.getElementById('diff-months').textContent = monthsApprox;
+        document.getElementById('diff-years').textContent = yearsApprox;
+
+        const breakText = `${bd.years} 年 ${bd.months} 月 ${bd.days} 天`;
+        document.getElementById('diff-breakdown').innerHTML =
+            `<i class="fas fa-clock" style="color:var(--theme-accent);margin-right:6px;"></i> 详细：${breakText}` +
+            (includeEndDay ? ' <span style="color:var(--text-muted);font-size:0.8rem;">（包含结束日）</span>' : '');
+
+        diffResult.style.display = 'block';
+    }
+
+    btnDiffCalc.addEventListener('click', calcDateDiff);
+
+    btnDiffToday.addEventListener('click', function() {
+        const now = new Date();
+        diffEnd.value = toDateStr(now);
+        // Also set start to 7 days ago if empty
+        if (!diffStart.value) {
+            const sevenAgo = new Date(now);
+            sevenAgo.setDate(sevenAgo.getDate() - 7);
+            diffStart.value = toDateStr(sevenAgo);
+        }
+        calcDateDiff();
+    });
+
+    // Enter key support
+    diffEnd.addEventListener('keydown', function(e) { if (e.key === 'Enter') calcDateDiff(); });
+    diffStart.addEventListener('keydown', function(e) { if (e.key === 'Enter') calcDateDiff(); });
+
+    // ==================== Tab2: 日期加减 ====================
+    const addStart = document.getElementById('add-start');
+    const addAmount = document.getElementById('add-amount');
+    const unitBtns = document.querySelectorAll('.dc-unit-btn');
+    const btnAddCalc = document.getElementById('btn-add-calc');
+    const btnAddToday = document.getElementById('btn-add-today');
+    const addResult = document.getElementById('add-result');
+    const addResultDate = document.getElementById('add-result-date');
+
+    let selectedUnit = 'days';
+
+    unitBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            unitBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            selectedUnit = this.dataset.unit;
+        });
+    });
+
+    function calcDateAdd() {
+        const start = parseDate(addStart.value);
+        if (!start) {
+            showToast('请选择起始日期');
+            return;
+        }
+        const amount = parseFloat(addAmount.value);
+        if (isNaN(amount)) {
+            showToast('请输入有效数值');
+            return;
+        }
+
+        let result = new Date(start);
+
+        switch (selectedUnit) {
+            case 'days':
+                result.setDate(result.getDate() + amount);
+                break;
+            case 'weeks':
+                result.setDate(result.getDate() + amount * 7);
+                break;
+            case 'months':
+                result = addMonths(result, amount);
+                break;
+            case 'years':
+                result = addYears(result, amount);
+                break;
+        }
+
+        addResultDate.textContent = toDateStr(result);
+        addResult.style.display = 'block';
+    }
+
+    btnAddCalc.addEventListener('click', calcDateAdd);
+
+    btnAddToday.addEventListener('click', function() {
+        addStart.value = toDateStr(new Date());
+        calcDateAdd();
+    });
+
+    addAmount.addEventListener('keydown', function(e) { if (e.key === 'Enter') calcDateAdd(); });
+    addStart.addEventListener('keydown', function(e) { if (e.key === 'Enter') calcDateAdd(); });
+
+    // ==================== Tab3: 年龄计算 ====================
+    const ageBirth = document.getElementById('age-birth');
+    const ageResult = document.getElementById('age-result');
+    const ageMain = document.getElementById('age-main');
+    const ageYears = document.getElementById('age-years');
+    const ageMonths = document.getElementById('age-months');
+    const ageDays = document.getElementById('age-days');
+    const zodiacDisplay = document.getElementById('zodiac-display');
+    const zodiacIcon = document.getElementById('zodiac-icon');
+    const zodiacName = document.getElementById('zodiac-name');
+    const zodiacDate = document.getElementById('zodiac-date');
+    const nextBdayDays = document.getElementById('next-bday-days');
+
+    function calcAge() {
+        const birth = parseDate(ageBirth.value);
+        if (!birth) {
+            ageResult.style.display = 'none';
+            return;
+        }
+
+        const now = new Date();
+        if (birth > now) {
+            showToast('出生日期不能晚于今天');
+            ageResult.style.display = 'none';
+            return;
+        }
+
+        let y = now.getFullYear() - birth.getFullYear();
+        let m = now.getMonth() - birth.getMonth();
+        let d = now.getDate() - birth.getDate();
+
+        if (d < 0) {
+            m--;
+            const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+            d += prevMonth.getDate();
+        }
+        if (m < 0) {
+            y--;
+            m += 12;
+        }
+
+        ageYears.textContent = y;
+        ageMonths.textContent = m;
+        ageDays.textContent = d;
+        ageMain.innerHTML = `${y} <span>岁 ${m} 月 ${d} 天</span>`;
+
+        // 星座
+        const zodiac = getZodiac(birth.getMonth() + 1, birth.getDate());
+        zodiacIcon.textContent = zodiac.symbol;
+        zodiacName.textContent = zodiac.name;
+        zodiacDate.textContent = zodiac.range;
+
+        // 距离下一个生日
+        const thisYearBday = new Date(now.getFullYear(), birth.getMonth(), birth.getDate());
+        let nextBday = new Date(thisYearBday);
+        if (now > thisYearBday || (now.getFullYear() === birth.getFullYear() && now < thisYearBday && now.getMonth() === birth.getMonth() && now.getDate() > birth.getDate())) {
+            // If this year's birthday has passed, use next year
+            nextBday = new Date(now.getFullYear() + 1, birth.getMonth(), birth.getDate());
+        } else if (now.getTime() === thisYearBday.getTime() && now.getHours() >= 0) {
+            // Today is birthday? Check if it's still today's date
+            // Actually let's just compare dates
+        }
+        // Re-check properly
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const bdayThisYear = new Date(now.getFullYear(), birth.getMonth(), birth.getDate());
+        let bdayNext;
+        if (bdayThisYear < today || (bdayThisYear.getTime() === today.getTime())) {
+            // If birthday is today or passed, next is next year
+            bdayNext = new Date(now.getFullYear() + 1, birth.getMonth(), birth.getDate());
+        } else {
+            bdayNext = bdayThisYear;
+        }
+
+        const daysToBday = Math.round((bdayNext - today) / 86400000);
+        nextBdayDays.textContent = daysToBday === 0 ? '🎉 今天！' : daysToBday;
+
+        ageResult.style.display = 'block';
+    }
+
+    ageBirth.addEventListener('input', calcAge);
+    ageBirth.addEventListener('change', calcAge);
+
+    // ==================== 初始设置 ====================
+    // Set default dates for diff tab
+    const today = new Date();
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    diffStart.value = toDateStr(sevenDaysAgo);
+    diffEnd.value = toDateStr(today);
+
+    // Set default for add tab
+    addStart.value = toDateStr(today);
+
+    // Set default birthdate to 1990-01-01
+    ageBirth.value = '1990-01-01';
+    calcAge();
+
+})();
+</script>
+</body>
+</html>

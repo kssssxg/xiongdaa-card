@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="CSP" content="upgrade-insecure-requests">
+    <title>编码转换 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* 方向切换 */
+        .enc-switch {
+            display: flex; gap: 0; margin-bottom: 16px; border-radius: 12px; overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .enc-switch button {
+            flex: 1; padding: 10px; border: none; background: rgba(255,255,255,0.05);
+            color: var(--text-muted); cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+        }
+        .enc-switch button.active {
+            background: rgba(165,180,252,0.2); color: #fff;
+        }
+        .enc-switch button:not(:last-child) { border-right: 1px solid rgba(255,255,255,0.1); }
+        .enc-switch button:hover:not(.active) { background: rgba(255,255,255,0.1); }
+
+        /* 格式切换 */
+        .enc-format {
+            display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;
+        }
+        .enc-format button {
+            flex: 1; min-width: 72px; padding: 8px 6px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+            background: rgba(255,255,255,0.05); color: var(--text-muted); cursor: pointer;
+            font-size: 0.8rem; transition: all 0.2s; text-align: center;
+        }
+        .enc-format button.active {
+            background: rgba(165,180,252,0.2); color: #fff; border-color: var(--theme-accent);
+        }
+        .enc-format button:hover:not(.active) { background: rgba(255,255,255,0.1); }
+
+        /* 字节序选择 */
+        .enc-byte-order {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 15px;
+            padding: 8px 14px; background: rgba(0,0,0,0.15); border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .enc-byte-order label { font-size: 0.8rem; color: var(--text-muted); cursor: pointer; }
+        .enc-byte-order select {
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+            color: #fff; padding: 5px 10px; border-radius: 8px; font-size: 0.85rem; outline: none;
+            cursor: pointer;
+        }
+        .enc-byte-order select:focus { border-color: var(--theme-accent); }
+        .enc-byte-order select option { background: #1a1a2e; color: #fff; }
+
+        /* 输入提示 */
+        .enc-input-hint {
+            font-size: 0.75rem; color: var(--text-muted); margin: 4px 0 10px 0; padding-left: 4px;
+        }
+
+        /* 结果区域 */
+        .enc-results { margin-top: 20px; }
+        .enc-result-item {
+            background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px; padding: 14px 16px; margin-bottom: 10px;
+            cursor: pointer; transition: all 0.2s; position: relative;
+        }
+        .enc-result-item:hover { border-color: var(--theme-accent); }
+        .enc-result-item .result-label {
+            font-size: 0.75rem; color: var(--text-muted); margin-bottom: 6px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .enc-result-item .result-value {
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.85rem; word-break: break-all; line-height: 1.6;
+            color: var(--text-main);
+        }
+        .enc-result-item .result-value.text-value {
+            font-family: 'Noto Sans SC', 'PingFang SC', sans-serif;
+            font-size: 1rem;
+        }
+        .enc-result-item .copy-hint {
+            position: absolute; top: 10px; right: 14px; font-size: 0.65rem; color: var(--text-muted);
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .enc-result-item:hover .copy-hint { opacity: 1; }
+
+        /* 无结果占位 */
+        .enc-placeholder {
+            text-align: center; padding: 30px 20px; color: rgba(255,255,255,0.2);
+            font-size: 0.9rem;
+        }
+        .enc-placeholder i { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+
+        /* 编码检测小提示 */
+        .enc-detect {
+            margin-top: 15px; display: flex; gap: 8px; flex-wrap: wrap;
+        }
+        .enc-detect button {
+            padding: 6px 14px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+            background: rgba(255,255,255,0.05); color: var(--text-muted); cursor: pointer;
+            font-size: 0.78rem; transition: all 0.2s;
+        }
+        .enc-detect button:hover { background: rgba(255,255,255,0.12); border-color: var(--theme-accent); }
+
+        /* 响应式 */
+        @media (max-width: 600px) {
+            .enc-format button { min-width: 60px; font-size: 0.75rem; padding: 7px 4px; }
+            .enc-result-item { padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="index.html" class="back-home-btn" title="返回工具首页"><i class="fas fa-arrow-left"></i></a>
+
+    <div id="toast"><i class="fas fa-info-circle" style="color: #a5b4fc;"></i><span id="toast-msg">提示信息</span></div>
+
+    <div class="glass-card tool-card">
+        <h1><i class="fas fa-exchange-alt"></i> 编码转换</h1>
+        <div class="tool-subtitle">UTF-8 / UTF-16 / GBK / Unicode转义(\uXXXX) 互转</div>
+
+        <!-- 方向切换 -->
+        <div class="enc-switch">
+            <button id="encDirEncode" class="active" onclick="setDirection('encode')"><i class="fas fa-arrow-right"></i> 编码</button>
+            <button id="encDirDecode" onclick="setDirection('decode')"><i class="fas fa-arrow-left"></i> 解码</button>
+        </div>
+
+        <!-- 格式切换 -->
+        <div class="enc-format">
+            <button id="encFmtUtf8" class="active" onclick="setFormat('utf8')">UTF-8</button>
+            <button id="encFmtUtf16" onclick="setFormat('utf16')">UTF-16</button>
+            <button id="encFmtGbk" onclick="setFormat('gbk')">GBK</button>
+            <button id="encFmtUni" onclick="setFormat('unicode')">\uXXXX</button>
+        </div>
+
+        <!-- UTF-16 字节序 -->
+        <div class="enc-byte-order" id="byteOrderRow" style="display:none;">
+            <i class="fas fa-sort-amount-down-alt" style="color:var(--text-muted); font-size:0.85rem;"></i>
+            <label for="encEndian">字节序：</label>
+            <select id="encEndian" onchange="onEndianChange()">
+                <option value="be">Big Endian (BE)</option>
+                <option value="le">Little Endian (LE)</option>
+            </select>
+        </div>
+
+        <!-- 输入提示 -->
+        <div class="enc-input-hint" id="inputHint">
+            <i class="fas fa-info-circle"></i> 输入文本，点击"转换"查看编码结果
+        </div>
+
+        <!-- 输入框 -->
+        <div class="tool-label"><i class="fas fa-pencil-alt"></i> <span id="inputLabel">输入文本</span></div>
+        <textarea id="encInput" rows="4" placeholder="在此输入要编码的文本..."></textarea>
+
+        <!-- 操作按钮 -->
+        <div class="tool-actions">
+            <button class="tool-btn primary" onclick="convert()" style="flex:1;">
+                <i class="fas fa-sync-alt"></i> <span id="convertBtnText">转换</span>
+            </button>
+            <button class="tool-btn" onclick="clearAll()" title="清空">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+
+        <!-- 快速检测 -->
+        <div class="enc-detect">
+            <span style="font-size:0.75rem;color:var(--text-muted);align-self:center;">
+                <i class="fas fa-bolt"></i> 快速示例：
+            </span>
+            <button onclick="loadSample('hello')">Hello World</button>
+            <button onclick="loadSample('chinese')">中文测试</button>
+            <button onclick="loadSample('mixed')">混合 Hello 123 🌍</button>
+        </div>
+
+        <!-- 结果 -->
+        <div class="enc-results" id="encResults">
+            <div class="enc-placeholder">
+                <i class="fas fa-exchange-alt"></i>
+                输入内容后点击"转换"查看结果
+            </div>
+        </div>
+    </div>
+
+    <div class="author-credit">
+        <p>© 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        // ========== 状态 ==========
+        let currentDirection = 'encode'; // 'encode' | 'decode'
+        let currentFormat = 'utf8';      // 'utf8' | 'utf16' | 'gbk' | 'unicode'
+
+        // ========== 模式切换 ==========
+        function setDirection(dir) {
+            currentDirection = dir;
+            document.getElementById('encDirEncode').classList.toggle('active', dir === 'encode');
+            document.getElementById('encDirDecode').classList.toggle('active', dir === 'decode');
+            updateUI();
+        }
+
+        function setFormat(fmt) {
+            currentFormat = fmt;
+            document.querySelectorAll('.enc-format button').forEach(b => b.classList.remove('active'));
+            document.getElementById('encFmt' + fmt.charAt(0).toUpperCase() + fmt.slice(1)).classList.add('active');
+            document.getElementById('byteOrderRow').style.display = fmt === 'utf16' ? 'flex' : 'none';
+            updateUI();
+        }
+
+        function updateUI() {
+            const isEncode = currentDirection === 'encode';
+            const fmt = currentFormat;
+
+            if (isEncode) {
+                document.getElementById('inputLabel').textContent = '输入文本';
+                if (fmt === 'utf8') {
+                    document.getElementById('encInput').placeholder = '输入要编码为 UTF-8 的文本...';
+                    document.getElementById('inputHint').innerHTML = '<i class="fas fa-info-circle"></i> 输入文本，转换为 UTF-8 字节序列（Hex / Binary）';
+                } else if (fmt === 'utf16') {
+                    document.getElementById('encInput').placeholder = '输入要编码为 UTF-16 的文本...';
+                    document.getElementById('inputHint').innerHTML = '<i class="fas fa-info-circle"></i> 输入文本，转换为 UTF-16 字节序列（可选 BE / LE 字节序）';
+                } else if (fmt === 'gbk') {
+                    document.getElementById('encInput').placeholder = '输入要编码为 GBK 的文本...';
+                    document.getElementById('inputHint').innerHTML = '<i class="fas fa-info-circle"></i> 输入文本，转换为 GBK 编码字节序列';
+                } else {
+                    document.getElementById('encInput').placeholder = '输入要转义为 \\uXXXX 格式的文本...';
+                    document.getElementById('inputHint').innerHTML = '<i class="fas fa-info-circle"></i> 输入文本，转换为 Unicode 转义序列 \\uXXXX';
+                }
+            } else {
+                document.getElementById('inputLabel').textContent = '输入编码数据';
+                if (fmt === 'utf8' || fmt === 'gbk') {
+                    document.getElementById('encInput').placeholder = '输入十六进制字节（如 E4B8AD 或 E4 B8 AD）...';
+                    document.getElementById('inputHint').innerHTML = '<i class="fas fa-info-circle"></i> 输入十六进制字节串（空格可选，不区分大小写）';
+                } else if (fmt === 'utf16') {
+                    document.getElementById('encInput').placeholder = '输入十六进制字节（如 4E2D56FD 或 4E 2D 56 FD）...';
+                    document.getElementById('inputHint').innerHTML = '<i class="fas fa-info-circle"></i> 输入十六进制字节串（根据字节序设置解析）';
+                } else {
+                    document.getElementById('encInput').placeholder = '输入 \\uXXXX 格式（如 \\u4E2D\\u56FD）...';
+                    document.getElementById('inputHint').innerHTML = '<i class="fas fa-info-circle"></i> 输入 Unicode 转义序列，如 \\u4E2D\\u56FD';
+                }
+            }
+            document.getElementById('convertBtnText').textContent = isEncode ? '编码' : '解码';
+        }
+
+        function onEndianChange() {
+            // 如果有结果显示，重新转换
+            const results = document.getElementById('encResults');
+            if (results.querySelector('.enc-result-item')) {
+                convert();
+            }
+        }
+
+        // ========== 核心编码函数 ==========
+
+        /** UTF-8 编码 */
+        function encodeUTF8(str) {
+            const encoder = new TextEncoder();
+            return encoder.encode(str);
+        }
+
+        /** UTF-8 解码 */
+        function decodeUTF8(bytes) {
+            const decoder = new TextDecoder('utf-8');
+            return decoder.decode(bytes);
+        }
+
+        /** UTF-16 编码 */
+        function encodeUTF16(str, littleEndian) {
+            const len = str.length;
+            const buf = new ArrayBuffer(len * 2);
+            const view = new DataView(buf);
+            for (let i = 0; i < len; i++) {
+                view.setUint16(i * 2, str.charCodeAt(i), littleEndian);
+            }
+            return new Uint8Array(buf);
+        }
+
+        /** UTF-16 解码 */
+        function decodeUTF16(bytes, littleEndian) {
+            if (bytes.length % 2 !== 0) {
+                throw new Error('字节长度必须是偶数（UTF-16 每字符占 2 字节）');
+            }
+            let result = '';
+            for (let i = 0; i < bytes.length; i += 2) {
+                if (i + 1 >= bytes.length) break;
+                const code = littleEndian
+                    ? bytes[i] | (bytes[i + 1] << 8)
+                    : (bytes[i] << 8) | bytes[i + 1];
+                result += String.fromCharCode(code);
+            }
+            return result;
+        }
+
+        /** GBK 编码 */
+        function encodeGBK(str) {
+            try {
+                const encoder = new TextEncoder('gbk');
+                return encoder.encode(str);
+            } catch (e) {
+                // 尝试 'gb2312' 作为备选
+                try {
+                    const encoder = new TextEncoder('gb2312');
+                    return encoder.encode(str);
+                } catch (e2) {
+                    throw new Error('浏览器不支持 GBK 编码。请使用 Chrome 或 Firefox 最新版本。');
+                }
+            }
+        }
+
+        /** GBK 解码 */
+        function decodeGBK(bytes) {
+            try {
+                const decoder = new TextDecoder('gbk');
+                return decoder.decode(bytes);
+            } catch (e) {
+                try {
+                    const decoder = new TextDecoder('gb2312');
+                    return decoder.decode(bytes);
+                } catch (e2) {
+                    throw new Error('浏览器不支持 GBK 解码。请使用 Chrome 或 Firefox 最新版本。');
+                }
+            }
+        }
+
+        /** Unicode 转义编码 (\uXXXX) */
+        function encodeUnicodeEscape(str) {
+            let result = '';
+            for (const ch of str) {
+                const code = ch.codePointAt(0);
+                if (code > 0xFFFF) {
+                    // 代理对 (supplementary plane)
+                    const high = Math.floor((code - 0x10000) / 0x400) + 0xD800;
+                    const low = ((code - 0x10000) % 0x400) + 0xDC00;
+                    result += '\\u' + high.toString(16).toUpperCase().padStart(4, '0');
+                    result += '\\u' + low.toString(16).toUpperCase().padStart(4, '0');
+                } else {
+                    result += '\\u' + code.toString(16).toUpperCase().padStart(4, '0');
+                }
+            }
+            return result;
+        }
+
+        /** Unicode 转义解码 */
+        function decodeUnicodeEscape(str) {
+            return str.replace(/\\u([0-9a-fA-F]{4})/g, (m, hex) => {
+                return String.fromCharCode(parseInt(hex, 16));
+            });
+        }
+
+        // ========== 辅助函数 ==========
+
+        /** 将 Uint8Array 转为十六进制字符串 */
+        function bytesToHex(bytes) {
+            return Array.from(bytes).map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
+        }
+
+        /** 将 Uint8Array 转为二进制字符串 */
+        function bytesToBinary(bytes) {
+            return Array.from(bytes).map(b => b.toString(2).padStart(8, '0')).join(' ');
+        }
+
+        /** 将 Uint8Array 转为紧凑十六进制（无空格） */
+        function bytesToHexCompact(bytes) {
+            return Array.from(bytes).map(b => b.toString(16).toUpperCase().padStart(2, '0')).join('');
+        }
+
+        /** 解析十六进制字符串为 Uint8Array */
+        function parseHex(str) {
+            // 移除 0x 前缀和空格
+            const cleaned = str.replace(/0x/gi, '').replace(/[^0-9a-fA-F]/g, '');
+            if (cleaned.length === 0) throw new Error('未检测到有效的十六进制数据');
+            if (cleaned.length % 2 !== 0) throw new Error('十六进制字符串长度必须为偶数');
+            const bytes = new Uint8Array(cleaned.length / 2);
+            for (let i = 0; i < bytes.length; i++) {
+                bytes[i] = parseInt(cleaned.substr(i * 2, 2), 16);
+            }
+            return bytes;
+        }
+
+        // ========== 核心转换 ==========
+
+        function convert() {
+            const input = document.getElementById('encInput').value;
+            if (!input.trim()) { showToast('请输入内容'); return; }
+
+            const isEncode = currentDirection === 'encode';
+            const fmt = currentFormat;
+            const le = document.getElementById('encEndian')?.value === 'le';
+
+            try {
+                let bytes, resultText, hexStr, binStr;
+
+                if (isEncode) {
+                    // === 编码模式 ===
+                    switch (fmt) {
+                        case 'utf8':
+                            bytes = encodeUTF8(input);
+                            resultText = bytesToHex(bytes);
+                            break;
+                        case 'utf16':
+                            bytes = encodeUTF16(input, le);
+                            resultText = bytesToHex(bytes);
+                            break;
+                        case 'gbk':
+                            bytes = encodeGBK(input);
+                            resultText = bytesToHex(bytes);
+                            break;
+                        case 'unicode':
+                            resultText = encodeUnicodeEscape(input);
+                            bytes = new TextEncoder().encode(resultText);
+                            break;
+                    }
+
+                    if (fmt !== 'unicode') {
+                        hexStr = bytesToHex(bytes);
+                        binStr = bytesToBinary(bytes);
+                    } else {
+                        hexStr = bytesToHex(bytes);
+                        binStr = bytesToBinary(bytes);
+                    }
+
+                    showEncodeResult(input, resultText, hexStr, binStr, bytes.length, fmt);
+
+                } else {
+                    // === 解码模式 ===
+                    if (fmt === 'unicode') {
+                        // \uXXXX 格式解码
+                        resultText = decodeUnicodeEscape(input);
+                        bytes = encodeUTF8(resultText); // 用于显示 hex/binary
+                        hexStr = bytesToHex(bytes);
+                        binStr = bytesToBinary(bytes);
+                        showDecodeResult(resultText, hexStr, binStr, bytes.length);
+                    } else {
+                        // 十六进制字节解码
+                        bytes = parseHex(input);
+                        switch (fmt) {
+                            case 'utf8':
+                                resultText = decodeUTF8(bytes);
+                                break;
+                            case 'utf16':
+                                resultText = decodeUTF16(bytes, le);
+                                break;
+                            case 'gbk':
+                                resultText = decodeGBK(bytes);
+                                break;
+                        }
+                        hexStr = bytesToHex(bytes);
+                        binStr = bytesToBinary(bytes);
+                        showDecodeResult(resultText, hexStr, binStr, bytes.length);
+                    }
+                }
+
+                printLog('编码转换', `${isEncode ? '编码' : '解码'} (${fmt}) 完成`);
+
+            } catch (e) {
+                showToast('转换失败：' + e.message);
+                printLog('编码转换错误', e.message, true);
+                document.getElementById('encResults').innerHTML = `
+                    <div class="enc-result-item" style="border-color:rgba(255,71,87,0.3);background:rgba(255,71,87,0.08);">
+                        <div class="result-label" style="color:#ff4757;">
+                            <i class="fas fa-exclamation-triangle"></i> 转换失败
+                        </div>
+                        <div class="result-value">${escapeHtml(e.message)}</div>
+                    </div>
+                `;
+            }
+        }
+
+        function showEncodeResult(inputText, encodedStr, hexStr, binStr, byteCount, fmt) {
+            const fmtNames = { utf8: 'UTF-8', utf16: 'UTF-16', gbk: 'GBK', unicode: '\\uXXXX' };
+            const endianLabel = fmt === 'utf16' 
+                ? (document.getElementById('encEndian').value === 'le' ? ' (LE)' : ' (BE)')
+                : '';
+
+            let extraInfo = '';
+            if (fmt === 'unicode') {
+                extraInfo = `<div class="enc-result-item" onclick="copyResult(this, '${escapeHtml(encodedStr)}')">
+                    <div class="result-label"><i class="fas fa-code"></i> Unicode 转义结果</div>
+                    <div class="copy-hint">📋 点击复制</div>
+                    <div class="result-value" style="font-size:0.9rem;">${escapeHtml(encodedStr)}</div>
+                </div>`;
+                extraInfo += `<div class="enc-result-item" onclick="copyResult(this, '${escapeHtml(hexStr)}')">
+                    <div class="result-label"><i class="fas fa-hashtag"></i> 字符串 UTF-8 字节 (Hex)</div>
+                    <div class="copy-hint">📋 点击复制</div>
+                    <div class="result-value">${escapeHtml(hexStr)}</div>
+                </div>`;
+                extraInfo += `<div class="enc-result-item" onclick="copyResult(this, '${escapeHtml(binStr)}')">
+                    <div class="result-label"><i class="fas fa-code-branch"></i> 字符串 UTF-8 字节 (Binary)</div>
+                    <div class="copy-hint">📋 点击复制</div>
+                    <div class="result-value" style="font-size:0.78rem;">${escapeHtml(binStr)}</div>
+                </div>`;
+            } else {
+                extraInfo = `<div class="enc-result-item" onclick="copyResult(this, '${escapeHtml(hexStr)}')">
+                    <div class="result-label"><i class="fas fa-hashtag"></i> 十六进制 (Hex)</div>
+                    <div class="copy-hint">📋 点击复制</div>
+                    <div class="result-value">${escapeHtml(hexStr)}</div>
+                </div>
+                <div class="enc-result-item" onclick="copyResult(this, '${escapeHtml(binStr)}')">
+                    <div class="result-label"><i class="fas fa-code-branch"></i> 二进制 (Binary)</div>
+                    <div class="copy-hint">📋 点击复制</div>
+                    <div class="result-value" style="font-size:0.78rem;">${escapeHtml(binStr)}</div>
+                </div>`;
+            }
+
+            document.getElementById('encResults').innerHTML = `
+                <div class="enc-result-item" onclick="copyResult(this, '${escapeHtml(encodedStr)}')">
+                    <div class="result-label">
+                        <i class="fas fa-arrow-right"></i> ${fmtNames[fmt]}${endianLabel} 编码结果
+                        <span style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);">共 ${byteCount} 字节</span>
+                    </div>
+                    <div class="copy-hint">📋 点击复制</div>
+                    <div class="result-value">${escapeHtml(encodedStr)}</div>
+                </div>
+                ${extraInfo}
+                <div class="enc-result-item" style="cursor:default;">
+                    <div class="result-label"><i class="fas fa-info-circle"></i> 原始文本</div>
+                    <div class="result-value text-value">${escapeHtml(inputText)}</div>
+                    <div style="margin-top:6px;font-size:0.75rem;color:var(--text-muted);">
+                        ${inputText.length} 字符 → ${byteCount} 字节（压缩比: ${byteCount > 0 ? (byteCount / inputText.length).toFixed(2) : '-'} 字节/字符）
+                    </div>
+                </div>
+            `;
+        }
+
+        function showDecodeResult(decodedText, hexStr, binStr, byteCount) {
+            const fmtNames = { utf8: 'UTF-8', utf16: 'UTF-16', gbk: 'GBK', unicode: '\\uXXXX' };
+            const endianLabel = currentFormat === 'utf16'
+                ? (document.getElementById('encEndian').value === 'le' ? ' (LE)' : ' (BE)')
+                : '';
+
+            document.getElementById('encResults').innerHTML = `
+                <div class="enc-result-item" onclick="copyResult(this, '${escapeHtml(decodedText)}')">
+                    <div class="result-label">
+                        <i class="fas fa-arrow-left"></i> ${fmtNames[currentFormat]}${endianLabel} 解码结果
+                    </div>
+                    <div class="copy-hint">📋 点击复制</div>
+                    <div class="result-value text-value">${escapeHtml(decodedText)}</div>
+                </div>
+                <div class="enc-result-item" onclick="copyResult(this, '${escapeHtml(hexStr)}')">
+                    <div class="result-label"><i class="fas fa-hashtag"></i> 十六进制 (Hex)</div>
+                    <div class="copy-hint">📋 点击复制</div>
+                    <div class="result-value">${escapeHtml(hexStr)}</div>
+                </div>
+                <div class="enc-result-item" onclick="copyResult(this, '${escapeHtml(binStr)}')">
+                    <div class="result-label"><i class="fas fa-code-branch"></i> 二进制 (Binary)</div>
+                    <div class="copy-hint">📋 点击复制</div>
+                    <div class="result-value" style="font-size:0.78rem;">${escapeHtml(binStr)}</div>
+                </div>
+                <div class="enc-result-item" style="cursor:default;">
+                    <div class="result-label"><i class="fas fa-info-circle"></i> 信息</div>
+                    <div style="font-size:0.85rem;color:var(--text-muted);">
+                        输入 ${byteCount} 字节 → 解码 ${decodedText.length} 字符
+                    </div>
+                </div>
+            `;
+        }
+
+        // ========== 工具函数 ==========
+
+        function copyResult(el, text) {
+            copyText(text);
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+        }
+
+        function clearAll() {
+            document.getElementById('encInput').value = '';
+            document.getElementById('encResults').innerHTML = `
+                <div class="enc-placeholder">
+                    <i class="fas fa-exchange-alt"></i>
+                    输入内容后点击"转换"查看结果
+                </div>
+            `;
+            showToast('已清空');
+        }
+
+        // ========== 示例加载 ==========
+
+        function loadSample(type) {
+            const isEncode = currentDirection === 'encode';
+            if (type === 'hello') {
+                document.getElementById('encInput').value = isEncode ? 'Hello World!' : '48656C6C6F20576F726C6421';
+            } else if (type === 'chinese') {
+                document.getElementById('encInput').value = isEncode ? '中文测试' : 'E4B8ADE69687E6B58BE8AF95';
+            } else if (type === 'mixed') {
+                document.getElementById('encInput').value = isEncode ? '混合 Hello 123 🌍' : 'E6B7B7E59088 Hello 123 F09F8C8D';
+            }
+            // 如果编码模式且样例是文本，直接转换
+            if (isEncode) {
+                convert();
+            }
+            showToast('已加载示例');
+        }
+
+        // ========== 键盘事件 ==========
+
+        document.getElementById('encInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                convert();
+            }
+        });
+
+        // ========== 初始化 ==========
+        updateUI();
+
+        // 点击特效
+        document.addEventListener('click', createClickEffect);
+        document.addEventListener('touchstart', function(e) {
+            const touch = e.touches[0];
+            createClickEffect({ clientX: touch.clientX, clientY: touch.clientY });
+        }, { passive: true });
+    </script>
+</body>
+</html>

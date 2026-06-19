@@ -89,7 +89,7 @@
         .avatar-wrap:hover { transform: translateX(-50%) rotate(360deg); }
         .avatar {
             width: 100%; height: 100%; border-radius: 50%;
-            background: #2a2a35 url('https://q1.qlogo.cn/g?b=qq&nk=你的QQ号&s=640') center/cover;
+            background: #2a2a35 url('https://q1.qlogo.cn/g?b=qq&nk=2700896261&s=640') center/cover;
         }
 
         .name { font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; letter-spacing: 2px; }
@@ -313,160 +313,9 @@
         .history-name { font-size: 0.85rem; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
         .history-artist { font-size: 0.7rem; color: var(--text-muted); }
         .history-time { font-size: 0.65rem; color: rgba(255,255,255,0.4); }
- .history-delete { color: #ff4757; cursor: pointer; font-size: 0.8rem; padding: 2px 6px; }
- .history-delete:hover { color: #ff6b6b; }
- .history-empty { text-align: center; padding: 30px; color: var(--text-muted); font-size: 0.85rem; }
-
- /* === 作者生平弹窗 === */
- #bio-modal {
- position: fixed; top: 0; left: 0; width: 100%; height: 100%;
- z-index: 9998; display: none; justify-content: center; align-items: center;
- animation: slideUpFade 0.3s forwards;
- }
- #bio-modal.show { display: flex; }
- #bio-modal-backdrop {
- position: absolute; top: 0; left: 0; width: 100%; height: 100%;
- background: rgba(0,0,0,0.5); z-index: 1;
- }
- #bio-panel {
- position: relative; z-index: 2;
- width: 90%; max-width: 520px; max-height: 80vh;
- background: rgba(15, 15, 20, 0.65);
- backdrop-filter: blur(28px) saturate(160%);
- -webkit-backdrop-filter: blur(28px) saturate(160%);
- border: 1px solid var(--glass-border);
- border-radius: 24px; box-shadow: var(--glass-shadow);
- display: flex; flex-direction: column;
- animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
- }
- .bio-header {
- padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,0.1);
- display: flex; justify-content: space-between; align-items: center;
- font-size: 1rem; font-weight: 500; flex-shrink: 0;
- }
- .bio-header i.fa-times {
- cursor: pointer; color: rgba(255,255,255,0.5); transition: color 0.2s; font-size: 1.1rem;
- }
- .bio-header i.fa-times:hover { color: #ff4757; }
- .bio-body {
- padding: 24px; overflow-y: auto; flex: 1;
- }
- .bio-body::-webkit-scrollbar { width: 5px; }
- .bio-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
-
- /* 作者头像区域 */
- .bio-avatar-section {
- text-align: center; margin-bottom: 20px;
- }
- .bio-avatar {
- width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 12px;
- background: #2a2a35; border: 2px solid var(--glass-border);
- object-fit: cover; display: block;
- }
- .bio-name { font-size: 1.4rem; font-weight: 700; }
- .bio-aka { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
- .bio-motto {
- font-size: 0.85rem; color: var(--theme-accent); margin-top: 8px;
- padding: 8px 16px; background: rgba(165,180,252,0.08);
- border-radius: 50px; display: inline-block; border: 1px solid rgba(165,180,252,0.15);
- }
- .bio-quote {
- font-size: 0.85rem; color: var(--text-muted); font-style: italic; margin-top: 15px;
- padding: 12px 16px; background: rgba(0,0,0,0.15); border-radius: 12px;
- border-left: 3px solid var(--theme-accent); line-height: 1.6;
- }
- .bio-section {
- margin-top: 20px; padding-top: 18px;
- border-top: 1px solid rgba(255,255,255,0.06);
- }
- .bio-section-title {
- font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;
- font-weight: 500; letter-spacing: 1px;
- }
- .bio-section-title i { color: var(--theme-accent); margin-right: 6px; }
-
- /* 技能条 */
- .bio-skills { display: flex; flex-direction: column; gap: 10px; }
- .bio-skill-item { display: flex; align-items: center; gap: 12px; }
- .bio-skill-icon {
- width: 28px; text-align: center; color: var(--theme-accent); font-size: 0.9rem;
- }
- .bio-skill-name { width: 100px; font-size: 0.85rem; color: var(--text-main); flex-shrink: 0; }
- .bio-skill-bar {
- flex: 1; height: 6px; background: rgba(255,255,255,0.08);
- border-radius: 3px; overflow: hidden;
- }
- .bio-skill-fill {
- height: 100%; border-radius: 3px;
- background: linear-gradient(90deg, var(--theme-accent), #818cf8);
- transition: width 0.8s ease; width: 0;
- }
- .bio-skill-level {
- width: 36px; text-align: right; font-size: 0.75rem;
- color: var(--text-muted); font-family: monospace;
- }
-
- /* 时间线 */
- .bio-timeline { position: relative; padding-left: 24px; }
- .bio-timeline::before {
- content: ''; position: absolute; left: 7px; top: 0; bottom: 0;
- width: 2px; background: rgba(165,180,252,0.25);
- }
- .bio-timeline-item { position: relative; padding-bottom: 16px; }
- .bio-timeline-item:last-child { padding-bottom: 0; }
- .bio-timeline-item::before {
- content: ''; position: absolute; left: -21px; top: 5px;
- width: 10px; height: 10px; border-radius: 50%;
- background: var(--theme-accent); border: 2px solid rgba(15,15,20,0.8);
- }
- .bio-timeline-year { font-size: 0.75rem; color: var(--theme-accent); font-weight: 600; font-family: monospace; }
- .bio-timeline-event { font-size: 0.85rem; color: var(--text-main); margin-top: 2px; line-height: 1.4; }
-
- /* 项目卡片 */
- .bio-projects { display: flex; flex-direction: column; gap: 10px; }
- .bio-project {
- padding: 12px 16px; background: rgba(255,255,255,0.04);
- border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
- transition: all 0.2s;
- }
- .bio-project:hover { background: rgba(255,255,255,0.08); border-color: var(--theme-accent); }
- .bio-project a {
- color: var(--text-main); text-decoration: none; font-weight: 500; font-size: 0.9rem;
- }
- .bio-project a:hover { color: var(--theme-accent); }
- .bio-project-desc { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
- .bio-project-lang {
- display: inline-block; margin-top: 6px; font-size: 0.7rem;
- background: rgba(165,180,252,0.15); padding: 2px 8px; border-radius: 50px;
- color: var(--theme-accent);
- }
-
- /* 标签 */
- .bio-tags { display: flex; flex-wrap: wrap; gap: 6px; }
- .bio-tag {
- font-size: 0.75rem; padding: 4px 12px; border-radius: 50px;
- background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
- color: var(--text-muted);
- }
- .bio-tag:hover { background: rgba(255,255,255,0.1); }
-
- /* 联系信息 */
- .bio-contact { display: flex; flex-wrap: wrap; gap: 8px; }
- .bio-contact a {
- display: inline-flex; align-items: center; gap: 6px;
- padding: 6px 14px; border-radius: 50px; font-size: 0.8rem;
- color: var(--text-main); text-decoration: none;
- background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
- transition: all 0.2s;
- }
- .bio-contact a:hover { background: rgba(255,255,255,0.12); border-color: var(--theme-accent); }
- .bio-contact a i { color: var(--theme-accent); }
-
- .bio-loading, .bio-error {
- text-align: center; padding: 40px; color: var(--text-muted); font-size: 0.9rem;
- }
- .bio-error { color: #ff4757; }
- .bio-occupation { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+        .history-delete { color: #ff4757; cursor: pointer; font-size: 0.8rem; padding: 2px 6px; }
+        .history-delete:hover { color: #ff6b6b; }
+        .history-empty { text-align: center; padding: 30px; color: var(--text-muted); font-size: 0.85rem; }
 
         /* 背景设置面板 */
         #bg-settings-panel {
@@ -566,91 +415,6 @@
         /* 夜间模式按钮激活状态 */
         .control-btn.night-active i { color: #ffd700; }
 
-        /* === 侧边栏 === */
-        #sidebar-trigger {
-            position: fixed; top: 20px; left: 20px; z-index: 1001;
-            width: 45px; height: 45px; border-radius: 50%;
-            background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border); color: #fff;
-            display: flex; justify-content: center; align-items: center;
-            cursor: pointer; transition: all 0.3s;
-        }
-        #sidebar-trigger:hover { background: rgba(255,255,255,0.2); transform: scale(1.1); }
-
-        #sidebar {
-            position: fixed; top: 0; left: 0; z-index: 1002;
-            width: var(--sidebar-width); height: 100vh;
-            background: rgba(15, 15, 20, 0.55);
-            backdrop-filter: blur(24px) saturate(150%);
-            -webkit-backdrop-filter: blur(24px) saturate(150%);
-            border-right: 1px solid var(--glass-border);
-            box-shadow: 4px 0 30px rgba(0,0,0,0.3);
-            transform: translateX(-100%);
-            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-            display: flex; flex-direction: column;
-        }
-        #sidebar.show { transform: translateX(0); }
-
-        .sidebar-header {
-            padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,0.1);
-            display: flex; justify-content: space-between; align-items: center;
-            font-size: 1rem; font-weight: 500;
-        }
-        .sidebar-header i.fa-times {
-            cursor: pointer; color: rgba(255,255,255,0.5);
-            transition: color 0.2s; font-size: 1.1rem;
-        }
-        .sidebar-header i.fa-times:hover { color: #ff4757; }
-
-        .sidebar-body { flex: 1; overflow-y: auto; padding: 12px 0; }
-        .sidebar-body::-webkit-scrollbar { width: 4px; }
-        .sidebar-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
-
-        .sidebar-link {
-            display: flex; align-items: center; gap: 14px;
-            padding: 12px 20px; color: rgba(255,255,255,0.75);
-            text-decoration: none; font-size: 0.9rem;
-            transition: all 0.2s; border-left: 3px solid transparent;
-        }
-        .sidebar-link:hover {
-            background: rgba(255,255,255,0.08); color: #fff;
-            border-left-color: var(--theme-accent);
-        }
-        .sidebar-link i { width: 20px; text-align: center; color: var(--theme-accent); font-size: 1rem; }
-        .sidebar-link .link-badge {
-            margin-left: auto; font-size: 0.65rem;
-            background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 50px;
-            color: var(--text-muted);
-        }
-        .sidebar-section-title {
-            padding: 16px 20px 8px; font-size: 0.7rem; color: var(--text-muted);
-            text-transform: uppercase; letter-spacing: 1px; font-weight: 500;
-        }
-
-        .sidebar-footer {
-            padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.1);
-        }
-        .sidebar-night-btn {
-            width: 100%; padding: 10px; border-radius: 12px;
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-            color: var(--text-muted); font-size: 0.85rem; cursor: pointer;
-            transition: all 0.2s; display: flex; align-items: center; gap: 10px; justify-content: center;
-        }
-        .sidebar-night-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
-        .sidebar-night-btn i { color: #ffd700; }
-
-        /* 侧边栏遮罩 */
-        #sidebar-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.3); z-index: 1000; opacity: 0;
-            pointer-events: none; transition: opacity 0.35s ease;
-        }
-        #sidebar-overlay.show { opacity: 1; pointer-events: auto; }
-
-        @media (max-width: 768px) {
-            #sidebar { width: 260px; }
-        }
-
         .status-msg { text-align: center; padding: 20px; font-size: 0.9rem; color: var(--text-muted); }
 
         /* 终端日志弹窗样式 */
@@ -671,7 +435,6 @@
             border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             backdrop-filter: blur(20px);
         }
-        /* 日志终端 + 作者生平弹窗共用动画 */
         #log-panel.show { display: flex; animation: slideUpFade 0.3s forwards; }
         .log-header {
             padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.1);
@@ -767,109 +530,11 @@
             transition: color 0.3s; cursor: pointer;
         }
         .author-credit a:hover { color: #a5b4fc; }
-
-        /* === 同心圆光标 === */
-        * { cursor: none !important; }
-        #cursor-concentric {
-            position: fixed; pointer-events: none; z-index: 999999;
-            transform: translate(-50%, -50%);
-            display: flex; justify-content: center; align-items: center;
-            opacity: 0; transition: opacity 0.15s ease;
-        }
-        #cursor-concentric.active { opacity: 1; }
-        #cursor-concentric .outer {
-            position: absolute; width: 100%; height: 100%; border-radius: 50%;
-            border: 2.5px solid #a5b4fc;
-            box-shadow: 0 0 12px rgba(165,180,252,0.4), inset 0 0 8px rgba(165,180,252,0.1);
-            animation: cursorPulse 2s ease-in-out infinite;
-        }
-        @keyframes cursorPulse {
-            0%, 100% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.08); opacity: 1; }
-        }
-        #cursor-concentric .inner {
-            position: absolute; border-radius: 50%;
-            border: 2px solid rgba(165,180,252,0.7);
-            box-shadow: 0 0 8px rgba(165,180,252,0.3), inset 0 0 6px rgba(165,180,252,0.15);
-            animation: innerPulse 2s ease-in-out infinite;
-        }
-        @keyframes innerPulse {
-            0%, 100% { transform: scale(1); opacity: 0.6; }
-            50% { transform: scale(1.05); opacity: 0.9; }
-        }
-        #cursor-concentric .dot {
-            position: absolute; width: 5px; height: 5px; border-radius: 50%;
-            background: #a5b4fc;
-            box-shadow: 0 0 10px rgba(165,180,252,0.6), 0 0 20px rgba(165,180,252,0.3);
-        }
-        #cursor-concentric.click .outer {
-            animation: clickRipple 0.5s ease-out forwards !important;
-        }
-        @keyframes clickRipple {
-            0% { transform: scale(1); opacity: 0.8; border-width: 2.5px; }
-            100% { transform: scale(2.5); opacity: 0; border-width: 1px; }
-        }
-        @keyframes trailRing {
-            0% { opacity: 0.6; transform: translate(-50%, -50%) scale(0.3); }
-            100% { opacity: 0; transform: translate(-50%, -50%) scale(2); }
-        }
-        @keyframes trailDot {
-            0% { opacity: 0.8; transform: translate(0, 0) scale(1); }
-            100% { opacity: 0; transform: translate(var(--mx), var(--my)) scale(0); }
-        }
     </style>
 </head>
 <body>
 
     <div class="overlay"></div>
-
-    <!-- 侧边栏遮罩 -->
-    <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
-
-    <!-- 侧边栏 -->
-    <div id="sidebar">
-        <div class="sidebar-header">
-            <span><i class="fas fa-compass" style="margin-right:10px;color:var(--theme-accent);"></i> 导航菜单</span>
-            <i class="fas fa-times" onclick="toggleSidebar()"></i>
-        </div>
-        <div class="sidebar-body">
-            <div class="sidebar-section-title"><i class="fas fa-star"></i> 回到主页</div>
-            <a href="index.html" class="sidebar-link">
-                <i class="fas fa-home"></i> 首页
-                <span class="link-badge">Home</span>
-            </a>
-
-            <div class="sidebar-section-title"><i class="fas fa-tools"></i> 实用工具</div>
-            <a href="tools/index.html" class="sidebar-link"><i class="fas fa-th-large"></i> 工具箱</a>
-
-            <div class="sidebar-section-title"><i class="fas fa-user"></i> 关于</div>
-            <a href="bio.html" class="sidebar-link">
-                <i class="fas fa-id-card"></i> 作者生平
-                <span class="link-badge">Bio</span>
-            </a>
-
-            <div class="sidebar-section-title"><i class="fas fa-gamepad"></i> 游戏</div>
-            <a href="games/index.html" class="sidebar-link">
-                <i class="fas fa-gamepad"></i> 游戏大厅
-                <span class="link-badge">Play</span>
-            </a>
-
-            <div class="sidebar-section-title"><i class="fas fa-cog"></i> 设置</div>
-            <a href="javascript:void(0)" class="sidebar-link" onclick="openBgSettings(); toggleSidebar();">
-                <i class="fas fa-image"></i> 背景设置
-            </a>
-        </div>
-        <div class="sidebar-footer">
-            <button class="sidebar-night-btn" onclick="toggleNightMode(); toggleSidebar();">
-                <i class="fas fa-moon"></i> <span id="sidebar-night-text">夜间模式</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- 侧边栏触发按钮 -->
-    <button id="sidebar-trigger" onclick="toggleSidebar()" title="打开导航菜单">
-        <i class="fas fa-bars"></i>
-    </button>
     
     <!-- 视频背景（移到 body 直接子元素，确保覆盖整个页面） -->
     <video id="bg-video" autoplay muted loop playsinline></video>
@@ -901,7 +566,7 @@
                     <span class="text">代码仓库</span>
                     <i class="fas fa-chevron-right arrow"></i>
                 </a>
-                <div class="link-btn qq" onclick="openApp('qq', '你的QQ号')">
+                <div class="link-btn qq" onclick="openApp('qq', '2700896261')">
                     <div class="icon-box"><i class="fab fa-qq"></i></div>
                     <span class="text">QQ 交流</span>
                     <i class="fas fa-chevron-right arrow"></i>
@@ -944,7 +609,7 @@
 
             <div class="custom-player">
                 <div class="vinyl-record" id="vinyl-record">
-                    <img src="https://q1.qlogo.cn/g?b=qq&nk=你的QQ号&s=640" id="player-cover" class="album-cover" alt="cover">
+                    <img src="https://q1.qlogo.cn/g?b=qq&nk=2700896261&s=640" id="player-cover" class="album-cover" alt="cover">
                 </div>
                 <div class="player-info">
                     <div class="player-title" id="player-title">等待播放</div>
@@ -1042,20 +707,6 @@
     <div id="toast">
         <i class="fas fa-info-circle" style="color: #a5b4fc;"></i>
         <span id="toast-msg">提示信息</span>
-    </div>
-
-    <!-- 作者生平弹窗 -->
-    <div id="bio-modal">
-        <div id="bio-modal-backdrop" onclick="closeBioPanel()"></div>
-        <div id="bio-panel">
-            <div class="bio-header">
-                <span><i class="fas fa-id-card" style="margin-right:10px;color:var(--theme-accent);"></i> 作者生平</span>
-                <i class="fas fa-times" onclick="closeBioPanel()"></i>
-            </div>
-            <div class="bio-body" id="bio-body">
-                <div class="bio-loading"><i class="fas fa-spinner fa-spin"></i> 正在加载作者信息...</div>
-            </div>
-        </div>
     </div>
 
     <script>
@@ -1238,7 +889,7 @@ let autoScrolling = false;
 
             currentIndex = index;
             uiTitle.innerText = song.name; uiArtist.innerText = song.artist; uiSourceTag.innerText = song.source;
-            uiCover.src = song.cover || 'https://q1.qlogo.cn/g?b=qq&nk=你的QQ号&s=640';
+            uiCover.src = song.cover || 'https://q1.qlogo.cn/g?b=qq&nk=2700896261&s=640';
             
             document.querySelectorAll('.music-item').forEach((el, i) => {
                 if(i === index) el.classList.add('active'); else el.classList.remove('active');
@@ -2325,179 +1976,6 @@ let autoScrolling = false;
             } catch(e) {}
         });
 
-        // ================= 侧边栏 =================
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
-            const trigger = document.getElementById('sidebar-trigger');
-            const isShow = sidebar.classList.toggle('show');
-            overlay.classList.toggle('show', isShow);
-            if(isShow) {
-                trigger.style.opacity = '0';
-                trigger.style.pointerEvents = 'none';
-                // 更新夜间模式按钮文本
-                const isNight = document.documentElement.classList.contains('night-mode');
-                const nightText = document.getElementById('sidebar-night-text');
-                if(nightText) nightText.textContent = isNight ? '日间模式' : '夜间模式';
-                const nightIcon = document.querySelector('.sidebar-night-btn i');
-                if(nightIcon) nightIcon.className = isNight ? 'fas fa-sun' : 'fas fa-moon';
-            } else {
-                trigger.style.opacity = '1';
-                trigger.style.pointerEvents = 'auto';
-            }
-        }
-        
-        // ================= 作者生平弹窗 =================
-        // 缓存 bio 数据，避免重复 fetch
-        let bioDataCache = null;
-        
-        function openBioPanel() {
-            const modal = document.getElementById('bio-modal');
-            modal.classList.add('show');
-            document.body.style.overflow = 'hidden';
-            
-            if (bioDataCache) {
-                renderBioPanel(bioDataCache);
-                return;
-            }
-            
-            // 显示加载中
-            document.getElementById('bio-body').innerHTML = '<div class="bio-loading"><i class="fas fa-spinner fa-spin"></i> 正在加载作者信息...</div>';
-            
-            // 读取 sp.json
-            fetch('sp.json')
-                .then(res => {
-                    if (!res.ok) throw new Error('HTTP ' + res.status);
-                    return res.json();
-                })
-                .then(data => {
-                    bioDataCache = data;
-                    renderBioPanel(data);
-                    printLog('作者生平', 'sp.json 加载成功');
-                })
-                .catch(err => {
-                    printLog('作者生平加载失败', err.message, true);
-                    document.getElementById('bio-body').innerHTML = '<div class="bio-error"><i class="fas fa-exclamation-triangle"></i><br>加载失败：' + escapeHtml(err.message) + '</div>';
-                });
-        }
-        
-        function closeBioPanel() {
-            document.getElementById('bio-modal').classList.remove('show');
-            document.body.style.overflow = '';
-        }
-        
-        function renderBioPanel(data) {
-            if (!data) return;
-            const body = document.getElementById('bio-body');
-            
-            // 构建技能条
-            let skillsHtml = '';
-            if (data.skills && data.skills.length) {
-                skillsHtml = data.skills.map(s => `
-                    <div class="bio-skill-item">
-                        <div class="bio-skill-icon"><i class="fas ${s.icon || 'fa-code'}"></i></div>
-                        <div class="bio-skill-name">${escapeHtml(s.name)}</div>
-                        <div class="bio-skill-bar"><div class="bio-skill-fill" style="width:${s.level}%;"></div></div>
-                        <div class="bio-skill-level">${s.level}%</div>
-                    </div>
-                `).join('');
-            }
-            
-            // 构建时间线
-            let timelineHtml = '';
-            if (data.timeline && data.timeline.length) {
-                timelineHtml = data.timeline.map(t => `
-                    <div class="bio-timeline-item">
-                        <div class="bio-timeline-year">${escapeHtml(t.year)}</div>
-                        <div class="bio-timeline-event">${escapeHtml(t.event)}</div>
-                    </div>
-                `).join('');
-            }
-            
-            // 构建项目列表
-            let projectsHtml = '';
-            if (data.projects && data.projects.length) {
-                projectsHtml = data.projects.map(p => `
-                    <div class="bio-project">
-                        <a href="${escapeHtml(p.url)}" target="_blank"><i class="fas fa-external-link-alt" style="font-size:0.7rem;margin-right:6px;"></i>${escapeHtml(p.name)}</a>
-                        <div class="bio-project-desc">${escapeHtml(p.desc)}</div>
-                        <span class="bio-project-lang">${escapeHtml(p.lang)}</span>
-                    </div>
-                `).join('');
-            }
-            
-            // 构建兴趣标签
-            let interestsHtml = '';
-            if (data.interests && data.interests.length) {
-                interestsHtml = data.interests.map(i => `<span class="bio-tag">${escapeHtml(i)}</span>`).join('');
-            }
-            
-            // 构建联系方式
-            let contactHtml = '';
-            if (data.contact) {
-                const c = data.contact;
-                if (c.github) contactHtml += `<a href="${escapeHtml(c.github)}" target="_blank"><i class="fab fa-github"></i> GitHub</a>`;
-                if (c.website) contactHtml += `<a href="${escapeHtml(c.website)}" target="_blank"><i class="fas fa-globe"></i> 网站</a>`;
-                if (c.email) contactHtml += `<a href="mailto:${escapeHtml(c.email)}"><i class="fas fa-envelope"></i> 邮件</a>`;
-                if (c.qq) contactHtml += `<a href="javascript:void(0)" onclick="openApp('qq', '${escapeHtml(c.qq)}')"><i class="fab fa-qq"></i> QQ</a>`;
-            }
-            
-            // 组合完整 HTML
-            const html = `
-                <div class="bio-avatar-section">
-                    <img class="bio-avatar" src="${escapeHtml(data.avatar || 'https://q1.qlogo.cn/g?b=qq&nk=你的QQ号&s=640')}" alt="avatar" onerror="this.src='https://q1.qlogo.cn/g?b=qq&nk=你的QQ号&s=640'">
-                    <div class="bio-name">${escapeHtml(data.name || '未知')}</div>
-                    ${data.aka ? '<div class="bio-aka">『' + escapeHtml(data.aka) + '』</div>' : ''}
-                    ${data.occupation ? '<div class="bio-occupation"><i class="fas fa-briefcase" style="margin-right:4px;"></i>' + escapeHtml(data.occupation) + '</div>' : ''}
-                    ${data.motto ? '<div class="bio-motto">' + escapeHtml(data.motto) + '</div>' : ''}
-                </div>
-                
-                ${data.bio ? '<div style="font-size:0.85rem;color:var(--text-muted);line-height:1.7;text-align:center;margin-bottom:15px;">' + escapeHtml(data.bio) + '</div>' : ''}
-                
-                ${data.quote ? '<div class="bio-quote"><i class="fas fa-quote-left" style="margin-right:6px;opacity:0.5;"></i>' + escapeHtml(data.quote) + '</div>' : ''}
-                
-                ${skillsHtml ? `
-                <div class="bio-section">
-                    <div class="bio-section-title"><i class="fas fa-cogs"></i> 技能栈</div>
-                    <div class="bio-skills">${skillsHtml}</div>
-                </div>` : ''}
-                
-                ${timelineHtml ? `
-                <div class="bio-section">
-                    <div class="bio-section-title"><i class="fas fa-history"></i> 时间线</div>
-                    <div class="bio-timeline">${timelineHtml}</div>
-                </div>` : ''}
-                
-                ${projectsHtml ? `
-                <div class="bio-section">
-                    <div class="bio-section-title"><i class="fas fa-folder-open"></i> 项目</div>
-                    <div class="bio-projects">${projectsHtml}</div>
-                </div>` : ''}
-                
-                ${interestsHtml ? `
-                <div class="bio-section">
-                    <div class="bio-section-title"><i class="fas fa-heart"></i> 兴趣</div>
-                    <div class="bio-tags">${interestsHtml}</div>
-                </div>` : ''}
-                
-                ${contactHtml ? `
-                <div class="bio-section">
-                    <div class="bio-section-title"><i class="fas fa-address-book"></i> 联系方式</div>
-                    <div class="bio-contact">${contactHtml}</div>
-                </div>` : ''}
-            `;
-            
-            body.innerHTML = html;
-        }
-        
-        // ESC 键关闭弹窗
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                const modal = document.getElementById('bio-modal');
-                if (modal.classList.contains('show')) closeBioPanel();
-            }
-        });
-        
         // 背景 URL 输入框回车处理
         document.addEventListener('DOMContentLoaded', function() {
             const bgInput = document.getElementById('bg-url-input');
@@ -2531,78 +2009,6 @@ lyricContainer.addEventListener('scroll', () => {
         loadPlayHistory();
         initNightMode();
         initBg();
-
-        // ================= 同心圆光标 + 飞机尾迹拖尾 =================
-        (function(){
-            const cursorEl = document.createElement('div');
-            cursorEl.id = 'cursor-concentric';
-            cursorEl.innerHTML = '<div class="outer" style="width:36px;height:36px;"></div><div class="inner" style="width:18px;height:18px;"></div><div class="dot"></div>';
-            document.body.appendChild(cursorEl);
-
-            // Canvas 尾迹
-            const cvs = document.createElement('canvas');
-            cvs.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:99998;';
-            cvs.width=window.innerWidth; cvs.height=window.innerHeight;
-            document.body.appendChild(cvs);
-            const ctx=cvs.getContext('2d');
-            window.addEventListener('resize',function(){cvs.width=window.innerWidth;cvs.height=window.innerHeight;});
-
-            const pts=[];
-            const MAX=60, DUR=600;
-            document.addEventListener('mousemove',function(e){
-                const x=e.clientX,y=e.clientY;
-                cursorEl.style.left=x+'px'; cursorEl.style.top=y+'px'; cursorEl.classList.add('active');
-                const last=pts[pts.length-1];
-                if(!last||Math.abs(last.x-x)>2||Math.abs(last.y-y)>2){pts.push({x,y,time:Date.now()});if(pts.length>MAX)pts.shift();}
-            });
-
-            function draw(){
-                ctx.clearRect(0,0,cvs.width,cvs.height);
-                const now=Date.now();
-                while(pts.length&&now-pts[0].time>DUR)pts.shift();
-                if(pts.length<3){requestAnimationFrame(draw);return;}
-                const hueOff=(now*0.05)%360;
-                for(let i=1;i<pts.length;i++){
-                    const p0=pts[i-1],p1=pts[i],age=(now-p1.time)/DUR;
-                    const op=Math.max(0,1-age*1.2), lw=Math.max(0.3,6*(1-age*1.1));
-                    const hue=(hueOff+i*8)%360;
-                    const clr=`hsla(${hue},80%,65%,${op})`;
-                    ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p1.x,p1.y);
-                    ctx.strokeStyle=clr;ctx.lineWidth=lw;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
-                    if(op>0.3){
-                        ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p1.x,p1.y);
-                        ctx.strokeStyle=`hsla(${hue},90%,75%,${op*0.3})`;ctx.lineWidth=lw*2.5;ctx.stroke();
-                    }
-                }
-                requestAnimationFrame(draw);
-            }
-            draw();
-
-            document.addEventListener('mousedown',function(){cursorEl.classList.add('click');setTimeout(()=>cursorEl.classList.remove('click'),500);});
-            document.addEventListener('mouseleave',function(){cursorEl.classList.remove('active');});
-            document.addEventListener('mouseenter',function(){cursorEl.classList.add('active');});
-            document.addEventListener('mouseover',function(e){
-                const t=e.target.closest('a,button,.tool-item,.link-btn,.control-btn,.sidebar-link,.music-item,.bg-option');
-                if(t){
-                    cursorEl.style.transform='translate(-50%,-50%) scale(1.4)';
-                    cursorEl.querySelector('.outer').style.borderColor='#f472b6';
-                    cursorEl.querySelector('.inner').style.borderColor='rgba(244,114,182,0.7)';
-                    cursorEl.querySelector('.dot').style.background='#f472b6';
-                    cursorEl.querySelector('.dot').style.boxShadow='0 0 10px rgba(244,114,182,0.6), 0 0 20px rgba(244,114,182,0.3)';
-                }
-            });
-            document.addEventListener('mouseout',function(e){
-                const t=e.target.closest('a,button,.tool-item,.link-btn,.control-btn,.sidebar-link,.music-item,.bg-option');
-                if(t){
-                    cursorEl.style.transform='translate(-50%,-50%) scale(1)';
-                    cursorEl.querySelector('.outer').style.borderColor='#a5b4fc';
-                    cursorEl.querySelector('.inner').style.borderColor='rgba(165,180,252,0.7)';
-                    cursorEl.querySelector('.dot').style.background='#a5b4fc';
-                    cursorEl.querySelector('.dot').style.boxShadow='0 0 10px rgba(165,180,252,0.6), 0 0 20px rgba(165,180,252,0.3)';
-                }
-            });
-            document.addEventListener('touchstart',function(){cursorEl.classList.remove('active');});
-        })();
     </script>
 
     <!-- 作者信息 - 请保留此标注 -->
@@ -2619,6 +2025,11 @@ lyricContainer.addEventListener('scroll', () => {
     <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 
     <!-- 不蒜子统计容器 -->
-
+    <div id="busuanzi_container_site_uv" style="display:none;">
+        <span id="busuanzi_value_site_uv"></span> 位访客
+    </div>
+    <div id="busuanzi_container_site_pv" style="display:none;">
+        <span id="busuanzi_value_site_pv"></span> 次访问
+    </div>
     <!-- 不蒜子统计 -->
 </html>

@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>摩斯电码工具 - 编码/解码</title>
+<link rel="stylesheet" href="common.css">
+<style>
+/* 补充摩斯电码专用样式 */
+.tool-card { max-width: 780px; }
+
+.morse-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 18px 0;
+}
+.morse-layout .mode-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.morse-layout .mode-card:hover { background: rgba(255,255,255,0.1); }
+.morse-layout .mode-card.active {
+    border-color: var(--theme-accent);
+    background: rgba(165,180,252,0.1);
+    box-shadow: 0 0 20px rgba(165,180,252,0.15);
+}
+.morse-layout .mode-card .mode-icon { font-size: 1.8rem; margin-bottom: 8px; }
+.morse-layout .mode-card .mode-label { font-size: 0.95rem; font-weight: 500; }
+.morse-layout .mode-card .mode-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+
+.morse-section { display: none; }
+.morse-section.active { display: block; animation: slideUpFade 0.4s ease; }
+
+.separator-options {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+}
+.separator-options label {
+    display: flex; align-items: center; gap: 6px;
+    cursor: pointer; font-size: 0.85rem; color: var(--text-muted);
+    padding: 6px 14px; border-radius: 20px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: all 0.2s;
+}
+.separator-options label:hover { background: rgba(255,255,255,0.1); }
+.separator-options input[type="radio"]:checked + span { color: var(--theme-accent); }
+.separator-options label:has(input:checked) {
+    border-color: var(--theme-accent);
+    background: rgba(165,180,252,0.1);
+}
+
+.speed-options {
+    display: flex; gap: 8px; flex-wrap: wrap;
+}
+.speed-options .speed-btn {
+    padding: 6px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05); color: var(--text-muted); cursor: pointer;
+    font-size: 0.8rem; transition: all 0.2s;
+}
+.speed-options .speed-btn:hover { background: rgba(255,255,255,0.1); }
+.speed-options .speed-btn.active {
+    border-color: var(--theme-accent); background: rgba(165,180,252,0.15);
+    color: var(--theme-accent);
+}
+
+.presets {
+    display: flex; gap: 8px; flex-wrap: wrap;
+}
+.presets .preset-btn {
+    padding: 6px 14px; border-radius: 12px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-muted); cursor: pointer; font-size: 0.8rem;
+    transition: all 0.2s;
+}
+.presets .preset-btn:hover {
+    background: rgba(165,180,252,0.1); border-color: var(--theme-accent); color: #fff;
+}
+
+.morse-table-wrapper {
+    margin-top: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+.morse-table-wrapper::-webkit-scrollbar { width: 4px; }
+.morse-table-wrapper::-webkit-scrollbar-track { background: transparent; }
+.morse-table-wrapper::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+
+.morse-table {
+    width: 100%; border-collapse: collapse; font-size: 0.85rem;
+}
+.morse-table th {
+    background: rgba(165,180,252,0.15); padding: 8px 12px;
+    text-align: center; font-weight: 500; color: var(--theme-accent);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    position: sticky; top: 0; backdrop-filter: blur(8px);
+}
+.morse-table td {
+    padding: 6px 12px; text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+.morse-table tr:hover td { background: rgba(255,255,255,0.04); }
+.morse-table .char-col { font-weight: 600; }
+.morse-table .code-col { color: var(--theme-accent); }
+
+.control-row {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    margin: 12px 0;
+}
+
+.result-area {
+    margin-top: 18px;
+}
+
+.result-area .result-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+}
+.result-area .result-header .result-label { font-size: 0.85rem; color: var(--text-muted); }
+.result-area .result-header .result-actions { display: flex; gap: 8px; }
+
+.result-box {
+    width: 100%; min-height: 70px; background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 14px 16px; font-size: 0.95rem;
+    color: var(--text-main);
+    word-break: break-all;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    line-height: 1.7;
+}
+
+.play-indicator {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.8rem; color: var(--text-muted);
+}
+.play-indicator.playing { color: #34d399; }
+.play-indicator .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #34d399; display: none;
+}
+.play-indicator.playing .dot { display: inline-block; animation: dotPulse 0.6s infinite; }
+@keyframes dotPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.6); }
+}
+
+.encode-mode-hint {
+    font-size: 0.78rem; color: var(--text-muted);
+    margin-top: 6px; margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+    .morse-layout { grid-template-columns: 1fr; }
+    .morse-table { font-size: 0.8rem; }
+    .morse-table td, .morse-table th { padding: 5px 8px; }
+}
+</style>
+</head>
+<body>
+
+<div class="overlay"></div>
+<video id="bg-video" muted loop playsinline></video>
+<div id="bg-video-overlay"></div>
+
+<a href="../index.html" class="back-home-btn" title="返回主页"><i class="fas fa-arrow-left"></i></a>
+
+<div id="toast"><span id="toast-msg"></span></div>
+
+<div class="glass-card tool-card">
+    <h1><i class="fas fa-signal" style="color:var(--theme-accent)"></i> 摩斯电码</h1>
+    <p class="tool-subtitle">文字 ↔ 摩斯电码 编码解码器</p>
+
+    <!-- 模式切换 -->
+    <div class="morse-layout">
+        <div class="mode-card active" data-mode="encode" onclick="switchMode('encode')">
+            <div class="mode-icon"><i class="fas fa-file-alt"></i></div>
+            <div class="mode-label">文字 → 摩斯电码</div>
+            <div class="mode-desc">将普通文字编码为摩斯电码</div>
+        </div>
+        <div class="mode-card" data-mode="decode" onclick="switchMode('decode')">
+            <div class="mode-icon"><i class="fas fa-exchange-alt"></i></div>
+            <div class="mode-label">摩斯电码 → 文字</div>
+            <div class="mode-desc">将摩斯电码解码为普通文字</div>
+        </div>
+    </div>
+
+    <!-- 编码区 -->
+    <div class="morse-section active" id="encode-section">
+        <label class="tool-label">输入文字</label>
+        <textarea id="encode-input" placeholder="输入要编码的文字，例如：SOS" oninput="doEncode()"></textarea>
+        <p class="encode-mode-hint"><i class="fas fa-info-circle"></i> 支持 A-Z、0-9 及部分标点符号，不区分大小写</p>
+
+        <div class="control-row">
+            <div style="flex:1">
+                <label class="tool-label" style="margin-top:0;margin-bottom:4px">分隔符</label>
+                <div class="separator-options">
+                    <label><input type="radio" name="encode-sep" value=" " checked onchange="doEncode()"><span>空格</span></label>
+                    <label><input type="radio" name="encode-sep" value=" / " onchange="doEncode()"><span>/ 分隔</span></label>
+                    <label><input type="radio" name="encode-sep" value="" onchange="doEncode()"><span>无分隔</span></label>
+                </div>
+            </div>
+            <div style="flex-shrink:0">
+                <label class="tool-label" style="margin-top:0;margin-bottom:4px">速度</label>
+                <div class="speed-options">
+                    <button class="speed-btn" data-speed="slow" onclick="setSpeed('slow')">慢</button>
+                    <button class="speed-btn active" data-speed="medium" onclick="setSpeed('medium')">中</button>
+                    <button class="speed-btn" data-speed="fast" onclick="setSpeed('fast')">快</button>
+                </div>
+            </div>
+        </div>
+
+        <label class="tool-label">预设示例</label>
+        <div class="presets">
+            <button class="preset-btn" onclick="loadPreset('SOS', 'encode')">SOS</button>
+            <button class="preset-btn" onclick="loadPreset('HELLO WORLD', 'encode')">HELLO WORLD</button>
+            <button class="preset-btn" onclick="loadPreset('MORSE CODE', 'encode')">MORSE CODE</button>
+            <button class="preset-btn" onclick="loadPreset('XIONG DA', 'encode')">XIONG DA</button>
+            <button class="preset-btn" onclick="loadPreset('I LOVE YOU', 'encode')">I LOVE YOU</button>
+            <button class="preset-btn" onclick="loadPreset('SAVE OUR SOULS', 'encode')">SAVE OUR SOULS</button>
+        </div>
+
+        <div class="result-area">
+            <div class="result-header">
+                <span class="result-label">摩斯电码结果</span>
+                <div class="result-actions">
+                    <button class="tool-btn" onclick="playMorse()" title="播放摩斯电码声音"><i class="fas fa-play"></i> 播放</button>
+                    <button class="tool-btn" onclick="stopMorse()" title="停止播放"><i class="fas fa-stop"></i> 停止</button>
+                    <button class="tool-btn" onclick="copyResult('encode')" title="复制结果"><i class="fas fa-copy"></i> 复制</button>
+                    <button class="tool-btn" onclick="clearAll('encode')" title="清空"><i class="fas fa-eraser"></i></button>
+                </div>
+            </div>
+            <div class="result-box" id="encode-result">等待输入...</div>
+            <div class="play-indicator" id="play-indicator"><span class="dot"></span> <span id="play-status">就绪</span></div>
+        </div>
+    </div>
+
+    <!-- 解码区 -->
+    <div class="morse-section" id="decode-section">
+        <label class="tool-label">输入摩斯电码</label>
+        <textarea id="decode-input" placeholder="输入摩斯电码，例如：... --- ..." oninput="doDecode()"></textarea>
+        <p class="encode-mode-hint"><i class="fas fa-info-circle"></i> 点(.) / 滴 表示短音，划(-) / 嗒 表示长音，空格分隔字母</p>
+
+        <div class="control-row">
+            <div style="flex:1">
+                <label class="tool-label" style="margin-top:0;margin-bottom:4px">分隔符格式</label>
+                <div class="separator-options">
+                    <label><input type="radio" name="decode-sep" value="space" checked onchange="doDecode()"><span>空格分隔</span></label>
+                    <label><input type="radio" name="decode-sep" value="slash" onchange="doDecode()"><span>/ 分隔</span></label>
+                </div>
+            </div>
+        </div>
+
+        <label class="tool-label">预设示例</label>
+        <div class="presets">
+            <button class="preset-btn" onclick="loadPreset('... --- ...', 'decode')">SOS</button>
+            <button class="preset-btn" onclick="loadPreset('.... . .-.. .-.. --- / .-- --- .-. .-.. -..', 'decode')">HELLO WORLD</button>
+            <button class="preset-btn" onclick="loadPreset('-- --- .-. ... . / -.-. --- -.. .', 'decode')">MORSE CODE</button>
+            <button class="preset-btn" onclick="loadPreset('-..- .. --- -. --. / -.. .-', 'decode')">XIONG DA</button>
+            <button class="preset-btn" onclick="loadPreset('.. / .-.. --- ...- . / -.-- --- ..-', 'decode')">I LOVE YOU</button>
+        </div>
+
+        <div class="result-area">
+            <div class="result-header">
+                <span class="result-label">解码结果</span>
+                <div class="result-actions">
+                    <button class="tool-btn" onclick="copyResult('decode')" title="复制结果"><i class="fas fa-copy"></i> 复制</button>
+                    <button class="tool-btn" onclick="clearAll('decode')" title="清空"><i class="fas fa-eraser"></i></button>
+                </div>
+            </div>
+            <div class="result-box" id="decode-result">等待输入...</div>
+        </div>
+    </div>
+
+    <!-- 摩斯电码表 -->
+    <details style="margin-top: 22px;">
+        <summary style="cursor:pointer;font-size:0.9rem;color:var(--text-muted);padding:10px 0;list-style:none;display:flex;align-items:center;gap:8px;">
+            <i class="fas fa-table" style="color:var(--theme-accent)"></i> 国际标准摩斯电码表
+            <i class="fas fa-chevron-down" style="margin-left:auto;font-size:0.7rem;transition:transform 0.3s;"></i>
+        </summary>
+        <div class="morse-table-wrapper">
+            <table class="morse-table">
+                <thead>
+                    <tr><th>字符</th><th>摩斯电码</th><th>字符</th><th>摩斯电码</th><th>字符</th><th>摩斯电码</th></tr>
+                </thead>
+                <tbody id="morse-table-body"></tbody>
+            </table>
+        </div>
+    </details>
+</div>
+
+<div class="author-credit">
+    <p><i class="fas fa-bolt" style="color:var(--theme-accent)"></i> xiongdaa 摩斯电码工具 <i class="fas fa-bolt" style="color:var(--theme-accent)"></i></p>
+</div>
+
+<script src="common.js"></script>
+<script>
+// ==================== 摩斯电码映射表 ====================
+const MORSE_MAP = {
+    'A': '.-',    'B': '-...',   'C': '-.-.',   'D': '-..',
+    'E': '.',     'F': '..-.',   'G': '--.',    'H': '....',
+    'I': '..',    'J': '.---',   'K': '-.-',    'L': '.-..',
+    'M': '--',    'N': '-.',     'O': '---',    'P': '.--.',
+    'Q': '--.-',  'R': '.-.',    'S': '...',    'T': '-',
+    'U': '..-',   'V': '...-',   'W': '.--',    'X': '-..-',
+    'Y': '-.--',  'Z': '--..',
+    '0': '-----', '1': '.----',  '2': '..---',  '3': '...--',
+    '4': '....-', '5': '.....',  '6': '-....',  '7': '--...',
+    '8': '---..', '9': '----.',
+    '.': '.-.-.-', ',': '--..--', '?': '..--..', "'": '.----.',
+    '!': '-.-.--', '/': '-..-.',  '(': '-.--.',  ')': '-.--.-',
+    '&': '.-...',  ':': '---...', ';': '-.-.-.', '=': '-...-',
+    '+': '.-.-.',  '-': '-....-', '_': '..--.-', '"': '.-..-.',
+    '$': '...-..-','@': '.--.-.', ' ': '/'
+};
+
+// 反转映射表（用于解码）
+const REVERSE_MAP = {};
+for (const [key, val] of Object.entries(MORSE_MAP)) {
+    if (key !== ' ') REVERSE_MAP[val] = key;
+}
+
+// 速度配置 (dot duration in ms)
+const SPEED_CONFIG = {
+    slow: { dot: 200, dash: 600, pause: 200, charPause: 400, wordPause: 800 },
+    medium: { dot: 120, dash: 360, pause: 120, charPause: 240, wordPause: 480 },
+    fast: { dot: 60, dash: 180, pause: 60, charPause: 120, wordPause: 240 }
+};
+
+let currentSpeed = 'medium';
+let audioCtx = null;
+let isPlaying = false;
+let playTimer = null;
+
+// 获取 AudioContext
+function getAudioCtx() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    return audioCtx;
+}
+
+// ==================== 模式切换 ====================
+function switchMode(mode) {
+    document.querySelectorAll('.mode-card').forEach(el => el.classList.remove('active'));
+    document.querySelector(`.mode-card[data-mode="${mode}"]`).classList.add('active');
+    document.querySelectorAll('.morse-section').forEach(el => el.classList.remove('active'));
+    document.getElementById(mode + '-section').classList.add('active');
+    // 停止播放
+    stopMorse();
+}
+
+// ==================== 速度设置 ====================
+function setSpeed(speed) {
+    currentSpeed = speed;
+    document.querySelectorAll('.speed-btn').forEach(el => el.classList.remove('active'));
+    document.querySelector(`.speed-btn[data-speed="${speed}"]`).classList.add('active');
+}
+
+// ==================== 编码 ====================
+function doEncode() {
+    const input = document.getElementById('encode-input').value.trim().toUpperCase();
+    const resultEl = document.getElementById('encode-result');
+    if (!input) {
+        resultEl.textContent = '等待输入...';
+        return;
+    }
+    const sep = document.querySelector('input[name="encode-sep"]:checked').value;
+    const parts = [];
+    let hasUnsupported = false;
+    for (const ch of input) {
+        if (MORSE_MAP[ch] !== undefined) {
+            parts.push(MORSE_MAP[ch]);
+        } else if (ch === ' ') {
+            parts.push('/');
+        } else {
+            parts.push('?');
+            hasUnsupported = true;
+        }
+    }
+    let result = parts.join(sep);
+    if (sep === ' / ') {
+        // 如果有空格，将空格对应的 / 换成 /
+        result = result.replace(/\/ \/ \//g, ' / ');
+    }
+    resultEl.textContent = result || '（无有效字符）';
+    if (hasUnsupported) {
+        resultEl.textContent += '\n（部分字符不受支持，已替换为 ?）';
+    }
+}
+
+// ==================== 解码 ====================
+function doDecode() {
+    const input = document.getElementById('decode-input').value.trim();
+    const resultEl = document.getElementById('decode-result');
+    if (!input) {
+        resultEl.textContent = '等待输入...';
+        return;
+    }
+    const sepMode = document.querySelector('input[name="decode-sep"]:checked').value;
+    let tokens;
+    if (sepMode === 'slash') {
+        // 用 / 分隔
+        tokens = input.split('/').map(t => t.trim()).filter(t => t.length > 0);
+    } else {
+        // 空格分隔，但也要处理 / 作为单词分隔
+        tokens = input.split(/\s+/).filter(t => t.length > 0);
+    }
+    const resultParts = [];
+    let unknownCount = 0;
+    for (const token of tokens) {
+        if (token === '/') {
+            resultParts.push(' ');
+            continue;
+        }
+        if (REVERSE_MAP[token] !== undefined) {
+            resultParts.push(REVERSE_MAP[token]);
+        } else {
+            resultParts.push('?');
+            unknownCount++;
+        }
+    }
+    const result = resultParts.join('');
+    resultEl.textContent = result || '（无法解码）';
+    if (unknownCount > 0) {
+        resultEl.textContent += '\n（有 ' + unknownCount + ' 个无法识别的码，已替换为 ?）';
+    }
+}
+
+// ==================== 预设示例 ====================
+function loadPreset(text, mode) {
+    if (mode === 'encode') {
+        document.getElementById('encode-input').value = text;
+        doEncode();
+        switchMode('encode');
+    } else {
+        document.getElementById('decode-input').value = text;
+        doDecode();
+        switchMode('decode');
+    }
+}
+
+// ==================== 复制结果 ====================
+function copyResult(mode) {
+    const el = document.getElementById(mode + '-result');
+    const text = el.textContent.replace(/（.*）/, '').trim();
+    if (!text || text === '等待输入...') {
+        showToast('没有内容可复制');
+        return;
+    }
+    copyText(text);
+}
+
+// ==================== 清空 ====================
+function clearAll(mode) {
+    stopMorse();
+    document.getElementById(mode + '-input').value = '';
+    document.getElementById(mode + '-result').textContent = '等待输入...';
+}
+
+// ==================== 播放摩斯电码声音 ====================
+function playMorse() {
+    const resultEl = document.getElementById('encode-result');
+    const morseStr = resultEl.textContent.replace(/（.*）/, '').trim();
+    if (!morseStr || morseStr === '等待输入...') {
+        showToast('请先输入文字编码');
+        return;
+    }
+
+    stopMorse();
+
+    // 解析摩斯电码序列
+    const symbols = [];
+    // 检测分隔符类型：空格、/、或无分隔
+    let sep = ' ';
+    if (morseStr.includes(' / ')) {
+        sep = ' / ';
+    } else if (!morseStr.includes(' ')) {
+        sep = '';
+    }
+
+    if (sep === '') {
+        // 无分隔符，每个字符就是一个符号
+        for (const ch of morseStr) {
+            symbols.push(ch);
+        }
+    } else if (sep === ' / ') {
+        const parts = morseStr.split(' / ');
+        for (let i = 0; i < parts.length; i++) {
+            if (i > 0) symbols.push('WORD_SPACE');
+            const chars = parts[i].split(' ');
+            for (let j = 0; j < chars.length; j++) {
+                if (j > 0) symbols.push('CHAR_SPACE');
+                for (const sym of chars[j]) {
+                    symbols.push(sym);
+                }
+            }
+        }
+    } else {
+        // 空格分隔
+        const tokens = morseStr.split(/\s+/);
+        for (const token of tokens) {
+            if (token === '/') {
+                symbols.push('WORD_SPACE');
+            } else {
+                for (const sym of token) {
+                    symbols.push(sym);
+                }
+                symbols.push('CHAR_SPACE');
+            }
+        }
+        // 移除末尾的 CHAR_SPACE
+        if (symbols.length > 0 && symbols[symbols.length - 1] === 'CHAR_SPACE') {
+            symbols.pop();
+        }
+    }
+
+    const config = SPEED_CONFIG[currentSpeed];
+    const ctx = getAudioCtx();
+    isPlaying = true;
+    updatePlayStatus(true);
+
+    let timeOffset = 0;
+
+    for (const sym of symbols) {
+        if (!isPlaying) break;
+
+        if (sym === 'WORD_SPACE') {
+            timeOffset += config.wordPause;
+            continue;
+        }
+        if (sym === 'CHAR_SPACE') {
+            timeOffset += config.charPause;
+            continue;
+        }
+
+        if (sym === '.') {
+            scheduleTone(ctx, timeOffset, config.dot);
+            timeOffset += config.dot + config.pause;
+        } else if (sym === '-') {
+            scheduleTone(ctx, timeOffset, config.dash);
+            timeOffset += config.dash + config.pause;
+        }
+    }
+
+    // 设置总时长后自动停止状态
+    const totalDuration = timeOffset + 200;
+    playTimer = setTimeout(() => {
+        if (isPlaying) {
+            isPlaying = false;
+            updatePlayStatus(false);
+        }
+    }, totalDuration);
+}
+
+function scheduleTone(ctx, startTime, duration) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, ctx.currentTime + startTime / 1000);
+    gain.gain.setValueAtTime(0.5, ctx.currentTime + startTime / 1000);
+    gain.gain.setValueAtTime(0.5, ctx.currentTime + startTime / 1000 + duration / 1000);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startTime / 1000 + duration / 1000 + 0.01);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime + startTime / 1000);
+    osc.stop(ctx.currentTime + startTime / 1000 + duration / 1000 + 0.02);
+}
+
+function stopMorse() {
+    isPlaying = false;
+    if (playTimer) {
+        clearTimeout(playTimer);
+        playTimer = null;
+    }
+    updatePlayStatus(false);
+}
+
+function updatePlayStatus(playing) {
+    const indicator = document.getElementById('play-indicator');
+    const statusEl = document.getElementById('play-status');
+    if (playing) {
+        indicator.classList.add('playing');
+        statusEl.textContent = '播放中...';
+    } else {
+        indicator.classList.remove('playing');
+        statusEl.textContent = '就绪';
+    }
+}
+
+// ==================== 生成摩斯电码表 ====================
+function generateMorseTable() {
+    const tbody = document.getElementById('morse-table-body');
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const digits = '0123456789';
+    const punct = ['.', ',', '?', '!', '/', '(', ')', '&', ':', ';', '=', '+', '-', '_', '"', '@'];
+    const allChars = [...letters, ...digits, ...punct];
+
+    // 每行3列
+    let html = '';
+    for (let i = 0; i < allChars.length; i += 3) {
+        html += '<tr>';
+        for (let j = 0; j < 3; j++) {
+            const idx = i + j;
+            if (idx < allChars.length) {
+                const ch = allChars[idx];
+                const code = MORSE_MAP[ch] || '';
+                html += `<td class="char-col">${ch === ' ' ? '&nbsp;' : ch}</td><td class="code-col">${code}</td>`;
+            } else {
+                html += '<td></td><td></td>';
+            }
+        }
+        html += '</tr>';
+    }
+    tbody.innerHTML = html;
+}
+
+// ==================== details 箭头动画 ====================
+document.querySelector('details summary').addEventListener('click', function() {
+    const icon = this.querySelector('.fa-chevron-down');
+    if (this.parentElement.open) {
+        icon.style.transform = 'rotate(0deg)';
+    } else {
+        icon.style.transform = 'rotate(180deg)';
+    }
+});
+
+// ==================== 初始化 ====================
+document.addEventListener('DOMContentLoaded', function() {
+    generateMorseTable();
+});
+</script>
+</body>
+</html>

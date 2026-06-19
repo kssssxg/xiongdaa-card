@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <title>手机号归属地查询 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .input-wrap {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .input-wrap input {
+            width: 100%;
+            padding: 14px 16px 14px 44px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            color: var(--text-main);
+            font-size: 1.1rem;
+            outline: none;
+            transition: all 0.3s;
+            backdrop-filter: blur(8px);
+            letter-spacing: 1px;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+        }
+        .input-wrap input::placeholder {
+            color: rgba(255,255,255,0.35);
+            letter-spacing: 0;
+            font-family: 'Noto Sans SC', 'PingFang SC', sans-serif;
+        }
+        .input-wrap input:focus {
+            border-color: var(--theme-accent);
+            background: rgba(255,255,255,0.12);
+            box-shadow: 0 0 0 3px rgba(165,180,252,0.15);
+        }
+        .input-wrap .input-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1rem;
+            pointer-events: none;
+            transition: color 0.3s;
+        }
+        .input-wrap input:focus ~ .input-icon {
+            color: var(--theme-accent);
+        }
+        .input-wrap .input-clear {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+            background: none;
+            border: none;
+            padding: 4px;
+        }
+        .input-wrap .input-clear.visible {
+            opacity: 1;
+        }
+        .input-wrap .input-clear:hover {
+            color: #fff;
+        }
+
+        .validation-msg {
+            font-size: 0.8rem;
+            margin-top: 6px;
+            min-height: 1.2em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.3s;
+        }
+        .validation-msg.valid {
+            color: #34d399;
+        }
+        .validation-msg.invalid {
+            color: #f87171;
+        }
+
+        .query-btn-wrap {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .query-btn-wrap .tool-btn {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .result-area {
+            margin-top: 20px;
+            display: none;
+            animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .result-area.show {
+            display: block;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .result-item {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .result-item:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.15);
+        }
+        .result-item .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .result-item .value {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        .result-item .value.highlight {
+            color: var(--theme-accent);
+        }
+        .result-item.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+        }
+        .result-actions .tool-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .history-section {
+            margin-top: 28px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            padding-top: 20px;
+        }
+        .history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .history-header h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .history-header h3 i {
+            color: var(--theme-accent);
+        }
+        .history-header .clear-btn {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .history-header .clear-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: #f87171;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .history-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .history-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .history-list::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.15);
+            border-radius: 2px;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        .history-item:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.12);
+        }
+        .history-item .phone-num {
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+        .history-item .phone-info {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .history-item .phone-info .tag {
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+        .tag.tag-mobile { background: rgba(52,211,153,0.15); color: #34d399; }
+        .tag.tag-unicom { background: rgba(96,165,250,0.15); color: #60a5fa; }
+        .tag.tag-telecom { background: rgba(251,191,36,0.15); color: #fbbf24; }
+
+        .history-empty {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .history-empty i {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            opacity: 0.5;
+            display: block;
+        }
+
+        .loading-spinner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .loading-spinner i {
+            animation: spin 1s linear infinite;
+            font-size: 1.2rem;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+            .query-btn-wrap {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="../index.html" class="back-home-btn" title="返回主页"><i class="fas fa-arrow-left"></i></a>
+
+    <div id="toast"><i class="fas fa-info-circle" style="color: #a5b4fc;"></i><span id="toast-msg">提示信息</span></div>
+
+    <div class="glass-card tool-card">
+        <h1><i class="fas fa-phone-alt"></i> 手机号归属地查询</h1>
+        <div class="tool-subtitle">输入手机号码，快速查询运营商与归属地</div>
+
+        <!-- 输入区域 -->
+        <div class="input-wrap">
+            <input type="text" id="phone-input" placeholder="请输入手机号码（11位）" maxlength="14" autocomplete="off" inputmode="numeric">
+            <i class="fas fa-phone input-icon"></i>
+            <button class="input-clear" id="input-clear" aria-label="清除输入"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="validation-msg" id="validation-msg"></div>
+
+        <div class="query-btn-wrap">
+            <button class="tool-btn primary" id="query-btn"><i class="fas fa-search"></i> 查询归属地</button>
+            <button class="tool-btn" id="clear-btn"><i class="fas fa-eraser"></i> 清空</button>
+        </div>
+
+        <!-- 加载状态 -->
+        <div class="loading-spinner" id="loading-spinner" style="display: none;">
+            <i class="fas fa-spinner"></i>
+            <span>正在查询中，请稍候…</span>
+        </div>
+
+        <!-- 结果区域 -->
+        <div class="result-area" id="result-area">
+            <div class="result-grid" id="result-grid">
+                <div class="result-item">
+                    <div class="label">运营商</div>
+                    <div class="value highlight" id="r-operator">—</div>
+                </div>
+                <div class="result-item">
+                    <div class="label">归属省份</div>
+                    <div class="value" id="r-province">—</div>
+                </div>
+                <div class="result-item">
+                    <div class="label">城市</div>
+                    <div class="value" id="r-city">—</div>
+                </div>
+                <div class="result-item">
+                    <div class="label">区号</div>
+                    <div class="value" id="r-areacode">—</div>
+                </div>
+                <div class="result-item full-width">
+                    <div class="label">邮政编码</div>
+                    <div class="value" id="r-zipcode">—</div>
+                </div>
+            </div>
+
+            <div class="result-actions">
+                <button class="tool-btn primary" id="copy-btn"><i class="fas fa-copy"></i> 一键复制结果</button>
+                <button class="tool-btn" id="query-again-btn"><i class="fas fa-redo"></i> 重新查询</button>
+            </div>
+        </div>
+
+        <!-- 查询历史 -->
+        <div class="history-section">
+            <div class="history-header">
+                <h3><i class="fas fa-history"></i> 查询历史</h3>
+                <button class="clear-btn" id="clear-history-btn"><i class="fas fa-trash-alt"></i> 清空</button>
+            </div>
+            <div class="history-list" id="history-list">
+                <div class="history-empty" id="history-empty">
+                    <i class="fas fa-inbox"></i>
+                    暂无查询记录
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="author-credit">
+        <p>© 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        (function() {
+            'use strict';
+
+            const PHONE_API = 'https://api.oioweb.cn/api/common/telQuery';
+            const CORS_PROXY = 'https://cros.xiongdaa.me/?url=';
+            const HISTORY_KEY = 'xiongda_phone_lookup_history';
+            const MAX_HISTORY = 20;
+
+            // DOM refs
+            const phoneInput = document.getElementById('phone-input');
+            const inputClear = document.getElementById('input-clear');
+            const validationMsg = document.getElementById('validation-msg');
+            const queryBtn = document.getElementById('query-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const resultArea = document.getElementById('result-area');
+            const copyBtn = document.getElementById('copy-btn');
+            const queryAgainBtn = document.getElementById('query-again-btn');
+            const clearHistoryBtn = document.getElementById('clear-history-btn');
+            const historyList = document.getElementById('history-list');
+            const historyEmpty = document.getElementById('history-empty');
+
+            // Result fields
+            const rOperator = document.getElementById('r-operator');
+            const rProvince = document.getElementById('r-province');
+            const rCity = document.getElementById('r-city');
+            const rAreacode = document.getElementById('r-areacode');
+            const rZipcode = document.getElementById('r-zipcode');
+
+            let lastResult = null;
+            let currentPhone = '';
+
+            // --- 手机号清洗 ---
+            function cleanPhone(raw) {
+                let s = raw.trim();
+                // 去除 +86 前缀
+                if (s.startsWith('+86')) {
+                    s = s.substring(3).trim();
+                } else if (s.startsWith('86') && s.length > 11) {
+                    s = s.substring(2).trim();
+                }
+                // 去除非数字字符
+                s = s.replace(/\D/g, '');
+                return s;
+            }
+
+            // --- 校验 ---
+            function validatePhone(raw) {
+                const cleaned = cleanPhone(raw);
+                if (cleaned.length === 0) {
+                    return { valid: false, phone: '', message: '请输入手机号码' };
+                }
+                if (!/^1\d{10}$/.test(cleaned)) {
+                    if (cleaned.length < 11) {
+                        return { valid: false, phone: cleaned, message: '号码长度不够，请输入11位手机号' };
+                    }
+                    if (!cleaned.startsWith('1')) {
+                        return { valid: false, phone: cleaned, message: '手机号必须以 1 开头' };
+                    }
+                    return { valid: false, phone: cleaned, message: '手机号格式有误，请输入正确的11位手机号' };
+                }
+                return { valid: true, phone: cleaned, message: '✓ 格式正确' };
+            }
+
+            // --- 更新校验提示 ---
+            function updateValidation(raw) {
+                const result = validatePhone(raw);
+                validationMsg.textContent = result.message;
+                if (result.valid) {
+                    validationMsg.className = 'validation-msg valid';
+                } else if (result.phone.length > 0 || raw.trim().length > 0) {
+                    validationMsg.className = 'validation-msg invalid';
+                } else {
+                    validationMsg.className = 'validation-msg';
+                }
+                return result;
+            }
+
+            // --- 输入处理 ---
+            phoneInput.addEventListener('input', function() {
+                const raw = this.value;
+                const cleaned = cleanPhone(raw);
+                // 自动格式化：只保留数字，最大11位
+                const digits = raw.replace(/\D/g, '');
+                if (digits.length > 11) {
+                    this.value = digits.substring(0, 11);
+                } else if (raw !== digits) {
+                    // 如果输入了非数字字符（除了+），尝试保持可读性
+                    // 但只保留数字
+                    this.value = digits;
+                }
+
+                updateValidation(this.value);
+                inputClear.classList.toggle('visible', this.value.length > 0);
+
+                // 输入时自动隐藏结果
+                if (resultArea.classList.contains('show')) {
+                    resultArea.classList.remove('show');
+                }
+            });
+
+            phoneInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    doQuery();
+                }
+                if (e.key === 'Escape') {
+                    this.value = '';
+                    updateValidation('');
+                    inputClear.classList.remove('visible');
+                    this.blur();
+                }
+            });
+
+            // 输入框清除按钮
+            inputClear.addEventListener('click', function() {
+                phoneInput.value = '';
+                updateValidation('');
+                this.classList.remove('visible');
+                phoneInput.focus();
+                resultArea.classList.remove('show');
+            });
+
+            // --- 运营商标签颜色 ---
+            function getOperatorTag(operator) {
+                if (!operator) return '';
+                const op = operator.toLowerCase();
+                if (op.includes('移动')) return 'tag-mobile';
+                if (op.includes('联通')) return 'tag-unicom';
+                if (op.includes('电信')) return 'tag-telecom';
+                return '';
+            }
+
+            // --- 查询 API ---
+            async function doQuery() {
+                const raw = phoneInput.value;
+                const validation = validatePhone(raw);
+                if (!validation.valid) {
+                    showToast('请输入正确的11位手机号');
+                    phoneInput.focus();
+                    return;
+                }
+
+                const phone = validation.phone;
+                currentPhone = phone;
+                const prefix = phone.substring(0, 7);
+
+                // 显示加载
+                loadingSpinner.style.display = 'flex';
+                resultArea.classList.remove('show');
+                queryBtn.disabled = true;
+                queryBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 查询中…';
+
+                try {
+                    const url = CORS_PROXY + encodeURIComponent(PHONE_API + '?phone=' + prefix);
+                    const resp = await fetch(url);
+                    const data = await resp.json();
+
+                    if (data && data.code === 200 && data.data) {
+                        const info = data.data;
+                        const result = {
+                            phone: phone,
+                            operator: info.operator || info.sp || '未知',
+                            province: info.province || '未知',
+                            city: info.city || '未知',
+                            areaCode: info.area_code || info.areacode || '未知',
+                            zipCode: info.zip_code || info.zip || info.postcode || '未知'
+                        };
+                        lastResult = result;
+                        displayResult(result);
+                        saveHistory(result);
+                        renderHistory();
+                    } else {
+                        // 尝试备用 API
+                        throw new Error('主API返回异常: ' + JSON.stringify(data));
+                    }
+                } catch (e) {
+                    printLog('归属地查询失败', e.message, true);
+                    // 备用API尝试
+                    try {
+                        const fallbackUrl = CORS_PROXY + encodeURIComponent(
+                            'https://api.uomg.com/api/telecom?tel=' + prefix
+                        );
+                        const resp2 = await fetch(fallbackUrl);
+                        const data2 = await resp2.json();
+
+                        if (data2 && (data2.code === 1 || data2.telephone) && data2.data) {
+                            const info = data2.data;
+                            const result = {
+                                phone: phone,
+                                operator: info.operator || info.sp || '未知',
+                                province: info.province || info.prov || '未知',
+                                city: info.city || '未知',
+                                areaCode: info.area_code || info.areacode || '未知',
+                                zipCode: info.zip_code || info.zip || info.postcode || '未知'
+                            };
+                            lastResult = result;
+                            displayResult(result);
+                            saveHistory(result);
+                            renderHistory();
+                        } else {
+                            throw new Error('备用API返回异常');
+                        }
+                    } catch (e2) {
+                        printLog('备用API也失败', e2.message, true);
+                        showToast('查询失败，请稍后重试或检查网络');
+                        // 显示默认信息（基于号段）
+                        const defaultResult = getDefaultInfo(phone);
+                        lastResult = defaultResult;
+                        displayResult(defaultResult);
+                    }
+                } finally {
+                    loadingSpinner.style.display = 'none';
+                    queryBtn.disabled = false;
+                    queryBtn.innerHTML = '<i class="fas fa-search"></i> 查询归属地';
+                }
+            }
+
+            // --- 内置号段信息（API失败时备用） ---
+            function getDefaultInfo(phone) {
+                const prefix = phone.substring(0, 3);
+                let operator = '未知';
+                if (/^1(3[4-9]|4[57]|5[0-27-9]|6[7]|7[0-8]|8[2-478]|9[5-8])/.test(phone)) {
+                    operator = '中国移动';
+                } else if (/^1(3[0-2]|4[56]|5[56]|6[6]|7[156]|8[56]|9[6])/.test(phone)) {
+                    operator = '中国联通';
+                } else if (/^1(3[3]|4[9]|5[3]|7[37]|8[0-19]|9[9])/.test(phone)) {
+                    operator = '中国电信';
+                } else if (/^1(9[2])/.test(phone)) {
+                    operator = '中国广电';
+                }
+                return {
+                    phone: phone,
+                    operator: operator,
+                    province: '（查询失败，使用号段判断）',
+                    city: '—',
+                    areaCode: '—',
+                    zipCode: '—'
+                };
+            }
+
+            // --- 显示结果 ---
+            function displayResult(result) {
+                rOperator.textContent = result.operator;
+                rProvince.textContent = result.province;
+                rCity.textContent = result.city;
+                rAreacode.textContent = result.areaCode;
+                rZipcode.textContent = result.zipCode;
+
+                // 运营商标签颜色（通过额外类）
+                const opTag = getOperatorTag(result.operator);
+                // 移除已有颜色类
+                rOperator.className = 'value highlight';
+                // 无需额外类，用颜色区分
+
+                resultArea.classList.add('show');
+                // 滚动到结果区域
+                resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            // --- 查询按钮 ---
+            queryBtn.addEventListener('click', doQuery);
+
+            // --- 清空按钮 ---
+            clearBtn.addEventListener('click', function() {
+                phoneInput.value = '';
+                updateValidation('');
+                inputClear.classList.remove('visible');
+                resultArea.classList.remove('show');
+                lastResult = null;
+                currentPhone = '';
+                phoneInput.focus();
+            });
+
+            // --- 重新查询 ---
+            queryAgainBtn.addEventListener('click', function() {
+                phoneInput.focus();
+                phoneInput.select();
+            });
+
+            // --- 一键复制 ---
+            copyBtn.addEventListener('click', function() {
+                if (!lastResult) {
+                    showToast('没有可复制的结果');
+                    return;
+                }
+                const text = [
+                    '📞 手机号归属地查询结果',
+                    '━━━━━━━━━━━━━━━━━━',
+                    '手机号：' + lastResult.phone,
+                    '运营商：' + lastResult.operator,
+                    '省份：' + lastResult.province,
+                    '城市：' + lastResult.city,
+                    '区号：' + lastResult.areaCode,
+                    '邮编：' + lastResult.zipCode,
+                    '━━━━━━━━━━━━━━━━━━',
+                    '由 xiong da 工具箱提供'
+                ].join('\n');
+                copyText(text);
+            });
+
+            // --- 查询历史 localStorage ---
+            function getHistory() {
+                try {
+                    const stored = localStorage.getItem(HISTORY_KEY);
+                    return stored ? JSON.parse(stored) : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function saveHistory(result) {
+                try {
+                    let history = getHistory();
+                    // 去重：如果已经存在相同手机号，移除旧条目
+                    history = history.filter(function(item) {
+                        return item.phone !== result.phone;
+                    });
+                    // 添加到最前面
+                    history.unshift({
+                        phone: result.phone,
+                        operator: result.operator,
+                        province: result.province,
+                        city: result.city,
+                        areaCode: result.areaCode,
+                        zipCode: result.zipCode,
+                        time: new Date().toLocaleString('zh-CN')
+                    });
+                    // 限制最大数量
+                    if (history.length > MAX_HISTORY) {
+                        history = history.slice(0, MAX_HISTORY);
+                    }
+                    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+                } catch (e) {
+                    printLog('保存历史失败', e.message, true);
+                }
+            }
+
+            function renderHistory() {
+                const history = getHistory();
+                // 清空列表（保留 empty 占位）
+                const items = historyList.querySelectorAll('.history-item');
+                items.forEach(function(el) { el.remove(); });
+
+                if (history.length === 0) {
+                    historyEmpty.style.display = 'block';
+                    return;
+                }
+                historyEmpty.style.display = 'none';
+
+                history.forEach(function(item, index) {
+                    const div = document.createElement('div');
+                    div.className = 'history-item';
+                    div.style.animationDelay = (index * 0.03) + 's';
+
+                    const opTag = getOperatorTag(item.operator);
+                    const infoParts = [];
+                    if (item.province && item.province !== '—' && item.province !== '未知') {
+                        infoParts.push(item.province);
+                    }
+                    if (item.city && item.city !== '—' && item.city !== '未知') {
+                        infoParts.push(item.city);
+                    }
+                    infoParts.push('<span class="tag ' + opTag + '">' + (item.operator || '未知') + '</span>');
+
+                    div.innerHTML =
+                        '<span class="phone-num">' + item.phone + '</span>' +
+                        '<span class="phone-info">' +
+                            infoParts.join(' · ') +
+                            '<span style="color:rgba(255,255,255,0.3);font-size:0.7rem;">' + (item.time || '') + '</span>' +
+                        '</span>';
+
+                    // 点击历史项重新查询
+                    div.addEventListener('click', function() {
+                        phoneInput.value = item.phone;
+                        updateValidation(item.phone);
+                        inputClear.classList.toggle('visible', true);
+                        // 直接显示之前的结果
+                        lastResult = {
+                            phone: item.phone,
+                            operator: item.operator,
+                            province: item.province,
+                            city: item.city,
+                            areaCode: item.areaCode,
+                            zipCode: item.zipCode
+                        };
+                        displayResult(lastResult);
+                        currentPhone = item.phone;
+                    });
+
+                    historyList.appendChild(div);
+                });
+            }
+
+            // --- 清空历史 ---
+            clearHistoryBtn.addEventListener('click', function() {
+                if (getHistory().length === 0) {
+                    showToast('暂无历史记录');
+                    return;
+                }
+                try {
+                    localStorage.removeItem(HISTORY_KEY);
+                    renderHistory();
+                    showToast('已清空查询历史');
+                } catch (e) {
+                    printLog('清空历史失败', e.message, true);
+                }
+            });
+
+            // --- 初始化 ---
+            renderHistory();
+
+            // 焦点自动输入
+            phoneInput.focus();
+
+            // 粘贴事件：自动清理+86
+            phoneInput.addEventListener('paste', function(e) {
+                // 稍后处理，input事件会处理
+                setTimeout(function() {
+                    const cleaned = cleanPhone(phoneInput.value);
+                    if (cleaned.length <= 11) {
+                        phoneInput.value = cleaned;
+                    } else {
+                        phoneInput.value = cleaned.substring(0, 11);
+                    }
+                    updateValidation(phoneInput.value);
+                    inputClear.classList.toggle('visible', phoneInput.value.length > 0);
+                }, 10);
+            });
+
+            // 如果URL有参数 ?phone=xxx，自动填入
+            (function() {
+                const params = new URLSearchParams(window.location.search);
+                const phoneParam = params.get('phone');
+                if (phoneParam) {
+                    const cleaned = cleanPhone(phoneParam);
+                    if (cleaned.length <= 11) {
+                        phoneInput.value = cleaned;
+                    } else {
+                        phoneInput.value = cleaned.substring(0, 11);
+                    }
+                    updateValidation(phoneInput.value);
+                    inputClear.classList.toggle('visible', phoneInput.value.length > 0);
+                    if (validatePhone(phoneInput.value).valid) {
+                        setTimeout(doQuery, 300);
+                    }
+                }
+            })();
+
+        })();
+    </script>
+</body>
+</html>

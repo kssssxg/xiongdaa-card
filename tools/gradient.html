@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>渐变 CSS 生成器 - xiongdaa 工具集</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* ===== 渐变生成器专用样式 ===== */
+        .tool-card { max-width: 800px; }
+
+        /* 颜色选择行 */
+        .color-picker-row {
+            display: flex; gap: 20px; flex-wrap: wrap;
+            justify-content: center; margin-bottom: 20px;
+        }
+        .color-picker-group {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+        }
+        .color-picker-group label {
+            font-size: 0.8rem; color: var(--text-muted);
+        }
+        .color-picker-group input[type="color"] {
+            width: 80px; height: 80px; border: 2px solid var(--glass-border);
+            border-radius: 16px; cursor: pointer; padding: 4px;
+            background: rgba(0,0,0,0.2); transition: all 0.3s;
+        }
+        .color-picker-group input[type="color"]:hover {
+            border-color: var(--theme-accent); transform: scale(1.05);
+        }
+        .color-picker-group input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        .color-picker-group input[type="color"]::-webkit-color-swatch {
+            border: none; border-radius: 10px;
+        }
+        .color-hex-label {
+            font-size: 0.8rem; font-family: 'Cascadia Code', 'Fira Code', monospace;
+            color: var(--text-muted); background: rgba(0,0,0,0.3);
+            padding: 4px 12px; border-radius: 8px;
+        }
+
+        /* 方向网格 */
+        .direction-label {
+            font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;
+            text-align: center;
+        }
+        .direction-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 6px; max-width: 240px; margin: 0 auto 20px auto;
+        }
+        .dir-btn {
+            padding: 10px 0; border-radius: 12px;
+            background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border);
+            color: var(--text-muted); cursor: pointer; font-size: 0.75rem;
+            transition: all 0.2s; text-align: center;
+        }
+        .dir-btn:hover {
+            background: rgba(255,255,255,0.12); border-color: var(--theme-accent);
+        }
+        .dir-btn.active {
+            background: rgba(165,180,252,0.2); border-color: var(--theme-accent);
+            color: #fff;
+        }
+        .dir-btn .dir-icon {
+            display: block; font-size: 1rem; margin-bottom: 4px;
+        }
+
+        /* 预览区域 */
+        .preview-area {
+            width: 100%; height: 220px; border-radius: 16px;
+            border: 2px solid var(--glass-border);
+            margin-bottom: 20px; position: relative; overflow: hidden;
+            transition: background 0.4s ease;
+        }
+        .preview-area .preview-overlay {
+            position: absolute; bottom: 12px; right: 12px;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
+            padding: 4px 12px; border-radius: 20px;
+            font-size: 0.7rem; color: rgba(255,255,255,0.6);
+        }
+
+        /* 色标管理 */
+        .stops-section { margin-bottom: 20px; }
+        .stops-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 10px;
+        }
+        .stops-header .stops-title {
+            font-size: 0.85rem; color: var(--text-muted);
+        }
+        .stops-header .add-stop-btn {
+            background: rgba(165,180,252,0.15); border: 1px dashed var(--theme-accent);
+            color: var(--theme-accent); padding: 6px 16px; border-radius: 20px;
+            cursor: pointer; font-size: 0.8rem; transition: all 0.2s;
+        }
+        .stops-header .add-stop-btn:hover {
+            background: rgba(165,180,252,0.25);
+        }
+        .stops-header .add-stop-btn:disabled {
+            opacity: 0.3; cursor: not-allowed;
+        }
+
+        .stop-item {
+            display: flex; align-items: center; gap: 12px;
+            background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px; padding: 10px 14px; margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+        .stop-item:hover { border-color: rgba(255,255,255,0.15); }
+        .stop-item .stop-color-input {
+            width: 44px; height: 44px; border: 2px solid var(--glass-border);
+            border-radius: 10px; cursor: pointer; padding: 2px;
+            background: rgba(0,0,0,0.2); flex-shrink: 0;
+        }
+        .stop-item .stop-color-input::-webkit-color-swatch-wrapper { padding: 0; }
+        .stop-item .stop-color-input::-webkit-color-swatch { border: none; border-radius: 7px; }
+        .stop-item .stop-position {
+            flex: 1;
+        }
+        .stop-item .stop-position input[type="range"] {
+            width: 100%; height: 4px; -webkit-appearance: none;
+            background: rgba(255,255,255,0.15); border-radius: 2px;
+            outline: none;
+        }
+        .stop-item .stop-position input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 16px; height: 16px;
+            border-radius: 50%; background: var(--theme-accent);
+            cursor: pointer; border: none;
+        }
+        .stop-item .stop-position input[type="range"]::-moz-range-thumb {
+            width: 16px; height: 16px; border-radius: 50%;
+            background: var(--theme-accent); cursor: pointer; border: none;
+        }
+        .stop-item .stop-pos-label {
+            font-size: 0.75rem; color: var(--text-muted);
+            font-family: 'Cascadia Code', monospace; min-width: 36px; text-align: right;
+        }
+        .stop-item .stop-remove {
+            background: none; border: none; color: rgba(255,255,255,0.3);
+            cursor: pointer; font-size: 1rem; padding: 4px 8px;
+            border-radius: 8px; transition: all 0.2s;
+        }
+        .stop-item .stop-remove:hover {
+            color: #ef4444; background: rgba(239,68,68,0.1);
+        }
+
+        /* 色标迷你预览条 */
+        .stops-mini-bar {
+            width: 100%; height: 12px; border-radius: 6px;
+            margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.08);
+            transition: background 0.3s ease;
+        }
+
+        /* CSS 代码 */
+        .css-output-area {
+            margin-bottom: 20px;
+        }
+        .css-output-area .css-code-block {
+            background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px; padding: 14px 16px; font-size: 0.85rem;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            color: #e2e8f0; word-break: break-all; position: relative;
+            user-select: all; line-height: 1.6;
+        }
+        .css-code-block .css-comment { color: #6b7280; }
+        .css-code-block .css-property { color: #93c5fd; }
+        .css-code-block .css-value { color: #fbbf24; }
+        .css-code-block .css-func { color: #a78bfa; }
+
+        .copy-btn-row {
+            display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px;
+        }
+        .copy-btn-row .tool-btn {
+            display: flex; align-items: center; gap: 6px;
+        }
+
+        /* 预设方案 */
+        .presets-label {
+            font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;
+            text-align: center;
+        }
+        .presets-grid {
+            display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+            margin-bottom: 10px;
+        }
+        .preset-btn {
+            padding: 8px 16px; border-radius: 20px; border: 1px solid var(--glass-border);
+            background: rgba(255,255,255,0.06); color: var(--text-muted);
+            cursor: pointer; font-size: 0.8rem; transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .preset-btn:hover {
+            background: rgba(255,255,255,0.14); border-color: var(--theme-accent);
+            color: #fff; transform: translateY(-2px);
+        }
+        .preset-btn .preset-dot {
+            display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+            vertical-align: middle; margin-right: 6px;
+        }
+
+        /* 方向下拉（备用） */
+        .direction-select-row {
+            text-align: center; margin-bottom: 20px;
+        }
+        .direction-select-row select {
+            background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border);
+            color: #fff; padding: 8px 16px; border-radius: 12px;
+            font-size: 0.85rem; outline: none; cursor: pointer;
+        }
+        .direction-select-row select:focus {
+            border-color: var(--theme-accent);
+        }
+        .direction-select-row select option {
+            background: #1e1e24; color: #fff;
+        }
+
+        @media (max-width: 600px) {
+            .color-picker-group input[type="color"] { width: 60px; height: 60px; }
+            .direction-grid { max-width: 200px; }
+            .stop-item { flex-wrap: wrap; }
+            .preview-area { height: 160px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video"></video>
+    <div id="toast"><i class="fas fa-check-circle" style="color: #34d399;"></i><span id="toast-msg"></span></div>
+
+    <!-- 返回按钮 -->
+    <a href="../tools.html" class="back-home-btn" title="返回工具列表">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <div class="glass-card tool-card">
+        <h1><i class="fas fa-palette" style="margin-right: 10px; color: var(--theme-accent);"></i>渐变 CSS 生成器</h1>
+        <p class="tool-subtitle">可视化设计渐变背景，一键复制 CSS 代码</p>
+
+        <!-- 颜色选择 -->
+        <div class="color-picker-row">
+            <div class="color-picker-group">
+                <label>起始颜色</label>
+                <input type="color" id="color-start" value="#667eea">
+                <span class="color-hex-label" id="hex-start">#667eea</span>
+            </div>
+            <div class="color-picker-group">
+                <label>结束颜色</label>
+                <input type="color" id="color-end" value="#764ba2">
+                <span class="color-hex-label" id="hex-end">#764ba2</span>
+            </div>
+        </div>
+
+        <!-- 方向选择 -->
+        <div class="direction-label"><i class="fas fa-arrows-alt" style="margin-right: 6px;"></i>选择渐变方向</div>
+        <div class="direction-grid" id="direction-grid">
+            <div></div>
+            <div class="dir-btn" data-dir="to top" title="从上到下">
+                <span class="dir-icon">⬆</span>上
+            </div>
+            <div></div>
+            <div class="dir-btn" data-dir="to left" title="从右到左">
+                <span class="dir-icon">⬅</span>左
+            </div>
+            <div class="dir-btn active" data-dir="to right" title="从左到右">
+                <span class="dir-icon">➡</span>右
+            </div>
+            <div class="dir-btn" data-dir="to right bottom" title="从左上到右下">
+                <span class="dir-icon">↘</span>右下
+            </div>
+            <div class="dir-btn" data-dir="to bottom" title="从上到下">
+                <span class="dir-icon">⬇</span>下
+            </div>
+            <div class="dir-btn" data-dir="to right top" title="从左下到右上">
+                <span class="dir-icon">↗</span>右上
+            </div>
+            <div class="dir-btn" data-dir="to left top" title="从右下到左上">
+                <span class="dir-icon">↖</span>左上
+            </div>
+            <div class="dir-btn" data-dir="to left bottom" title="从右上到左下">
+                <span class="dir-icon">↙</span>左下
+            </div>
+        </div>
+
+        <!-- 方向下拉（备用选择） -->
+        <div class="direction-select-row">
+            <select id="direction-select">
+                <option value="to top">⬆ 上 (to top)</option>
+                <option value="to right" selected>➡ 右 (to right)</option>
+                <option value="to bottom">⬇ 下 (to bottom)</option>
+                <option value="to left">⬅ 左 (to left)</option>
+                <option value="to right bottom">↘ 右下 (to right bottom)</option>
+                <option value="to right top">↗ 右上 (to right top)</option>
+                <option value="to left bottom">↙ 左下 (to left bottom)</option>
+                <option value="to left top">↖ 左上 (to left top)</option>
+            </select>
+        </div>
+
+        <!-- 预览区域 -->
+        <div class="preview-area" id="preview-area">
+            <div class="preview-overlay"><i class="fas fa-eye"></i> 实时预览</div>
+        </div>
+
+        <!-- 色标迷你预览条 -->
+        <div class="stops-mini-bar" id="stops-mini-bar"></div>
+
+        <!-- 色标管理 -->
+        <div class="stops-section">
+            <div class="stops-header">
+                <span class="stops-title"><i class="fas fa-layer-group" style="margin-right: 6px;"></i>中间色标</span>
+                <button class="add-stop-btn" id="add-stop-btn"><i class="fas fa-plus" style="margin-right: 4px;"></i>添加色标</button>
+            </div>
+            <div id="stops-container">
+                <!-- 动态添加的色标 -->
+            </div>
+        </div>
+
+        <!-- 预设方案 -->
+        <div class="presets-label"><i class="fas fa-magic" style="margin-right: 6px;"></i>预设渐变方案</div>
+        <div class="presets-grid">
+            <button class="preset-btn" data-preset="sunset">
+                <span class="preset-dot" style="background: linear-gradient(to right, #f093fb, #f5576c);"></span>晚霞
+            </button>
+            <button class="preset-btn" data-preset="ocean">
+                <span class="preset-dot" style="background: linear-gradient(to right, #2193b0, #6dd5ed);"></span>海洋
+            </button>
+            <button class="preset-btn" data-preset="aurora">
+                <span class="preset-dot" style="background: linear-gradient(to right, #00b09b, #96c93d);"></span>极光
+            </button>
+            <button class="preset-btn" data-preset="dusk">
+                <span class="preset-dot" style="background: linear-gradient(to right, #ff758c, #ff7eb3);"></span>日落
+            </button>
+            <button class="preset-btn" data-preset="mint">
+                <span class="preset-dot" style="background: linear-gradient(to right, #43e97b, #38f9d7);"></span>薄荷
+            </button>
+            <button class="preset-btn" data-preset="lavender">
+                <span class="preset-dot" style="background: linear-gradient(to right, #a18cd1, #fbc2eb);"></span>薰衣草
+            </button>
+        </div>
+
+        <!-- CSS 代码输出 -->
+        <div class="css-output-area">
+            <div class="tool-label"><i class="fas fa-code" style="margin-right: 6px;"></i>生成的 CSS 代码（点击代码块选中全部）</div>
+            <div class="css-code-block" id="css-output">
+                <span class="css-comment">/* 实时预览，点击代码块即可全选 */</span><br>
+                <span class="css-property">background</span>: <span class="css-value">linear-gradient(<span class="css-func" id="css-dir-display">to right</span>, <span id="css-color1-display" class="css-func">#667eea</span>, <span id="css-color2-display" class="css-func">#764ba2</span>)</span>;
+            </div>
+            <div class="copy-btn-row">
+                <button class="tool-btn primary" id="copy-css-btn"><i class="fas fa-copy"></i> 复制 CSS</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部 -->
+    <div class="author-credit">
+        <p>💜 渐变 CSS 生成器 · <a href="../tools.html">返回工具集</a> · Made with <i class="fas fa-heart" style="color: #f472b6;"></i></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+    // ========== 状态管理 ==========
+    const state = {
+        direction: 'to right',
+        colors: [
+            { color: '#667eea', position: 0 },
+            { color: '#764ba2', position: 100 }
+        ]
+    };
+
+    const MAX_STOPS = 5;
+
+    // DOM 引用
+    const colorStart = document.getElementById('color-start');
+    const colorEnd = document.getElementById('color-end');
+    const hexStart = document.getElementById('hex-start');
+    const hexEnd = document.getElementById('hex-end');
+    const previewArea = document.getElementById('preview-area');
+    const stopsMiniBar = document.getElementById('stops-mini-bar');
+    const stopsContainer = document.getElementById('stops-container');
+    const addStopBtn = document.getElementById('add-stop-btn');
+    const directionGrid = document.getElementById('direction-grid');
+    const directionSelect = document.getElementById('direction-select');
+    const cssOutput = document.getElementById('css-output');
+    const cssDirDisplay = document.getElementById('css-dir-display');
+    const cssColor1Display = document.getElementById('css-color1-display');
+    const cssColor2Display = document.getElementById('css-color2-display');
+    const copyCssBtn = document.getElementById('copy-css-btn');
+
+    // ========== 预设方案 ==========
+    const PRESETS = {
+        sunset: { colors: ['#f093fb', '#f5576c'], direction: 'to right' },
+        ocean:  { colors: ['#2193b0', '#6dd5ed'], direction: 'to right' },
+        aurora: { colors: ['#00b09b', '#96c93d'], direction: 'to right' },
+        dusk:   { colors: ['#ff758c', '#ff7eb3'], direction: 'to right' },
+        mint:   { colors: ['#43e97b', '#38f9d7'], direction: 'to right' },
+        lavender: { colors: ['#a18cd1', '#fbc2eb'], direction: 'to right' }
+    };
+
+    // ========== 核心函数 ==========
+    function getGradientCSS() {
+        const parts = [state.direction];
+        // Sort stops by position
+        const sorted = [...state.colors].sort((a, b) => a.position - b.position);
+        for (const stop of sorted) {
+            if (stop.position === 0) {
+                parts.push(stop.color);
+            } else {
+                parts.push(`${stop.color} ${stop.position}%`);
+            }
+        }
+        return `linear-gradient(${parts.join(', ')})`;
+    }
+
+    function updatePreview() {
+        const css = getGradientCSS();
+        previewArea.style.background = css;
+        stopsMiniBar.style.background = css;
+    }
+
+    function updateCSSOutput() {
+        const css = getGradientCSS();
+        const fullCode = `background: ${css};`;
+
+        // Update the styled display
+        cssDirDisplay.textContent = state.direction;
+
+        // Build color stops display
+        const sorted = [...state.colors].sort((a, b) => a.position - b.position);
+        const colorParts = sorted.map(s => {
+            if (s.position === 0) return `<span class="css-func">${s.color}</span>`;
+            return `<span class="css-func">${s.color} ${s.position}%</span>`;
+        });
+
+        cssOutput.innerHTML = `<span class="css-comment">/* 从预览实时生成的 CSS */</span><br>` +
+            `<span class="css-property">background</span>: <span class="css-value">linear-gradient(<span class="css-func">${state.direction}</span>, ${colorParts.join(', ')})</span>;`;
+
+        // Store full code for copy
+        cssOutput.dataset.fullCode = fullCode;
+    }
+
+    function refresh() {
+        updatePreview();
+        updateCSSOutput();
+        updateStopsUI();
+    }
+
+    // ========== 色标管理 ==========
+    function updateStopsUI() {
+        // Update add button state
+        addStopBtn.disabled = state.colors.length >= MAX_STOPS;
+
+        // Render stop items
+        stopsContainer.innerHTML = '';
+        // Skip the first and last (they're the main color pickers)
+        for (let i = 0; i < state.colors.length; i++) {
+            const stop = state.colors[i];
+            // Only show middle stops (index 1 to length-2) in the stops container
+            // Actually, we show ALL non-first/non-last stops. But initially there are only 2 (first and last).
+            // We'll show all stops, but the first and last are managed by the main color pickers.
+            // Actually, let's show all stops that aren't index 0 and index (length-1)
+            // But user might have reordered... Let me think differently.
+            // The main color pickers manage colors[0] and colors[last].
+            // Middle stops are colors[1] through colors[length-2].
+            // But when sorted, the first and last might not be the same indices.
+            // Let me just show all stops that aren't the first or last in the sorted order.
+        }
+
+        // Simpler approach: render all stops except the first and last in the state array
+        // since color[0] = start, color[last] = end always.
+        for (let i = 1; i < state.colors.length - 1; i++) {
+            const stop = state.colors[i];
+            const div = document.createElement('div');
+            div.className = 'stop-item';
+            div.innerHTML = `
+                <input type="color" class="stop-color-input" value="${stop.color}" data-index="${i}">
+                <div class="stop-position">
+                    <input type="range" min="1" max="99" value="${stop.position}" data-index="${i}">
+                </div>
+                <span class="stop-pos-label" data-index="${i}">${stop.position}%</span>
+                <button class="stop-remove" data-index="${i}"><i class="fas fa-times"></i></button>
+            `;
+            stopsContainer.appendChild(div);
+        }
+    }
+
+    function addStop() {
+        if (state.colors.length >= MAX_STOPS) return;
+
+        // Find a good position between existing stops
+        let pos = 50;
+        if (state.colors.length >= 2) {
+            // Put it roughly in the middle
+            const sorted = [...state.colors].sort((a, b) => a.position - b.position);
+            const midIndex = Math.floor(sorted.length / 2);
+            if (sorted.length > 1) {
+                const before = sorted[midIndex - 1];
+                const after = sorted[midIndex];
+                pos = Math.round((before.position + after.position) / 2);
+            }
+        }
+
+        // Insert before the last (end) color
+        state.colors.splice(state.colors.length - 1, 0, { color: '#48c6ef', position: pos });
+        refresh();
+    }
+
+    function removeStop(index) {
+        if (state.colors.length <= 2) return; // must keep at least start and end
+        state.colors.splice(index, 1);
+        refresh();
+    }
+
+    function updateStopColor(index, newColor) {
+        if (index >= 0 && index < state.colors.length) {
+            state.colors[index].color = newColor;
+            refresh();
+        }
+    }
+
+    function updateStopPosition(index, newPos) {
+        if (index >= 0 && index < state.colors.length) {
+            state.colors[index].position = parseInt(newPos);
+            refresh();
+        }
+    }
+
+    // ========== 事件绑定 ==========
+
+    // 主颜色选择
+    colorStart.addEventListener('input', function() {
+        state.colors[0].color = this.value;
+        hexStart.textContent = this.value;
+        refresh();
+    });
+
+    colorEnd.addEventListener('input', function() {
+        state.colors[state.colors.length - 1].color = this.value;
+        hexEnd.textContent = this.value;
+        refresh();
+    });
+
+    // 方向按钮
+    directionGrid.addEventListener('click', function(e) {
+        const btn = e.target.closest('.dir-btn');
+        if (!btn) return;
+        const dir = btn.dataset.dir;
+        if (!dir) return;
+
+        // Update active state
+        directionGrid.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Update select
+        directionSelect.value = dir;
+
+        state.direction = dir;
+        refresh();
+    });
+
+    // 方向下拉
+    directionSelect.addEventListener('change', function() {
+        const dir = this.value;
+        state.direction = dir;
+
+        // Update grid active
+        directionGrid.querySelectorAll('.dir-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.dir === dir);
+        });
+
+        refresh();
+    });
+
+    // 添加色标
+    addStopBtn.addEventListener('click', addStop);
+
+    // 色标事件（事件委托）
+    stopsContainer.addEventListener('input', function(e) {
+        const target = e.target;
+        if (target.classList.contains('stop-color-input')) {
+            const index = parseInt(target.dataset.index);
+            updateStopColor(index, target.value);
+        } else if (target.type === 'range') {
+            const index = parseInt(target.dataset.index);
+            const label = target.closest('.stop-item').querySelector('.stop-pos-label');
+            label.textContent = target.value + '%';
+            updateStopPosition(index, target.value);
+        }
+    });
+
+    stopsContainer.addEventListener('click', function(e) {
+        const btn = e.target.closest('.stop-remove');
+        if (!btn) return;
+        const index = parseInt(btn.dataset.index);
+        removeStop(index);
+    });
+
+    // 预设方案
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const presetName = this.dataset.preset;
+            const preset = PRESETS[presetName];
+            if (!preset) return;
+
+            // Reset to 2 colors
+            state.colors = [
+                { color: preset.colors[0], position: 0 },
+                { color: preset.colors[1], position: 100 }
+            ];
+
+            // Update main color pickers
+            colorStart.value = preset.colors[0];
+            colorEnd.value = preset.colors[1];
+            hexStart.textContent = preset.colors[0];
+            hexEnd.textContent = preset.colors[1];
+
+            // Set direction
+            state.direction = preset.direction;
+            directionSelect.value = preset.direction;
+            directionGrid.querySelectorAll('.dir-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.dir === preset.direction);
+            });
+
+            refresh();
+            showToast(`已应用「${this.textContent.trim()}」方案`);
+        });
+    });
+
+    // 复制 CSS
+    copyCssBtn.addEventListener('click', function() {
+        const code = cssOutput.dataset.fullCode || `background: ${getGradientCSS()};`;
+        copyText(code);
+    });
+
+    // 点击 CSS 代码块全选
+    cssOutput.addEventListener('click', function() {
+        const range = document.createRange();
+        range.selectNodeContents(this);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    });
+
+    // ========== 初始化 ==========
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ensure colors state is synced
+        state.colors[0] = { color: colorStart.value, position: 0 };
+        state.colors[state.colors.length - 1] = { color: colorEnd.value, position: 100 };
+        hexStart.textContent = colorStart.value;
+        hexEnd.textContent = colorEnd.value;
+        refresh();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="CSP" content="upgrade-insecure-requests">
+    <title>像素画板 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* ===== 画板布局 ===== */
+        .canvas-area {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        #pixel-canvas {
+            display: grid;
+            gap: 1px;
+            background: rgba(255,255,255,0.08);
+            border: 2px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 2px;
+            user-select: none;
+            touch-action: none;
+            flex-shrink: 0;
+        }
+
+        .pixel-cell {
+            background: #ffffff;
+            border-radius: 1px;
+            cursor: pointer;
+            transition: background 0.08s ease;
+            aspect-ratio: 1 / 1;
+            position: relative;
+        }
+        .pixel-cell:hover {
+            filter: brightness(1.3);
+        }
+        .pixel-cell:active {
+            filter: brightness(0.85);
+        }
+
+        /* ===== 控制面板 ===== */
+        .control-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            min-width: 80px;
+        }
+        .control-group label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        /* 大小选择器 */
+        #size-select {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--glass-border);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        #size-select:hover, #size-select:focus {
+            border-color: var(--theme-accent);
+            background: rgba(255,255,255,0.15);
+        }
+        #size-select option {
+            background: #2a2a35;
+            color: #fff;
+        }
+
+        /* 预设颜色 */
+        .preset-colors {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            max-width: 300px;
+        }
+        .preset-color {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .preset-color:hover {
+            transform: scale(1.15);
+        }
+        .preset-color.active {
+            border-color: #fff;
+            box-shadow: 0 0 10px rgba(165,180,252,0.5);
+        }
+
+        /* 自定义颜色选择器 */
+        #custom-color {
+            width: 40px;
+            height: 36px;
+            padding: 0;
+            border: 2px solid var(--glass-border);
+            border-radius: 8px;
+            cursor: pointer;
+            background: transparent;
+            transition: border-color 0.2s;
+        }
+        #custom-color:hover {
+            border-color: var(--theme-accent);
+        }
+        #custom-color::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+        #custom-color::-webkit-color-swatch {
+            border: none;
+            border-radius: 4px;
+        }
+
+        /* 模式切换 */
+        .mode-toggle {
+            display: flex;
+            gap: 4px;
+            background: rgba(0,0,0,0.25);
+            border-radius: 10px;
+            padding: 3px;
+        }
+        .mode-btn {
+            padding: 6px 14px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-btn.active {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+        }
+        .mode-btn:hover:not(.active) {
+            background: rgba(255,255,255,0.06);
+        }
+
+        /* 按钮行 */
+        .action-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 12px 0;
+        }
+
+        /* ===== 状态条 ===== */
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            padding: 10px 16px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+            font-size: 0.82rem;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+        }
+        .status-item .color-swatch {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.2);
+            flex-shrink: 0;
+        }
+        .status-item .label {
+            color: var(--text-main);
+        }
+
+        /* ===== 导出提示 ===== */
+        .export-hint {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 600px) {
+            .preset-colors {
+                grid-template-columns: repeat(8, 1fr);
+                gap: 3px;
+            }
+            .preset-color {
+                width: 22px;
+                height: 22px;
+            }
+            .status-bar {
+                font-size: 0.7rem;
+                gap: 10px;
+                padding: 8px 12px;
+            }
+            .control-group {
+                min-width: 60px;
+            }
+            #size-select {
+                padding: 6px 10px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="overlay"></div>
+<video id="bg-video" muted loop playsinline></video>
+<div id="bg-video-overlay"></div>
+
+<!-- 返回主页 -->
+<a href="../index.html" class="back-home-btn" title="返回主页">
+    <i class="fas fa-arrow-left"></i>
+</a>
+
+<!-- Toast -->
+<div id="toast"><i class="fas fa-info-circle"></i><span id="toast-msg"></span></div>
+
+<!-- 主卡片 -->
+<div class="glass-card tool-card">
+    <h1><i class="fas fa-paint-brush"></i> 像素画板</h1>
+    <p class="tool-subtitle">点击格子绘制像素艺术</p>
+
+    <!-- 控制面板 -->
+    <div class="control-panel">
+        <!-- 画布大小 -->
+        <div class="control-group">
+            <label>画布大小</label>
+            <select id="size-select">
+                <option value="8">8 × 8</option>
+                <option value="16" selected>16 × 16</option>
+                <option value="24">24 × 24</option>
+                <option value="32">32 × 32</option>
+            </select>
+        </div>
+
+        <!-- 模式切换 -->
+        <div class="control-group">
+            <label>绘制模式</label>
+            <div class="mode-toggle">
+                <button class="mode-btn active" data-mode="pen" title="画笔"><i class="fas fa-pen"></i></button>
+                <button class="mode-btn" data-mode="eraser" title="橡皮擦"><i class="fas fa-eraser"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 颜色选择 -->
+    <div style="display:flex;justify-content:center;gap:10px;align-items:center;margin-top:10px;">
+        <div class="control-group" style="flex-direction:row;align-items:center;">
+            <label style="margin:0 8px 0 0;">颜色</label>
+            <input type="color" id="custom-color" value="#ff6b6b">
+        </div>
+    </div>
+
+    <div style="display:flex;justify-content:center;">
+        <div class="preset-colors" id="preset-colors"></div>
+    </div>
+
+    <!-- 画布 -->
+    <div class="canvas-area">
+        <div id="pixel-canvas"></div>
+    </div>
+
+    <!-- 状态栏 -->
+    <div class="status-bar">
+        <span class="status-item">
+            当前颜色: <span class="color-swatch" id="color-swatch" style="background:#ff6b6b;"></span>
+            <span class="label" id="color-hex">#ff6b6b</span>
+        </span>
+        <span class="status-item">
+            模式: <span class="label" id="mode-label">画笔</span>
+        </span>
+        <span class="status-item">
+            尺寸: <span class="label" id="size-label">16×16</span>
+        </span>
+        <span class="status-item">
+            撤销步数: <span class="label" id="undo-count">0</span>
+        </span>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="action-row">
+        <button class="tool-btn" id="undo-btn" title="撤销 (Ctrl+Z)">
+            <i class="fas fa-undo"></i> 撤销
+        </button>
+        <button class="tool-btn" id="clear-btn" title="清空画布">
+            <i class="fas fa-trash-alt"></i> 清空
+        </button>
+        <button class="tool-btn primary" id="export-btn" title="导出为 PNG">
+            <i class="fas fa-download"></i> 导出 PNG
+        </button>
+    </div>
+
+    <p class="export-hint">
+        <i class="fas fa-info-circle"></i> 点击拖拽可连续绘制 · 右键点击可拾取颜色
+    </p>
+</div>
+
+<a href="https://github.com/xiongdaa" class="author-credit" style="text-decoration:none;">
+    <p>❤ xiong da · Pixel Art Tool</p>
+</a>
+
+<script src="common.js"></script>
+<script>
+(function() {
+    'use strict';
+
+    // ===== 预设颜色 =====
+    const PRESET_COLORS = [
+        '#ff6b6b', '#ff9f43', '#feca57', '#48dbfb',
+        '#0abde3', '#10ac84', '#1dd1a1', '#5f27cd',
+        '#341f97', '#ff9ff3', '#f368e0', '#576574',
+        '#222f3e', '#8395a7', '#c8d6e5', '#ffffff',
+        '#cc0000', '#e67e22', '#f1c40f', '#2ecc71',
+        '#3498db', '#9b59b6', '#34495e', '#95a5a6'
+    ];
+
+    // ===== DOM 引用 =====
+    const canvasEl = document.getElementById('pixel-canvas');
+    const sizeSelect = document.getElementById('size-select');
+    const customColorInput = document.getElementById('custom-color');
+    const colorSwatch = document.getElementById('color-swatch');
+    const colorHex = document.getElementById('color-hex');
+    const modeLabel = document.getElementById('mode-label');
+    const sizeLabel = document.getElementById('size-label');
+    const undoCount = document.getElementById('undo-count');
+    const presetColorsContainer = document.getElementById('preset-colors');
+    const modeBtns = document.querySelectorAll('.mode-btn');
+    const undoBtn = document.getElementById('undo-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const exportBtn = document.getElementById('export-btn');
+
+    // ===== 状态 =====
+    const MAX_UNDO = 20;
+    let gridSize = 16;
+    let currentColor = '#ff6b6b';
+    let mode = 'pen'; // 'pen' | 'eraser'
+    let grid = [];          // flat array of hex colors
+    let undoStack = [];     // arrays of {index, oldColor}
+    let isDrawing = false;
+    let lastPaintedIndex = -1;
+
+    // ===== 初始化预设颜色 =====
+    PRESET_COLORS.forEach(function(color) {
+        const div = document.createElement('div');
+        div.className = 'preset-color';
+        div.style.background = color;
+        if (color === currentColor) {
+            div.classList.add('active');
+        }
+        div.dataset.color = color;
+        div.addEventListener('click', function() {
+            setCurrentColor(color);
+            document.querySelectorAll('.preset-color').forEach(function(c) {
+                c.classList.remove('active');
+            });
+            div.classList.add('active');
+            customColorInput.value = color;
+        });
+        presetColorsContainer.appendChild(div);
+    });
+
+    // ===== 设置当前颜色 =====
+    function setCurrentColor(color) {
+        currentColor = color;
+        colorSwatch.style.background = color;
+        colorHex.textContent = color;
+    }
+
+    // ===== 自定义颜色选择器 =====
+    customColorInput.addEventListener('input', function() {
+        setCurrentColor(this.value);
+        document.querySelectorAll('.preset-color').forEach(function(c) {
+            c.classList.remove('active');
+        });
+        // 高亮匹配的预设色
+        document.querySelectorAll('.preset-color').forEach(function(c) {
+            if (c.dataset.color === this.value) {
+                c.classList.add('active');
+            }
+        }.bind(this));
+    });
+
+    // ===== 模式切换 =====
+    modeBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            modeBtns.forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            mode = btn.dataset.mode;
+            modeLabel.textContent = mode === 'pen' ? '画笔' : '橡皮擦';
+        });
+    });
+
+    // ===== 生成初始网格 =====
+    function createGrid() {
+        grid = new Array(gridSize * gridSize).fill('#ffffff');
+        undoStack = [];
+        updateUndoCount();
+        renderGrid();
+    }
+
+    // ===== 渲染网格 =====
+    function renderGrid() {
+        canvasEl.style.gridTemplateColumns = 'repeat(' + gridSize + ', 1fr)';
+        canvasEl.innerHTML = '';
+
+        // 格子尺寸 = min(36, 可容纳)
+        const maxWidth = Math.min(window.innerWidth - 80, 640);
+        const cellSize = Math.max(12, Math.floor(maxWidth / gridSize));
+
+        for (let i = 0; i < grid.length; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'pixel-cell';
+            cell.style.width = cellSize + 'px';
+            cell.style.height = cellSize + 'px';
+            cell.style.background = grid[i];
+            cell.dataset.index = i;
+            cell.addEventListener('mousedown', onCellMouseDown);
+            cell.addEventListener('mouseenter', onCellMouseEnter);
+            cell.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                pickColor(this.dataset.index);
+            });
+            // 触摸事件
+            cell.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                const idx = parseInt(this.dataset.index);
+                paintCell(idx);
+            }, { passive: false });
+            cell.addEventListener('touchmove', function(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (target && target.classList.contains('pixel-cell')) {
+                    const idx = parseInt(target.dataset.index);
+                    if (idx !== lastPaintedIndex) {
+                        paintCell(idx);
+                    }
+                }
+            }, { passive: false });
+            canvasEl.appendChild(cell);
+        }
+
+        sizeLabel.textContent = gridSize + '×' + gridSize;
+    }
+
+    // ===== 取色（右键） =====
+    function pickColor(index) {
+        const color = grid[index];
+        if (color && color !== '#ffffff') {
+            setCurrentColor(color);
+            customColorInput.value = color;
+            document.querySelectorAll('.preset-color').forEach(function(c) {
+                c.classList.remove('active');
+                if (c.dataset.color === color) {
+                    c.classList.add('active');
+                }
+            });
+            showToast('已拾取颜色 ' + color);
+        }
+    }
+
+    // ===== 鼠标事件 =====
+    function onCellMouseDown(e) {
+        e.preventDefault();
+        const idx = parseInt(this.dataset.index);
+        isDrawing = true;
+        lastPaintedIndex = idx;
+        paintCell(idx);
+    }
+
+    function onCellMouseEnter(e) {
+        if (!isDrawing) return;
+        const idx = parseInt(this.dataset.index);
+        if (idx === lastPaintedIndex) return;
+        lastPaintedIndex = idx;
+        paintCell(idx);
+    }
+
+    document.addEventListener('mouseup', function() {
+        isDrawing = false;
+        lastPaintedIndex = -1;
+    });
+
+    // ===== 绘制一个格子 =====
+    function paintCell(index) {
+        const targetColor = mode === 'eraser' ? '#ffffff' : currentColor;
+        if (grid[index] === targetColor) return;
+
+        // 保存撤销快照
+        const lastUndo = undoStack.length > 0 ? undoStack[undoStack.length - 1] : null;
+        if (!lastUndo || lastUndo[0].index !== index || lastUndo.length > 1) {
+            undoStack.push([{ index: index, oldColor: grid[index] }]);
+        } else {
+            // 连续绘制同一格，只保留第一次快照
+            // do nothing extra
+        }
+
+        // 限制撤销步数
+        while (undoStack.length > MAX_UNDO) {
+            undoStack.shift();
+        }
+
+        grid[index] = targetColor;
+        const cell = canvasEl.children[index];
+        if (cell) {
+            cell.style.background = targetColor;
+        }
+
+        updateUndoCount();
+    }
+
+    // ===== 撤销 =====
+    function undo() {
+        if (undoStack.length === 0) {
+            showToast('没有可撤销的操作');
+            return;
+        }
+        const snapshot = undoStack.pop();
+        snapshot.forEach(function(entry) {
+            grid[entry.index] = entry.oldColor;
+            const cell = canvasEl.children[entry.index];
+            if (cell) {
+                cell.style.background = entry.oldColor;
+            }
+        });
+        updateUndoCount();
+        showToast('已撤销');
+    }
+
+    function updateUndoCount() {
+        undoCount.textContent = undoStack.length;
+    }
+
+    // ===== 清空画布 =====
+    function clearCanvas() {
+        if (grid.every(function(c) { return c === '#ffffff'; })) {
+            showToast('画布已是空白');
+            return;
+        }
+        // 保存撤销快照（整画布）
+        const snapshot = [];
+        for (let i = 0; i < grid.length; i++) {
+            if (grid[i] !== '#ffffff') {
+                snapshot.push({ index: i, oldColor: grid[i] });
+            }
+        }
+        if (snapshot.length > 0) {
+            undoStack.push(snapshot);
+            while (undoStack.length > MAX_UNDO) {
+                undoStack.shift();
+            }
+        }
+
+        for (let i = 0; i < grid.length; i++) {
+            grid[i] = '#ffffff';
+            const cell = canvasEl.children[i];
+            if (cell) {
+                cell.style.background = '#ffffff';
+            }
+        }
+        updateUndoCount();
+        showToast('画布已清空');
+    }
+
+    // ===== 导出 PNG =====
+    function exportPNG() {
+        const size = gridSize;
+        const pixelSize = 20; // 导出每个像素 20x20
+        const canvas = document.createElement('canvas');
+        canvas.width = size * pixelSize;
+        canvas.height = size * pixelSize;
+        const ctx = canvas.getContext('2d');
+
+        // 白色背景
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        for (let row = 0; row < size; row++) {
+            for (let col = 0; col < size; col++) {
+                const color = grid[row * size + col];
+                if (color === '#ffffff') continue;
+                ctx.fillStyle = color;
+                ctx.fillRect(col * pixelSize, row * pixelSize, pixelSize, pixelSize);
+            }
+        }
+
+        // 添加细网格线（可选，增强像素感）
+        ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i <= size; i++) {
+            ctx.beginPath();
+            ctx.moveTo(i * pixelSize, 0);
+            ctx.lineTo(i * pixelSize, canvas.height);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(0, i * pixelSize);
+            ctx.lineTo(canvas.width, i * pixelSize);
+            ctx.stroke();
+        }
+
+        const link = document.createElement('a');
+        link.download = 'pixelart_' + size + 'x' + size + '.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('PNG 已导出');
+    }
+
+    // ===== 窗口尺寸变化时重新渲染 =====
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+            // 只重新调整格子尺寸，不重建数据
+            const maxWidth = Math.min(window.innerWidth - 80, 640);
+            const cellSize = Math.max(12, Math.floor(maxWidth / gridSize));
+            const cells = canvasEl.children;
+            for (let i = 0; i < cells.length; i++) {
+                cells[i].style.width = cellSize + 'px';
+                cells[i].style.height = cellSize + 'px';
+            }
+        }, 200);
+    });
+
+    // ===== 改变网格大小 =====
+    function resizeGrid(newSize) {
+        if (newSize === gridSize) return;
+        gridSize = parseInt(newSize);
+        createGrid();
+        sizeLabel.textContent = gridSize + '×' + gridSize;
+        showToast('画布已切换为 ' + gridSize + '×' + gridSize);
+    }
+
+    // ===== 事件绑定 =====
+    sizeSelect.addEventListener('change', function() {
+        resizeGrid(this.value);
+    });
+
+    undoBtn.addEventListener('click', undo);
+
+    clearBtn.addEventListener('click', function() {
+        if (confirm('确定要清空画布吗？')) {
+            clearCanvas();
+        }
+    });
+
+    exportBtn.addEventListener('click', exportPNG);
+
+    // 键盘快捷键
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'z') {
+            e.preventDefault();
+            undo();
+        }
+        if (e.key === 'e' || e.key === 'E') {
+            // 切换橡皮擦
+            modeBtns.forEach(function(btn) {
+                if (btn.dataset.mode === 'eraser') {
+                    btn.click();
+                }
+            });
+        }
+        if (e.key === 'p' || e.key === 'P') {
+            // 切换画笔
+            modeBtns.forEach(function(btn) {
+                if (btn.dataset.mode === 'pen') {
+                    btn.click();
+                }
+            });
+        }
+    });
+
+    // ===== 初始化 =====
+    function init() {
+        createGrid();
+        // 设置第一个预设色为激活
+        document.querySelector('.preset-color.active') || (function() {
+            const first = document.querySelector('.preset-color');
+            if (first) {
+                first.classList.add('active');
+                setCurrentColor(first.dataset.color);
+                customColorInput.value = first.dataset.color;
+            }
+        })();
+    }
+
+    init();
+
+    // ===== Toast =====
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        if (!toast) return;
+        document.getElementById('toast-msg').innerText = msg;
+        toast.classList.add('show');
+        clearTimeout(window._toastTimer);
+        window._toastTimer = setTimeout(function() {
+            toast.classList.remove('show');
+        }, 2500);
+    }
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <title>五子棋 - xiong da</title>
+    <link rel="stylesheet" href="../tools/common.css">
+    <style>
+        /* ===== 五子棋专属样式 ===== */
+        .game-card {
+            padding: 30px 30px 10px;
+            width: 100%;
+            max-width: 660px;
+            position: relative;
+            z-index: 10;
+            text-align: center;
+        }
+
+        .game-card h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .game-card .game-subtitle {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+        }
+
+        /* --- 信息栏：回合指示 + 步数 --- */
+        .game-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .turn-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 18px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            min-width: 140px;
+            justify-content: center;
+        }
+
+        .turn-stone {
+            display: inline-block;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+        .turn-stone.black {
+            background: radial-gradient(circle at 35% 35%, #555, #111);
+            box-shadow: 1px 1px 4px rgba(0,0,0,0.5);
+        }
+        .turn-stone.white {
+            background: radial-gradient(circle at 35% 35%, #fff, #ddd);
+            border: 1px solid rgba(0,0,0,0.15);
+            box-shadow: 1px 1px 4px rgba(0,0,0,0.2);
+        }
+
+        .move-count {
+            padding: 8px 18px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 12px;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+        .move-count span {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        /* --- 棋盘 15×15 --- */
+        .board-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 14px;
+            overflow-x: auto;
+            padding: 4px 0;
+        }
+
+        .board {
+            display: inline-grid;
+            grid-template-columns: repeat(15, var(--cell-size, 34px));
+            grid-template-rows: repeat(15, var(--cell-size, 34px));
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: var(--cell-half, 17px);
+            user-select: none;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .cell {
+            position: relative;
+            cursor: pointer;
+            z-index: 1;
+        }
+        .cell.game-over {
+            cursor: default;
+        }
+
+        /* --- 棋盘线（通过中心） --- */
+        .cell::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            height: 1px;
+            background: rgba(255,255,255,0.30);
+            transform: translateY(-50%);
+            left: 0;
+            right: 0;
+            pointer-events: none;
+        }
+        .cell::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            width: 1px;
+            background: rgba(255,255,255,0.30);
+            transform: translateX(-50%);
+            top: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+        /* 边缘线只画一半 */
+        .cell[data-col="0"]::before { left: 50%; }
+        .cell[data-col="14"]::before { right: 50%; }
+        .cell[data-row="0"]::after { top: 50%; }
+        .cell[data-row="14"]::after { bottom: 50%; }
+
+        /* --- 交叉点圆点标记 --- */
+        .cell .dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.35);
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .cell .dot.star {
+            width: 9px;
+            height: 9px;
+            background: rgba(255,255,255,0.50);
+        }
+        .cell .dot.hidden {
+            opacity: 0;
+        }
+
+        /* --- 棋子 --- */
+        .cell .stone {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: calc(var(--cell-size, 34px) - 6px);
+            height: calc(var(--cell-size, 34px) - 6px);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            pointer-events: none;
+            transition: all 0.15s ease;
+            box-shadow: 2px 2px 6px rgba(0,0,0,0.45);
+        }
+        .cell .stone.black {
+            background: radial-gradient(circle at 35% 35%, #555, #111);
+        }
+        .cell .stone.white {
+            background: radial-gradient(circle at 35% 35%, #fff, #ddd);
+            border: 1px solid rgba(0,0,0,0.15);
+        }
+
+        /* 最后一子标记 */
+        .cell .stone.last-move::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255, 50, 50, 0.85);
+            transform: translate(-50%, -50%);
+        }
+        .cell .stone.white.last-move::after {
+            background: rgba(200, 30, 30, 0.85);
+        }
+
+        /* --- 胜利高亮 --- */
+        .cell .stone.win {
+            box-shadow: 0 0 14px 4px rgba(255, 215, 0, 0.65);
+            animation: winPulse 0.7s ease-in-out infinite alternate;
+        }
+        @keyframes winPulse {
+            from { box-shadow: 0 0 8px 3px rgba(255, 215, 0, 0.4); transform: translate(-50%, -50%) scale(1); }
+            to   { box-shadow: 0 0 20px 8px rgba(255, 215, 0, 0.7); transform: translate(-50%, -50%) scale(1.08); }
+        }
+
+        /* 胜利提示横幅 */
+        .win-banner {
+            display: none;
+            margin: 0 auto 12px;
+            padding: 10px 24px;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 180, 0, 0.08));
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 14px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #ffd700;
+            text-align: center;
+            animation: bannerSlideIn 0.4s ease;
+            max-width: 360px;
+        }
+        .win-banner.show { display: inline-block; }
+        @keyframes bannerSlideIn {
+            from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* --- 操作按钮 --- */
+        .game-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 6px;
+        }
+
+        .game-btn {
+            padding: 9px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .game-btn:hover:not(:disabled) {
+            background: rgba(255,255,255,0.15);
+            border-color: var(--theme-accent);
+        }
+        .game-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+        .game-btn.primary {
+            background: rgba(165,180,252,0.15);
+            border-color: var(--theme-accent);
+        }
+        .game-btn.primary:hover:not(:disabled) {
+            background: rgba(165,180,252,0.25);
+        }
+        .game-btn.replay-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-color: rgba(255,255,255,0.08);
+            cursor: default;
+            background: transparent;
+        }
+        .game-btn.replay-label:hover { border-color: rgba(255,255,255,0.08); }
+
+        /* --- 响应式 --- */
+        @media (max-width: 640px) {
+            .game-card { padding: 20px 14px 8px; }
+            :root { --cell-size: 28px; --cell-half: 14px; }
+            .game-card h1 { font-size: 1.2rem; }
+            .game-info { gap: 10px; }
+            .turn-indicator { padding: 6px 12px; font-size: 0.82rem; min-width: 110px; }
+            .move-count { padding: 6px 12px; font-size: 0.78rem; }
+            .game-btn { padding: 7px 14px; font-size: 0.78rem; }
+            .win-banner { font-size: 0.9rem; padding: 8px 16px; }
+            .cell .stone { width: calc(28px - 5px); height: calc(28px - 5px); }
+        }
+        @media (max-width: 480px) {
+            :root { --cell-size: 24px; --cell-half: 12px; }
+            .cell .stone { width: calc(24px - 4px); height: calc(24px - 4px); }
+            .game-card { padding: 16px 10px 6px; }
+            .cell .dot { width: 4px; height: 4px; }
+            .cell .dot.star { width: 7px; height: 7px; }
+        }
+        @media (min-width: 641px) {
+            :root { --cell-size: 34px; --cell-half: 17px; }
+            .cell .stone { width: calc(34px - 6px); height: calc(34px - 6px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="index.html" class="back-home-btn" title="返回游戏专区">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <div id="toast">
+        <i class="fas fa-info-circle" style="color: #a5b4fc;"></i>
+        <span id="toast-msg">提示信息</span>
+    </div>
+
+    <div class="glass-card game-card">
+        <h1><i class="fas fa-chess-board"></i> 五子棋</h1>
+        <div class="game-subtitle">15×15 棋盘 · 双人对战 · 五子连珠</div>
+
+        <!-- 信息栏 -->
+        <div class="game-info">
+            <div class="turn-indicator" id="turn-indicator">
+                <span class="turn-stone black" id="turn-stone"></span>
+                <span id="turn-text">黑棋走</span>
+            </div>
+            <div class="move-count">步数：<span id="move-count">0</span></div>
+        </div>
+
+        <!-- 胜利横幅 -->
+        <div class="win-banner" id="win-banner"><i class="fas fa-trophy"></i> <span id="win-msg"></span></div>
+
+        <!-- 棋盘 -->
+        <div class="board-container">
+            <div class="board" id="board"></div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="game-actions">
+            <button class="game-btn primary" id="restart-btn"><i class="fas fa-redo"></i> 重新开始</button>
+            <span class="game-btn replay-label"><i class="fas fa-history"></i> 回放</span>
+            <button class="game-btn" id="prev-btn"><i class="fas fa-step-backward"></i> 上一步</button>
+            <button class="game-btn" id="next-btn">下一步 <i class="fas fa-step-forward"></i></button>
+        </div>
+    </div>
+
+    <div class="author-credit">
+        <p>© 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="../tools/common.js"></script>
+    <script>
+        // ===== 五子棋游戏逻辑 =====
+        (function() {
+            const BOARD_SIZE = 15;
+
+            // 星位 (0-indexed)
+            const STAR_POINTS = new Set([
+                '3,3', '3,7', '3,11',
+                '7,3', '7,7', '7,11',
+                '11,3', '11,7', '11,11'
+            ]);
+
+            // DOM 引用
+            const boardEl = document.getElementById('board');
+            const turnStoneEl = document.getElementById('turn-stone');
+            const turnTextEl = document.getElementById('turn-text');
+            const moveCountEl = document.getElementById('move-count');
+            const winBannerEl = document.getElementById('win-banner');
+            const winMsgEl = document.getElementById('win-msg');
+            const restartBtn = document.getElementById('restart-btn');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+
+            // 游戏状态
+            let grid = [];              // 15×15, 0=空, 1=黑, 2=白
+            let currentPlayer = 1;      // 1=黑, 2=白
+            let gameActive = true;
+            let history = [];           // [{r, c, player}]
+            let historyPos = -1;        // -1=空棋盘, 0..N=当前步骤
+            let winCells = null;        // [{r, c}, ...] 或 null
+            let lastMoveCell = null;    // {r, c}
+            let isReplaying = false;
+
+            // 检查五子连珠 (从 (r,c) 开始，仅在 4 方向上检查)
+            function checkWinAt(r, c, player) {
+                const directions = [
+                    { dr: 0, dc: 1 },   // 横
+                    { dr: 1, dc: 0 },   // 竖
+                    { dr: 1, dc: 1 },   // 斜 ↘
+                    { dr: 1, dc: -1 }   // 斜 ↗
+                ];
+
+                for (const { dr, dc } of directions) {
+                    const cells = [{ r, c }];
+                    // 正方向
+                    for (let i = 1; i < 5; i++) {
+                        const nr = r + dr * i;
+                        const nc = c + dc * i;
+                        if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) break;
+                        if (grid[nr][nc] !== player) break;
+                        cells.push({ r: nr, c: nc });
+                    }
+                    // 负方向
+                    for (let i = 1; i < 5; i++) {
+                        const nr = r - dr * i;
+                        const nc = c - dc * i;
+                        if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) break;
+                        if (grid[nr][nc] !== player) break;
+                        cells.push({ r: nr, c: nc });
+                    }
+                    if (cells.length >= 5) {
+                        return cells;
+                    }
+                }
+                return null;
+            }
+
+            // 渲染棋盘
+            function renderBoard() {
+                const cellSize = getComputedStyle(document.documentElement).getPropertyValue('--cell-size').trim() || '34px';
+
+                // 清空并重建单元格
+                boardEl.innerHTML = '';
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    for (let c = 0; c < BOARD_SIZE; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.dataset.row = r;
+                        cell.dataset.col = c;
+                        if (!gameActive) cell.classList.add('game-over');
+
+                        // 交叉点圆点
+                        const dot = document.createElement('div');
+                        dot.className = 'dot';
+                        if (STAR_POINTS.has(r + ',' + c)) {
+                            dot.classList.add('star');
+                        }
+                        cell.appendChild(dot);
+
+                        // 棋子
+                        const stone = document.createElement('div');
+                        stone.className = 'stone';
+
+                        if (grid[r][c] === 1) {
+                            stone.classList.add('black');
+                            dot.classList.add('hidden');
+                            if (lastMoveCell && lastMoveCell.r === r && lastMoveCell.c === c) {
+                                stone.classList.add('last-move');
+                            }
+                        } else if (grid[r][c] === 2) {
+                            stone.classList.add('white');
+                            dot.classList.add('hidden');
+                            if (lastMoveCell && lastMoveCell.r === r && lastMoveCell.c === c) {
+                                stone.classList.add('last-move');
+                            }
+                        } else {
+                            stone.style.display = 'none';
+                        }
+
+                        // 胜利高亮
+                        if (winCells && grid[r][c] !== 0) {
+                            const isWin = winCells.some(w => w.r === r && w.c === c);
+                            if (isWin) {
+                                stone.classList.add('win');
+                            }
+                        }
+
+                        cell.appendChild(stone);
+
+                        // 点击事件
+                        cell.addEventListener('click', function() {
+                            handleCellClick(r, c);
+                        });
+
+                        boardEl.appendChild(cell);
+                    }
+                }
+
+                updateUI();
+            }
+
+            // 更新界面状态
+            function updateUI() {
+                // 回合指示
+                if (winCells) {
+                    const winner = grid[winCells[0].r][winCells[0].c];
+                    const name = winner === 1 ? '黑棋' : '白棋';
+                    turnStoneEl.className = 'turn-stone ' + (winner === 1 ? 'black' : 'white');
+                    turnTextEl.textContent = '🏆 ' + name + ' 获胜！';
+                    winBannerEl.classList.add('show');
+                    winMsgEl.textContent = name + '（' + winner + '）五子连珠，获得胜利！';
+                } else if (!gameActive) {
+                    // 平局情况（棋盘满但无胜者，实际上在15x15上几乎不可能）
+                    turnStoneEl.className = 'turn-stone';
+                    turnTextEl.textContent = '🤝 平局';
+                } else if (isReplaying) {
+                    const name = currentPlayer === 1 ? '黑棋' : '白棋';
+                    turnStoneEl.className = 'turn-stone ' + (currentPlayer === 1 ? 'black' : 'white');
+                    turnTextEl.textContent = '📽️ 回放中 · 轮到 ' + name;
+                } else {
+                    const name = currentPlayer === 1 ? '黑棋' : '白棋';
+                    turnStoneEl.className = 'turn-stone ' + (currentPlayer === 1 ? 'black' : 'white');
+                    turnTextEl.textContent = '轮到 ' + name + ' 走棋';
+                }
+
+                // 步数
+                const displayedMoves = historyPos + 1;
+                moveCountEl.textContent = displayedMoves;
+
+                // 按钮状态
+                prevBtn.disabled = historyPos <= 0 || !!winCells;
+                nextBtn.disabled = historyPos >= history.length - 1 || !!winCells;
+
+                // 更新所有单元格的 game-over 状态
+                const cells = boardEl.querySelectorAll('.cell');
+                cells.forEach(cell => {
+                    if (!gameActive) {
+                        cell.classList.add('game-over');
+                    } else {
+                        cell.classList.remove('game-over');
+                    }
+                });
+            }
+
+            // 处理点击落子
+            function handleCellClick(r, c) {
+                // 不能下棋的情况
+                if (!gameActive) return;
+                if (isReplaying) {
+                    showToast('回放模式下无法落子，请先点击"下一步"到最新状态');
+                    return;
+                }
+                if (grid[r][c] !== 0) return;
+
+                // 落子
+                grid[r][c] = currentPlayer;
+                history.push({ r, c, player: currentPlayer });
+                historyPos = history.length - 1;
+                lastMoveCell = { r, c };
+
+                // 检查胜利
+                const result = checkWinAt(r, c, currentPlayer);
+                if (result && result.length >= 5) {
+                    winCells = result;
+                    gameActive = false;
+                    isReplaying = false;
+                    renderBoard();
+                    return;
+                }
+
+                // 检查平局（棋盘是否已满）
+                let isFull = true;
+                for (let ir = 0; ir < BOARD_SIZE; ir++) {
+                    for (let ic = 0; ic < BOARD_SIZE; ic++) {
+                        if (grid[ir][ic] === 0) { isFull = false; break; }
+                    }
+                    if (!isFull) break;
+                }
+                if (isFull) {
+                    gameActive = false;
+                    isReplaying = false;
+                    renderBoard();
+                    return;
+                }
+
+                // 切换玩家
+                currentPlayer = (currentPlayer === 1) ? 2 : 1;
+
+                renderBoard();
+            }
+
+            // 重新开始
+            function resetGame() {
+                grid = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(0));
+                currentPlayer = 1;
+                gameActive = true;
+                history = [];
+                historyPos = -1;
+                winCells = null;
+                lastMoveCell = null;
+                isReplaying = false;
+                winBannerEl.classList.remove('show');
+                renderBoard();
+            }
+
+            // ---- 历史回放 ----
+
+            // 回到上一步
+            function goPrev() {
+                if (!gameActive) return;
+                if (historyPos <= 0) return;
+
+                historyPos--;
+                isReplaying = (historyPos < history.length - 1);
+
+                // 重建 grid 到 historyPos
+                rebuildGridToPos(historyPos);
+
+                if (historyPos >= 0) {
+                    const move = history[historyPos];
+                    currentPlayer = (move.player === 1) ? 2 : 1;
+                    lastMoveCell = { r: move.r, c: move.c };
+                } else {
+                    currentPlayer = 1;
+                    lastMoveCell = null;
+                }
+
+                winCells = null;
+                renderBoard();
+            }
+
+            // 走到下一步
+            function goNext() {
+                if (!gameActive) return;
+                if (historyPos >= history.length - 1) return;
+
+                historyPos++;
+                isReplaying = (historyPos < history.length - 1);
+
+                rebuildGridToPos(historyPos);
+
+                if (historyPos >= 0) {
+                    const move = history[historyPos];
+                    currentPlayer = (move.player === 1) ? 2 : 1;
+                    lastMoveCell = { r: move.r, c: move.c };
+                } else {
+                    currentPlayer = 1;
+                    lastMoveCell = null;
+                }
+
+                // 检查当前最后一步是否构成胜利
+                if (historyPos >= 0) {
+                    const move = history[historyPos];
+                    const result = checkWinAt(move.r, move.c, move.player);
+                    if (result && result.length >= 5) {
+                        winCells = result;
+                        gameActive = false;
+                        isReplaying = false;
+                        renderBoard();
+                        return;
+                    }
+                }
+
+                winCells = null;
+                renderBoard();
+            }
+
+            function rebuildGridToPos(pos) {
+                grid = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(0));
+                for (let i = 0; i <= pos; i++) {
+                    const move = history[i];
+                    grid[move.r][move.c] = move.player;
+                }
+            }
+
+            // ---- 事件绑定 ----
+            restartBtn.addEventListener('click', resetGame);
+            prevBtn.addEventListener('click', goPrev);
+            nextBtn.addEventListener('click', goNext);
+
+            // ---- 键盘快捷键 ----
+            document.addEventListener('keydown', function(e) {
+                // 左右箭头回放
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    goPrev();
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    goNext();
+                } else if (e.key === 'r' || e.key === 'R') {
+                    if (!e.ctrlKey && !e.metaKey) {
+                        e.preventDefault();
+                        resetGame();
+                    }
+                }
+            });
+
+            // ---- 初始化 ----
+            resetGame();
+        })();
+    </script>
+</body>
+</html>

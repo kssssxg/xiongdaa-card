@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <title>井字棋 - xiong da</title>
+    <link rel="stylesheet" href="../tools/common.css">
+    <style>
+        /* ===== 井字棋专属样式 ===== */
+        .game-card {
+            padding: 40px;
+            width: 100%;
+            max-width: 520px;
+            position: relative;
+            z-index: 10;
+            text-align: center;
+        }
+
+        .game-card h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .game-card .game-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        /* --- 状态 / 计分板 --- */
+        .game-status {
+            font-size: 1.05rem;
+            margin-bottom: 16px;
+            padding: 10px 18px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 12px;
+            display: inline-block;
+            min-width: 200px;
+        }
+
+        .scoreboard {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+        }
+        .scoreboard .score-item {
+            padding: 8px 18px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px;
+            min-width: 80px;
+        }
+        .scoreboard .score-item span {
+            font-weight: 700;
+            color: var(--theme-accent);
+            font-size: 1.1rem;
+        }
+        .scoreboard .score-item .label {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        /* --- 棋盘 3x3 --- */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            max-width: 340px;
+            margin: 0 auto 20px;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            user-select: none;
+            color: #fff;
+        }
+
+        .cell:hover:not(.taken):not(.game-over) {
+            background: rgba(255,255,255,0.12);
+            border-color: var(--theme-accent);
+            transform: scale(1.03);
+        }
+
+        .cell.taken {
+            cursor: default;
+        }
+
+        .cell.x {
+            color: #a5b4fc;
+            text-shadow: 0 0 20px rgba(165,180,252,0.4);
+        }
+
+        .cell.o {
+            color: #f472b6;
+            text-shadow: 0 0 20px rgba(244,114,182,0.4);
+        }
+
+        .cell.win {
+            background: rgba(52, 211, 153, 0.15);
+            border-color: rgba(52, 211, 153, 0.4);
+            box-shadow: 0 0 20px rgba(52, 211, 153, 0.15);
+            animation: winPulse 0.6s ease infinite alternate;
+        }
+
+        @keyframes winPulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.06); }
+        }
+
+        .cell.draw {
+            color: rgba(255,255,255,0.4);
+        }
+
+        /* --- 按钮 --- */
+        .game-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .game-btn {
+            padding: 10px 24px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .game-btn:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: var(--theme-accent);
+        }
+
+        .game-btn.primary {
+            background: rgba(165,180,252,0.15);
+            border-color: var(--theme-accent);
+        }
+
+        .game-btn.primary:hover {
+            background: rgba(165,180,252,0.25);
+        }
+
+        .game-btn.danger {
+            background: rgba(244,67,54,0.12);
+            border-color: rgba(244,67,54,0.25);
+        }
+        .game-btn.danger:hover {
+            background: rgba(244,67,54,0.2);
+        }
+
+        @media (max-width: 480px) {
+            .game-card { padding: 24px; }
+            .board { max-width: 280px; gap: 6px; }
+            .cell { font-size: 2.2rem; }
+            .scoreboard { gap: 12px; }
+            .scoreboard .score-item { min-width: 65px; padding: 6px 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="index.html" class="back-home-btn" title="返回游戏专区">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <div id="toast">
+        <i class="fas fa-info-circle" style="color: #a5b4fc;"></i>
+        <span id="toast-msg">提示信息</span>
+    </div>
+
+    <div class="glass-card game-card">
+        <h1><i class="fas fa-times"></i> 井字棋</h1>
+        <div class="game-subtitle">经典三连棋 · 双人对战</div>
+
+        <!-- 计分板 -->
+        <div class="scoreboard">
+            <div class="score-item">
+                <div class="label">❌ X</div>
+                <span id="score-x">0</span>
+            </div>
+            <div class="score-item">
+                <div class="label">🤝 平局</div>
+                <span id="score-draw">0</span>
+            </div>
+            <div class="score-item">
+                <div class="label">⭕ O</div>
+                <span id="score-o">0</span>
+            </div>
+        </div>
+
+        <!-- 状态 -->
+        <div class="game-status" id="game-status">轮到 <strong>X</strong> 下棋</div>
+
+        <!-- 棋盘 -->
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="game-actions">
+            <button class="game-btn primary" id="restart-btn"><i class="fas fa-redo"></i> 重新开始</button>
+            <button class="game-btn danger" id="reset-score-btn"><i class="fas fa-trash-alt"></i> 重置计分</button>
+        </div>
+    </div>
+
+    <div class="author-credit">
+        <p>© 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="../tools/common.js"></script>
+    <script>
+        // ===== 井字棋游戏逻辑 =====
+        (function() {
+            const boardEl = document.getElementById('board');
+            const cells = Array.from(boardEl.querySelectorAll('.cell'));
+            const statusEl = document.getElementById('game-status');
+            const scoreXEl = document.getElementById('score-x');
+            const scoreOEl = document.getElementById('score-o');
+            const scoreDrawEl = document.getElementById('score-draw');
+            const restartBtn = document.getElementById('restart-btn');
+            const resetScoreBtn = document.getElementById('reset-score-btn');
+
+            const SCORE_KEY = 'xiongda_ttt_score';
+
+            // 状态
+            let board = Array(9).fill(null);
+            let currentPlayer = 'X'; // 'X' 或 'O'
+            let gameActive = true;
+            let scores = { X: 0, O: 0, draw: 0 };
+
+            // 胜利组合
+            const winPatterns = [
+                [0,1,2], [3,4,5], [6,7,8],  // 横
+                [0,3,6], [1,4,7], [2,5,8],  // 竖
+                [0,4,8], [2,4,6]            // 斜
+            ];
+
+            // 加载计分
+            function loadScores() {
+                try {
+                    const saved = localStorage.getItem(SCORE_KEY);
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        scores.X = parsed.X || 0;
+                        scores.O = parsed.O || 0;
+                        scores.draw = parsed.draw || 0;
+                    }
+                } catch (e) {}
+                updateScoreDisplay();
+            }
+
+            function saveScores() {
+                try {
+                    localStorage.setItem(SCORE_KEY, JSON.stringify(scores));
+                } catch (e) {}
+            }
+
+            function updateScoreDisplay() {
+                scoreXEl.textContent = scores.X;
+                scoreOEl.textContent = scores.O;
+                scoreDrawEl.textContent = scores.draw;
+            }
+
+            // 检查胜利
+            function checkWinner() {
+                for (const pattern of winPatterns) {
+                    const [a, b, c] = pattern;
+                    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                        return { winner: board[a], pattern: pattern };
+                    }
+                }
+                if (board.every(cell => cell !== null)) {
+                    return { winner: 'draw', pattern: null };
+                }
+                return null;
+            }
+
+            // 渲染棋盘
+            function renderBoard() {
+                cells.forEach((cell, i) => {
+                    cell.textContent = board[i] || '';
+                    cell.className = 'cell';
+                    if (board[i] === 'X') {
+                        cell.classList.add('taken', 'x');
+                    } else if (board[i] === 'O') {
+                        cell.classList.add('taken', 'o');
+                    }
+                });
+            }
+
+            // 高亮胜利线
+            function highlightWin(pattern) {
+                if (!pattern) return;
+                pattern.forEach(i => {
+                    cells[i].classList.add('win');
+                });
+            }
+
+            // 更新状态文字
+            function updateStatus(message) {
+                statusEl.innerHTML = message;
+            }
+
+            // 结束游戏
+            function endGame(result) {
+                gameActive = false;
+                cells.forEach(cell => cell.classList.add('game-over'));
+
+                if (result.winner === 'X') {
+                    scores.X++;
+                    updateStatus('❌ <strong>X</strong> 获胜！ 🎉');
+                } else if (result.winner === 'O') {
+                    scores.O++;
+                    updateStatus('⭕ <strong>O</strong> 获胜！ 🎉');
+                } else if (result.winner === 'draw') {
+                    scores.draw++;
+                    updateStatus('🤝 平局！');
+                    cells.forEach(cell => cell.classList.add('draw'));
+                }
+
+                if (result.pattern) {
+                    highlightWin(result.pattern);
+                }
+
+                saveScores();
+                updateScoreDisplay();
+            }
+
+            // 处理下棋
+            function handleCellClick(index) {
+                if (!gameActive) return;
+                if (board[index] !== null) return;
+
+                // 下棋
+                board[index] = currentPlayer;
+                renderBoard();
+
+                // 检查结果
+                const result = checkWinner();
+                if (result) {
+                    endGame(result);
+                    return;
+                }
+
+                // 切换玩家
+                currentPlayer = (currentPlayer === 'X') ? 'O' : 'X';
+                updateStatus(`轮到 <strong>${currentPlayer}</strong> 下棋`);
+            }
+
+            // 重新开始（保持计分）
+            function resetBoard() {
+                board = Array(9).fill(null);
+                currentPlayer = 'X';
+                gameActive = true;
+                renderBoard();
+                updateStatus(`轮到 <strong>X</strong> 下棋`);
+            }
+
+            // 重置计分
+            function resetScores() {
+                scores = { X: 0, O: 0, draw: 0 };
+                saveScores();
+                updateScoreDisplay();
+                resetBoard();
+                showToast('计分已重置');
+            }
+
+            // 绑定事件
+            cells.forEach((cell, i) => {
+                cell.addEventListener('click', function() {
+                    handleCellClick(i);
+                });
+            });
+
+            restartBtn.addEventListener('click', resetBoard);
+            resetScoreBtn.addEventListener('click', resetScores);
+
+            // 初始化
+            loadScores();
+            resetBoard();
+        })();
+    </script>
+</body>
+</html>

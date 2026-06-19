@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BMI 身体质量指数计算器 - xiongdaa</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* ---- BMI 专属样式 ---- */
+        .bmi-wrapper {
+            padding: 30px 35px 35px;
+            width: 100%;
+            max-width: 540px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .bmi-wrapper h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        .bmi-wrapper .bmi-subtitle {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        /* ---- 单位切换 ---- */
+        .unit-toggle {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 22px;
+        }
+        .unit-toggle span {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            transition: color 0.3s;
+        }
+        .unit-toggle span.active {
+            color: var(--theme-accent);
+            font-weight: 600;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 52px;
+            height: 28px;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 22px;
+            height: 22px;
+            background: var(--theme-accent);
+            border-radius: 50%;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .toggle-switch.imperial::after {
+            transform: translateX(24px);
+        }
+
+        /* ---- 输入栏 ---- */
+        .bmi-input-group {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .bmi-input-item {
+            flex: 1;
+        }
+        .bmi-input-item label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .bmi-input-item label i {
+            margin-right: 5px;
+            color: var(--theme-accent);
+        }
+        .bmi-input-item .input-wrap {
+            position: relative;
+        }
+        .bmi-input-item input {
+            width: 100%;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff;
+            padding: 11px 16px;
+            padding-right: 44px;
+            border-radius: 12px;
+            outline: none;
+            font-size: 1.05rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .bmi-input-item input:focus {
+            border-color: var(--theme-accent);
+            background: rgba(255,255,255,0.12);
+        }
+        .bmi-input-item input::placeholder {
+            color: rgba(255,255,255,0.25);
+        }
+        .bmi-input-item .input-unit {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+        /* 去掉 input number 的上下箭头 */
+        .bmi-input-item input[type="number"]::-webkit-inner-spin-button,
+        .bmi-input-item input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .bmi-input-item input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        /* ---- BMI 结果显示 ---- */
+        .bmi-result-area {
+            text-align: center;
+            padding: 20px 0 18px;
+            margin-bottom: 16px;
+        }
+        .bmi-number {
+            font-size: 3.2rem;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.02em;
+            transition: color 0.4s;
+        }
+        .bmi-number.placeholder {
+            color: rgba(255,255,255,0.15);
+        }
+        .bmi-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* ---- 分类卡片 ---- */
+        .bmi-category-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            border-radius: 16px;
+            margin-bottom: 14px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            min-height: 72px;
+        }
+        .bmi-category-card .cat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+            transition: all 0.5s;
+        }
+        .bmi-category-card .cat-icon i {
+            transition: transform 0.3s;
+        }
+        .bmi-category-card.active .cat-icon i {
+            transform: scale(1.15);
+        }
+        .bmi-category-card .cat-text {
+            flex: 1;
+        }
+        .bmi-category-card .cat-name {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .bmi-category-card .cat-range {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .bmi-category-card .cat-icon-check {
+            font-size: 1.6rem;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .bmi-category-card.active .cat-icon-check {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* 四种颜色主题 */
+        .cat-underweight .cat-icon { background: rgba(96, 165, 250, 0.25); color: #60a5fa; }
+        .cat-underweight.active { border-color: rgba(96, 165, 250, 0.5); background: rgba(96, 165, 250, 0.1); }
+        .cat-underweight.active .cat-name { color: #60a5fa; }
+        .cat-underweight .cat-icon-check { color: #60a5fa; }
+
+        .cat-normal .cat-icon { background: rgba(52, 211, 153, 0.25); color: #34d399; }
+        .cat-normal.active { border-color: rgba(52, 211, 153, 0.5); background: rgba(52, 211, 153, 0.1); }
+        .cat-normal.active .cat-name { color: #34d399; }
+        .cat-normal .cat-icon-check { color: #34d399; }
+
+        .cat-overweight .cat-icon { background: rgba(251, 191, 36, 0.25); color: #fbbf24; }
+        .cat-overweight.active { border-color: rgba(251, 191, 36, 0.5); background: rgba(251, 191, 36, 0.1); }
+        .cat-overweight.active .cat-name { color: #fbbf24; }
+        .cat-overweight .cat-icon-check { color: #fbbf24; }
+
+        .cat-obese .cat-icon { background: rgba(248, 113, 113, 0.25); color: #f87171; }
+        .cat-obese.active { border-color: rgba(248, 113, 113, 0.5); background: rgba(248, 113, 113, 0.1); }
+        .cat-obese.active .cat-name { color: #f87171; }
+        .cat-obese .cat-icon-check { color: #f87171; }
+
+        /* ---- 健康建议 & 标准体重 ---- */
+        .bmi-detail-section {
+            margin-top: 10px;
+        }
+        .bmi-detail-card {
+            padding: 14px 18px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.07);
+            margin-bottom: 10px;
+            transition: all 0.4s;
+        }
+        .bmi-detail-card .detail-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .bmi-detail-card .detail-title i {
+            color: var(--theme-accent);
+        }
+        .bmi-detail-card .detail-body {
+            font-size: 0.88rem;
+            line-height: 1.6;
+            color: var(--text-main);
+        }
+        .bmi-detail-card .detail-body .highlight {
+            color: var(--theme-accent);
+            font-weight: 600;
+        }
+        .bmi-detail-card .detail-body .highlight-green { color: #34d399; font-weight: 600; }
+        .bmi-health-advice {
+            min-height: 20px;
+        }
+
+        /* ---- 响应式 ---- */
+        @media (max-width: 480px) {
+            .bmi-wrapper { padding: 22px 18px 25px; }
+            .bmi-number { font-size: 2.6rem; }
+            .bmi-input-group { flex-direction: column; gap: 10px; }
+            .bmi-category-card { padding: 13px 16px; }
+            .bmi-category-card .cat-icon { width: 40px; height: 40px; font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 覆盖层 -->
+    <div class="overlay"></div>
+
+    <!-- 视频背景（由 common.js 控制） -->
+    <video id="bg-video" muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <!-- 返回主页按钮 -->
+    <a href="../index.html" class="back-home-btn" title="返回主页">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <!-- Toast -->
+    <div id="toast"><i class="fas fa-info-circle"></i> <span id="toast-msg"></span></div>
+
+    <!-- 主卡片 -->
+    <div class="glass-card bmi-wrapper">
+        <h1><i class="fas fa-weight" style="color:var(--theme-accent);margin-right:8px;"></i>BMI 计算器</h1>
+        <p class="bmi-subtitle">身体质量指数 · 一键了解你的体型</p>
+
+        <!-- 单位切换 -->
+        <div class="unit-toggle">
+            <span class="active" id="unit-metric">公制 (cm/kg)</span>
+            <div class="toggle-switch" id="unit-switch" role="button" tabindex="0" aria-label="切换单位"></div>
+            <span id="unit-imperial">英制 (ft/lb)</span>
+        </div>
+
+        <!-- 输入 -->
+        <div class="bmi-input-group">
+            <div class="bmi-input-item">
+                <label for="height-input"><i class="fas fa-ruler-vertical"></i> 身高</label>
+                <div class="input-wrap">
+                    <input type="number" id="height-input" placeholder="175" step="0.1" min="0">
+                    <span class="input-unit" id="height-unit">cm</span>
+                </div>
+            </div>
+            <div class="bmi-input-item">
+                <label for="weight-input"><i class="fas fa-weight"></i> 体重</label>
+                <div class="input-wrap">
+                    <input type="number" id="weight-input" placeholder="70" step="0.1" min="0">
+                    <span class="input-unit" id="weight-unit">kg</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- BMI 数值 -->
+        <div class="bmi-result-area">
+            <div class="bmi-number placeholder" id="bmi-number">--</div>
+            <div class="bmi-label">BMI</div>
+        </div>
+
+        <!-- 分类卡片 -->
+        <div class="bmi-category-card cat-underweight" data-cat="underweight">
+            <div class="cat-icon"><i class="fas fa-leaf"></i></div>
+            <div class="cat-text">
+                <div class="cat-name">偏瘦</div>
+                <div class="cat-range">BMI &lt; 18.5</div>
+            </div>
+            <div class="cat-icon-check"><i class="fas fa-check-circle"></i></div>
+        </div>
+        <div class="bmi-category-card cat-normal" data-cat="normal">
+            <div class="cat-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="cat-text">
+                <div class="cat-name">正常</div>
+                <div class="cat-range">18.5 ≤ BMI &lt; 24</div>
+            </div>
+            <div class="cat-icon-check"><i class="fas fa-check-circle"></i></div>
+        </div>
+        <div class="bmi-category-card cat-overweight" data-cat="overweight">
+            <div class="cat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="cat-text">
+                <div class="cat-name">偏胖</div>
+                <div class="cat-range">24 ≤ BMI &lt; 28</div>
+            </div>
+            <div class="cat-icon-check"><i class="fas fa-check-circle"></i></div>
+        </div>
+        <div class="bmi-category-card cat-obese" data-cat="obese">
+            <div class="cat-icon"><i class="fas fa-times-circle"></i></div>
+            <div class="cat-text">
+                <div class="cat-name">肥胖</div>
+                <div class="cat-range">BMI ≥ 28</div>
+            </div>
+            <div class="cat-icon-check"><i class="fas fa-check-circle"></i></div>
+        </div>
+
+        <!-- 详情 -->
+        <div class="bmi-detail-section">
+            <div class="bmi-detail-card" id="bmi-health-advice-card">
+                <div class="detail-title"><i class="fas fa-heartbeat"></i> 健康建议</div>
+                <div class="detail-body bmi-health-advice" id="bmi-health-advice">请输入身高体重开始计算</div>
+            </div>
+            <div class="bmi-detail-card">
+                <div class="detail-title"><i class="fas fa-bullseye"></i> 标准体重范围</div>
+                <div class="detail-body" id="bmi-weight-range">请输入身高体重查看标准范围</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部作者标注 -->
+    <div class="author-credit">
+        <p><i class="fas fa-heart" style="color:#f87171;"></i> xiongdaa 健康工具</p>
+    </div>
+
+    <!-- common.js -->
+    <script src="common.js"></script>
+
+    <!-- BMI 逻辑 -->
+    <script>
+        (function() {
+            'use strict';
+
+            // ---- DOM 引用 ----
+            const heightInput = document.getElementById('height-input');
+            const weightInput = document.getElementById('weight-input');
+            const bmiNumber = document.getElementById('bmi-number');
+            const healthAdvice = document.getElementById('bmi-health-advice');
+            const weightRange = document.getElementById('bmi-weight-range');
+            const unitSwitch = document.getElementById('unit-switch');
+            const unitMetric = document.getElementById('unit-metric');
+            const unitImperial = document.getElementById('unit-imperial');
+            const heightUnit = document.getElementById('height-unit');
+            const weightUnit = document.getElementById('weight-unit');
+            const categoryCards = document.querySelectorAll('.bmi-category-card');
+
+            // ---- 状态 ----
+            let isImperial = false; // false = 公制 (cm/kg), true = 英制 (ft/lb)
+
+            // ---- 单位切换 ----
+            unitSwitch.addEventListener('click', function() {
+                isImperial = !isImperial;
+                updateUnitUI();
+                // 切换时保留用户输入
+                calculateBMI();
+            });
+
+            function updateUnitUI() {
+                unitSwitch.classList.toggle('imperial', isImperial);
+                unitMetric.classList.toggle('active', !isImperial);
+                unitImperial.classList.toggle('active', isImperial);
+
+                if (isImperial) {
+                    heightUnit.textContent = 'ft';
+                    weightUnit.textContent = 'lb';
+                    heightInput.placeholder = '5.7';
+                    weightInput.placeholder = '154';
+                } else {
+                    heightUnit.textContent = 'cm';
+                    weightUnit.textContent = 'kg';
+                    heightInput.placeholder = '175';
+                    weightInput.placeholder = '70';
+                }
+            }
+
+            // ---- 实时计算 ----
+            function calculateBMI() {
+                const rawH = parseFloat(heightInput.value);
+                const rawW = parseFloat(weightInput.value);
+
+                // 无效输入
+                if (isNaN(rawH) || isNaN(rawW) || rawH <= 0 || rawW <= 0) {
+                    bmiNumber.textContent = '--';
+                    bmiNumber.className = 'bmi-number placeholder';
+                    clearCategory();
+                    healthAdvice.textContent = '请输入身高体重开始计算';
+                    weightRange.textContent = '请输入身高体重查看标准范围';
+                    return;
+                }
+
+                let heightCm, weightKg;
+
+                if (isImperial) {
+                    // 英制 → 公制: 1 ft = 30.48 cm, 1 lb = 0.453592 kg
+                    heightCm = rawH * 30.48;
+                    weightKg = rawW * 0.453592;
+                } else {
+                    heightCm = rawH;
+                    weightKg = rawW;
+                }
+
+                // 计算 BMI
+                const heightM = heightCm / 100;
+                const bmi = weightKg / (heightM * heightM);
+                const bmiDisplay = bmi.toFixed(1);
+
+                bmiNumber.textContent = bmiDisplay;
+                bmiNumber.className = 'bmi-number';
+
+                // ---- 分类 & 颜色 ----
+                let category = '';
+                let bmiColor = '';
+
+                if (bmi < 18.5) {
+                    category = 'underweight';
+                    bmiColor = '#60a5fa';
+                } else if (bmi < 24) {
+                    category = 'normal';
+                    bmiColor = '#34d399';
+                } else if (bmi < 28) {
+                    category = 'overweight';
+                    bmiColor = '#fbbf24';
+                } else {
+                    category = 'obese';
+                    bmiColor = '#f87171';
+                }
+
+                bmiNumber.style.color = bmiColor;
+
+                // 激活对应分类卡片
+                categoryCards.forEach(function(card) {
+                    const isActive = card.dataset.cat === category;
+                    card.classList.toggle('active', isActive);
+                });
+
+                // ---- 健康建议 ----
+                const adviceMap = {
+                    underweight: '你的体重偏轻，建议增加营养摄入，多吃富含蛋白质和碳水化合物的食物，适当进行力量训练增肌。',
+                    normal: '太棒了！你的体重在健康范围内。请继续保持均衡饮食和适量运动的良好习惯。',
+                    overweight: '你的体重偏重，建议控制高热量食物摄入，增加有氧运动频率，如跑步、游泳等。',
+                    obese: '你的体重已达到肥胖水平，建议咨询专业医生或营养师制定科学的减重计划，预防慢性疾病风险。'
+                };
+                healthAdvice.textContent = adviceMap[category] || '';
+
+                // ---- 标准体重范围 ----
+                // 标准体重(kg) = (身高cm - 100) × 0.9 (Broca公式改良)
+                // 健康 BMI 范围 18.5~23.9 对应的体重区间
+                const minWeight = (18.5 * heightM * heightM).toFixed(1);
+                const maxWeight = (23.9 * heightM * heightM).toFixed(1);
+
+                let rangeText;
+                if (isImperial) {
+                    const minLb = (parseFloat(minWeight) / 0.453592).toFixed(1);
+                    const maxLb = (parseFloat(maxWeight) / 0.453592).toFixed(1);
+                    const standardKg = (heightCm - 100) * 0.9;
+                    const standardLb = (standardKg / 0.453592).toFixed(1);
+                    rangeText =
+                        '健康 BMI (18.5~23.9) 对应体重：<span class="highlight">' + minLb + ' ~ ' + maxLb + ' lb</span>' +
+                        '<br>参考标准体重：<span class="highlight-green">' + standardLb + ' lb</span>';
+                } else {
+                    const standardKg = (heightCm - 100) * 0.9;
+                    rangeText =
+                        '健康 BMI (18.5~23.9) 对应体重：<span class="highlight">' + minWeight + ' ~ ' + maxWeight + ' kg</span>' +
+                        '<br>参考标准体重：<span class="highlight-green">' + standardKg.toFixed(1) + ' kg</span>';
+                }
+                weightRange.innerHTML = rangeText;
+            }
+
+            // ---- 清除分类激活 ----
+            function clearCategory() {
+                categoryCards.forEach(function(card) {
+                    card.classList.remove('active');
+                });
+                bmiNumber.style.color = '';
+            }
+
+            // ---- 输入事件 ----
+            heightInput.addEventListener('input', calculateBMI);
+            weightInput.addEventListener('input', calculateBMI);
+
+            // ---- 点击切换标签也可切换单位 ----
+            unitMetric.addEventListener('click', function() {
+                if (isImperial) {
+                    isImperial = false;
+                    updateUnitUI();
+                    calculateBMI();
+                }
+            });
+            unitImperial.addEventListener('click', function() {
+                if (!isImperial) {
+                    isImperial = true;
+                    updateUnitUI();
+                    calculateBMI();
+                }
+            });
+
+            // ---- 键盘事件: Enter 跳转到下一个输入 ----
+            heightInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    weightInput.focus();
+                }
+            });
+            weightInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    calculateBMI();
+                }
+            });
+
+            // ---- 初始计算（无值，显示占位） ----
+            calculateBMI();
+        })();
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>单位换算 - xiongdaa 工具集</title>
+<link rel="stylesheet" href="common.css">
+<style>
+/* 分类标签 */
+.category-tabs {
+    display: flex; gap: 8px; margin-bottom: 25px; flex-wrap: wrap;
+    justify-content: center;
+}
+.category-tab {
+    padding: 8px 20px; border-radius: 20px; cursor: pointer;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+    color: var(--text-muted); font-size: 0.85rem; transition: all 0.3s;
+    user-select: none;
+}
+.category-tab:hover { background: rgba(255,255,255,0.15); }
+.category-tab.active {
+    background: rgba(165,180,252,0.2); border-color: var(--theme-accent);
+    color: var(--text-main); font-weight: 500;
+}
+
+/* 换算区域 */
+.converter-box {
+    display: none;
+    animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.converter-box.active { display: block; }
+
+.converter-row {
+    display: flex; align-items: center; gap: 12px;
+    margin: 12px 0;
+}
+.converter-field {
+    flex: 1;
+}
+.converter-field label {
+    display: block; font-size: 0.8rem; color: var(--text-muted);
+    margin-bottom: 6px;
+}
+.converter-field select,
+.converter-field input[type="number"] {
+    width: 100%; background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15); color: #fff;
+    padding: 10px 14px; border-radius: 12px; outline: none;
+    font-size: 0.95rem; transition: all 0.3s;
+    -moz-appearance: textfield;
+}
+.converter-field select {
+    cursor: pointer; appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+    padding-right: 34px;
+}
+.converter-field select:focus,
+.converter-field input[type="number"]:focus {
+    border-color: var(--theme-accent); background: rgba(255,255,255,0.12);
+}
+.converter-field select option {
+    background: #1a1a2e; color: #fff;
+}
+.converter-field input[type="number"]::-webkit-inner-spin-button,
+.converter-field input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none; margin: 0;
+}
+
+/* 互换按钮 */
+.swap-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+    color: #fff; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; transition: all 0.3s; flex-shrink: 0;
+    margin-top: 22px;
+}
+.swap-btn:hover {
+    background: rgba(165,180,252,0.2); border-color: var(--theme-accent);
+    transform: rotate(180deg);
+}
+.swap-btn i { font-size: 1rem; pointer-events: none; }
+
+/* 结果区域 */
+.result-box {
+    margin-top: 18px;
+    background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px; padding: 16px 20px;
+}
+.result-value {
+    font-size: 1.5rem; font-weight: 700; color: var(--theme-accent);
+    margin-bottom: 4px;
+}
+.result-formula {
+    font-size: 0.8rem; color: var(--text-muted);
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+
+/* 操作按钮 */
+.action-row {
+    display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap;
+}
+.action-btn {
+    padding: 8px 18px; border-radius: 12px; cursor: pointer;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+    color: var(--text-muted); font-size: 0.85rem; transition: all 0.3s;
+    display: flex; align-items: center; gap: 6px;
+}
+.action-btn:hover {
+    background: rgba(255,255,255,0.15); color: var(--text-main);
+}
+.action-btn.clear-btn:hover {
+    background: rgba(248,113,113,0.2); border-color: rgba(248,113,113,0.4);
+    color: #f87171;
+}
+
+@media (max-width: 480px) {
+    .converter-row { flex-direction: column; }
+    .swap-btn { margin-top: 0; transform: rotate(90deg); }
+    .swap-btn:hover { transform: rotate(270deg); }
+    .result-value { font-size: 1.2rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- 视频背景占位 -->
+<video id="bg-video"></video>
+<div class="overlay"></div>
+
+<!-- 返回按钮 -->
+<a href="index.html" class="back-home-btn" title="返回主页">
+    <i class="fas fa-arrow-left"></i>
+</a>
+
+<!-- Toast -->
+<div id="toast"><span id="toast-msg"></span></div>
+
+<!-- 主卡片 -->
+<div class="glass-card tool-card" style="max-width: 520px;">
+    <h1><i class="fas fa-arrows-alt-h"></i> 单位换算</h1>
+    <p class="tool-subtitle">长度 · 重量 · 温度 · 数据存储</p>
+
+    <!-- 分类标签 -->
+    <div class="category-tabs" id="categoryTabs">
+        <div class="category-tab active" data-category="length">长度</div>
+        <div class="category-tab" data-category="weight">重量</div>
+        <div class="category-tab" data-category="temperature">温度</div>
+        <div class="category-tab" data-category="data">数据存储</div>
+    </div>
+
+    <!-- ===== 长度 ===== -->
+    <div class="converter-box active" id="box-length">
+        <div class="converter-row">
+            <div class="converter-field">
+                <label>从</label>
+                <select id="length-from">
+                    <option value="mm">毫米</option>
+                    <option value="cm" selected>厘米</option>
+                    <option value="m">米</option>
+                    <option value="km">千米</option>
+                    <option value="in">英寸</option>
+                    <option value="ft">英尺</option>
+                    <option value="mi">英里</option>
+                </select>
+            </div>
+            <div class="swap-btn" data-category="length" title="互换单位"><i class="fas fa-exchange-alt"></i></div>
+            <div class="converter-field">
+                <label>到</label>
+                <select id="length-to">
+                    <option value="mm">毫米</option>
+                    <option value="cm">厘米</option>
+                    <option value="m" selected>米</option>
+                    <option value="km">千米</option>
+                    <option value="in">英寸</option>
+                    <option value="ft">英尺</option>
+                    <option value="mi">英里</option>
+                </select>
+            </div>
+        </div>
+        <div class="converter-field">
+            <label>数值</label>
+            <input type="number" id="length-input" placeholder="输入数值" step="any">
+        </div>
+        <div class="result-box" id="length-result">
+            <div class="result-value" id="length-result-value">—</div>
+            <div class="result-formula" id="length-result-formula">等待输入...</div>
+        </div>
+    </div>
+
+    <!-- ===== 重量 ===== -->
+    <div class="converter-box" id="box-weight">
+        <div class="converter-row">
+            <div class="converter-field">
+                <label>从</label>
+                <select id="weight-from">
+                    <option value="mg">毫克</option>
+                    <option value="g" selected>克</option>
+                    <option value="kg">千克</option>
+                    <option value="t">吨</option>
+                    <option value="lb">磅</option>
+                    <option value="oz">盎司</option>
+                </select>
+            </div>
+            <div class="swap-btn" data-category="weight" title="互换单位"><i class="fas fa-exchange-alt"></i></div>
+            <div class="converter-field">
+                <label>到</label>
+                <select id="weight-to">
+                    <option value="mg">毫克</option>
+                    <option value="g">克</option>
+                    <option value="kg" selected>千克</option>
+                    <option value="t">吨</option>
+                    <option value="lb">磅</option>
+                    <option value="oz">盎司</option>
+                </select>
+            </div>
+        </div>
+        <div class="converter-field">
+            <label>数值</label>
+            <input type="number" id="weight-input" placeholder="输入数值" step="any">
+        </div>
+        <div class="result-box" id="weight-result">
+            <div class="result-value" id="weight-result-value">—</div>
+            <div class="result-formula" id="weight-result-formula">等待输入...</div>
+        </div>
+    </div>
+
+    <!-- ===== 温度 ===== -->
+    <div class="converter-box" id="box-temperature">
+        <div class="converter-row">
+            <div class="converter-field">
+                <label>从</label>
+                <select id="temp-from">
+                    <option value="c" selected>摄氏度 (°C)</option>
+                    <option value="f">华氏度 (°F)</option>
+                    <option value="k">开尔文 (K)</option>
+                </select>
+            </div>
+            <div class="swap-btn" data-category="temperature" title="互换单位"><i class="fas fa-exchange-alt"></i></div>
+            <div class="converter-field">
+                <label>到</label>
+                <select id="temp-to">
+                    <option value="c">摄氏度 (°C)</option>
+                    <option value="f" selected>华氏度 (°F)</option>
+                    <option value="k">开尔文 (K)</option>
+                </select>
+            </div>
+        </div>
+        <div class="converter-field">
+            <label>数值</label>
+            <input type="number" id="temp-input" placeholder="输入数值" step="any">
+        </div>
+        <div class="result-box" id="temp-result">
+            <div class="result-value" id="temp-result-value">—</div>
+            <div class="result-formula" id="temp-result-formula">等待输入...</div>
+        </div>
+    </div>
+
+    <!-- ===== 数据存储 ===== -->
+    <div class="converter-box" id="box-data">
+        <div class="converter-row">
+            <div class="converter-field">
+                <label>从</label>
+                <select id="data-from">
+                    <option value="bit">bit</option>
+                    <option value="B" selected>字节 (B)</option>
+                    <option value="KB">KB</option>
+                    <option value="MB">MB</option>
+                    <option value="GB">GB</option>
+                    <option value="TB">TB</option>
+                </select>
+            </div>
+            <div class="swap-btn" data-category="data" title="互换单位"><i class="fas fa-exchange-alt"></i></div>
+            <div class="converter-field">
+                <label>到</label>
+                <select id="data-to">
+                    <option value="bit">bit</option>
+                    <option value="B">字节 (B)</option>
+                    <option value="KB" selected>KB</option>
+                    <option value="MB">MB</option>
+                    <option value="GB">GB</option>
+                    <option value="TB">TB</option>
+                </select>
+            </div>
+        </div>
+        <div class="converter-field">
+            <label>数值</label>
+            <input type="number" id="data-input" placeholder="输入数值" step="any">
+        </div>
+        <div class="result-box" id="data-result">
+            <div class="result-value" id="data-result-value">—</div>
+            <div class="result-formula" id="data-result-formula">等待输入...</div>
+        </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="action-row">
+        <button class="action-btn clear-btn" id="clearAllBtn"><i class="fas fa-eraser"></i> 清空</button>
+    </div>
+</div>
+
+<!-- 作者 -->
+<div class="author-credit">
+    <p><a href="index.html">xiongdaa 工具集</a> · <span id="clock-time">--:--:--</span> · <span id="clock-date">----年--月--日</span></p>
+</div>
+
+<script src="common.js"></script>
+<script>
+// ================= 换算数据 =================
+
+// 长度：以毫米为基准
+const lengthUnits = {
+    mm: { name: '毫米', toBase: 1 },
+    cm: { name: '厘米', toBase: 10 },
+    m:  { name: '米',   toBase: 1000 },
+    km: { name: '千米', toBase: 1e6 },
+    in: { name: '英寸', toBase: 25.4 },
+    ft: { name: '英尺', toBase: 304.8 },
+    mi: { name: '英里', toBase: 1609344 }
+};
+
+// 重量：以毫克为基准
+const weightUnits = {
+    mg: { name: '毫克', toBase: 1 },
+    g:  { name: '克',   toBase: 1000 },
+    kg: { name: '千克', toBase: 1e6 },
+    t:  { name: '吨',   toBase: 1e9 },
+    lb: { name: '磅',   toBase: 453592.37 },
+    oz: { name: '盎司', toBase: 28349.523125 }
+};
+
+// 数据存储：以字节为基准
+const dataUnits = {
+    bit: { name: 'bit', toBase: 0.125 },
+    B:   { name: '字节', toBase: 1 },
+    KB:  { name: 'KB',  toBase: 1024 },
+    MB:  { name: 'MB',  toBase: 1048576 },
+    GB:  { name: 'GB',  toBase: 1073741824 },
+    TB:  { name: 'TB',  toBase: 1099511627776 }
+};
+
+// 温度单位名字映射
+const tempNames = { c: '°C', f: '°F', k: 'K' };
+
+// ================= 换算函数 =================
+
+function convertLength(val, fromUnit, toUnit) {
+    const base = val * lengthUnits[fromUnit].toBase;
+    return base / lengthUnits[toUnit].toBase;
+}
+
+function convertWeight(val, fromUnit, toUnit) {
+    const base = val * weightUnits[fromUnit].toBase;
+    return base / weightUnits[toUnit].toBase;
+}
+
+function convertTemperature(val, fromUnit, toUnit) {
+    // 先转摄氏度
+    let celsius;
+    if (fromUnit === 'c') celsius = val;
+    else if (fromUnit === 'f') celsius = (val - 32) * 5 / 9;
+    else celsius = val - 273.15;
+
+    // 从摄氏度转目标
+    let result;
+    if (toUnit === 'c') result = celsius;
+    else if (toUnit === 'f') result = celsius * 9 / 5 + 32;
+    else result = celsius + 273.15;
+
+    return result;
+}
+
+function convertData(val, fromUnit, toUnit) {
+    const base = val * dataUnits[fromUnit].toBase;
+    return base / dataUnits[toUnit].toBase;
+}
+
+// ================= 格式化数值 =================
+
+function formatResult(val) {
+    if (!isFinite(val)) return '无效值';
+    // 对于极大的整数（数据存储），用精确整数
+    if (Number.isInteger(val) && Math.abs(val) < 1e15) return val.toLocaleString('zh-CN');
+    // 一般的浮点数
+    const abs = Math.abs(val);
+    if (abs === 0) return '0';
+    if (abs >= 1e12 || (abs > 0 && abs < 1e-8)) return val.toExponential(6);
+    if (abs >= 1000) return val.toLocaleString('zh-CN', { maximumFractionDigits: 4 });
+    if (abs >= 1) return val.toFixed(4);
+    return val.toFixed(6);
+}
+
+function cleanNumber(n) {
+    return parseFloat(n) || 0;
+}
+
+// ================= 核心换算引擎 =================
+
+const converters = {
+    length: {
+        convert: convertLength,
+        inputId: 'length-input',
+        fromId: 'length-from',
+        toId: 'length-to',
+        resultValueId: 'length-result-value',
+        resultFormulaId: 'length-result-formula'
+    },
+    weight: {
+        convert: convertWeight,
+        inputId: 'weight-input',
+        fromId: 'weight-from',
+        toId: 'weight-to',
+        resultValueId: 'weight-result-value',
+        resultFormulaId: 'weight-result-formula'
+    },
+    temperature: {
+        convert: convertTemperature,
+        inputId: 'temp-input',
+        fromId: 'temp-from',
+        toId: 'temp-to',
+        resultValueId: 'temp-result-value',
+        resultFormulaId: 'temp-result-formula'
+    },
+    data: {
+        convert: convertData,
+        inputId: 'data-input',
+        fromId: 'data-from',
+        toId: 'data-to',
+        resultValueId: 'data-result-value',
+        resultFormulaId: 'data-result-formula'
+    }
+};
+
+function doConvert(cat) {
+    const cfg = converters[cat];
+    const inputEl = document.getElementById(cfg.inputId);
+    const fromEl = document.getElementById(cfg.fromId);
+    const toEl = document.getElementById(cfg.toId);
+    const valEl = document.getElementById(cfg.resultValueId);
+    const formulaEl = document.getElementById(cfg.resultFormulaId);
+
+    const val = cleanNumber(inputEl.value);
+    const fromUnit = fromEl.value;
+    const toUnit = toEl.value;
+
+    if (inputEl.value === '' || inputEl.value === '-' || inputEl.value === '.') {
+        valEl.textContent = '—';
+        formulaEl.textContent = '等待输入...';
+        return;
+    }
+
+    let result;
+    if (cat === 'temperature') {
+        result = cfg.convert(val, fromUnit, toUnit);
+    } else {
+        result = cfg.convert(val, fromUnit, toUnit);
+    }
+
+    valEl.textContent = formatResult(result) + ' ' + getUnitName(cat, toUnit);
+    formulaEl.textContent = buildFormulaText(cat, val, fromUnit, toUnit, result);
+}
+
+function getUnitName(cat, unit) {
+    if (cat === 'length') return lengthUnits[unit] ? lengthUnits[unit].name : unit;
+    if (cat === 'weight') return weightUnits[unit] ? weightUnits[unit].name : unit;
+    if (cat === 'temperature') return tempNames[unit] ? tempNames[unit] : unit;
+    if (cat === 'data') return dataUnits[unit] ? dataUnits[unit].name : unit;
+    return unit;
+}
+
+function buildFormulaText(cat, val, fromUnit, toUnit, result) {
+    const fromName = getUnitName(cat, fromUnit);
+    const toName = getUnitName(cat, toUnit);
+    const formattedResult = formatResult(result);
+
+    if (cat === 'temperature') {
+        if (fromUnit === 'c' && toUnit === 'f') return `(${val}${fromName} × 9/5) + 32 = ${formattedResult}${toName}`;
+        if (fromUnit === 'c' && toUnit === 'k') return `${val}${fromName} + 273.15 = ${formattedResult}${toName}`;
+        if (fromUnit === 'f' && toUnit === 'c') return `(${val}${fromName} − 32) × 5/9 = ${formattedResult}${toName}`;
+        if (fromUnit === 'f' && toUnit === 'k') return `(${val}${fromName} − 32) × 5/9 + 273.15 = ${formattedResult}${toName}`;
+        if (fromUnit === 'k' && toUnit === 'c') return `${val}${fromName} − 273.15 = ${formattedResult}${toName}`;
+        if (fromUnit === 'k' && toUnit === 'f') return `(${val}${fromName} − 273.15) × 9/5 + 32 = ${formattedResult}${toName}`;
+        return `${val}${fromName} = ${formattedResult}${toName}`;
+    }
+
+    if (cat === 'length' || cat === 'weight' || cat === 'data') {
+        let ratio;
+        if (cat === 'length') ratio = lengthUnits[fromUnit].toBase / lengthUnits[toUnit].toBase;
+        else if (cat === 'weight') ratio = weightUnits[fromUnit].toBase / weightUnits[toUnit].toBase;
+        else ratio = dataUnits[fromUnit].toBase / dataUnits[toUnit].toBase;
+
+        if (ratio === 1) return `${val} ${fromName} = ${formattedResult} ${toName}`;
+
+        let ratioStr;
+        if (Number.isInteger(ratio) && Math.abs(ratio) < 1e15) {
+            ratioStr = ratio.toLocaleString('zh-CN');
+        } else {
+            const abs = Math.abs(ratio);
+            ratioStr = (abs >= 1e12 || (abs > 0 && abs < 1e-6)) ? ratio.toExponential(4) : ratio.toFixed(6);
+        }
+        return `${val} ${fromName} × ${ratioStr} = ${formattedResult} ${toName}`;
+    }
+
+    return `${val} ${fromName} = ${formattedResult} ${toName}`;
+}
+
+// ================= 互换单位 =================
+
+function swapUnits(cat) {
+    const cfg = converters[cat];
+    const fromEl = document.getElementById(cfg.fromId);
+    const toEl = document.getElementById(cfg.toId);
+    const tmp = fromEl.value;
+    fromEl.value = toEl.value;
+    toEl.value = tmp;
+    doConvert(cat);
+}
+
+// ================= 清空 =================
+
+function clearAll() {
+    const categories = ['length', 'weight', 'temperature', 'data'];
+    categories.forEach(cat => {
+        const cfg = converters[cat];
+        document.getElementById(cfg.inputId).value = '';
+        document.getElementById(cfg.resultValueId).textContent = '—';
+        document.getElementById(cfg.resultFormulaId).textContent = '等待输入...';
+    });
+}
+
+// ================= 初始化 =================
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 分类标签切换
+    const tabs = document.querySelectorAll('.category-tab');
+    const boxes = {
+        length: document.getElementById('box-length'),
+        weight: document.getElementById('box-weight'),
+        temperature: document.getElementById('box-temperature'),
+        data: document.getElementById('box-data')
+    };
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            tabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            const cat = this.dataset.category;
+            Object.keys(boxes).forEach(k => {
+                boxes[k].classList.toggle('active', k === cat);
+            });
+        });
+    });
+
+    // 绑定输入事件
+    const categories = ['length', 'weight', 'temperature', 'data'];
+    categories.forEach(cat => {
+        const cfg = converters[cat];
+        const inputEl = document.getElementById(cfg.inputId);
+        const fromEl = document.getElementById(cfg.fromId);
+        const toEl = document.getElementById(cfg.toId);
+
+        inputEl.addEventListener('input', () => doConvert(cat));
+        fromEl.addEventListener('change', () => doConvert(cat));
+        toEl.addEventListener('change', () => doConvert(cat));
+    });
+
+    // 互换按钮
+    document.querySelectorAll('.swap-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            swapUnits(this.dataset.category);
+        });
+    });
+
+    // 清空按钮
+    document.getElementById('clearAllBtn').addEventListener('click', clearAll);
+});
+</script>
+</body>
+</html>

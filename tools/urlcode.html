@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="CSP" content="upgrade-insecure-requests">
+    <title>URL 编解码 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* 快捷示例按钮 */
+        .example-btns {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 6px 0 10px;
+        }
+        .example-btn {
+            background: rgba(165, 180, 252, 0.12);
+            border: 1px solid rgba(165, 180, 252, 0.2);
+            color: var(--text-muted);
+            padding: 5px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .example-btn:hover {
+            background: rgba(165, 180, 252, 0.25);
+            border-color: var(--theme-accent);
+            color: #fff;
+        }
+        .example-btn i {
+            margin-right: 4px;
+            font-size: 0.7rem;
+        }
+
+        /* 选项行 */
+        .option-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        .option-group .opt-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .option-group label.radio-label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 4px 12px 4px 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.2s;
+        }
+        .option-group label.radio-label:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+        .option-group label.radio-label.active {
+            border-color: var(--theme-accent);
+            background: rgba(165, 180, 252, 0.12);
+            color: #fff;
+        }
+        .option-group label.radio-label code {
+            background: rgba(0, 0, 0, 0.25);
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.78rem;
+        }
+        .option-group input[type="radio"],
+        .option-group input[type="checkbox"] {
+            accent-color: #a5b4fc;
+            cursor: pointer;
+        }
+        .option-group .batch-label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: auto;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 4px 12px 4px 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.2s;
+        }
+        .option-group .batch-label:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        /* URL 解析卡片区域 */
+        .url-parse-result {
+            display: none;
+            margin: 16px 0 12px;
+            background: rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 16px;
+            animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .url-parse-result.show {
+            display: block;
+        }
+        .url-parse-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .url-parse-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 12px 14px;
+            transition: all 0.2s;
+        }
+        .url-parse-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--theme-accent);
+        }
+        .url-parse-item .plabel {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .url-parse-item .plabel i {
+            font-size: 0.65rem;
+            width: 14px;
+            text-align: center;
+        }
+        .url-parse-item .pvalue {
+            font-size: 0.85rem;
+            color: #fff;
+            word-break: break-all;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+        }
+        .url-parse-item .pvalue.empty {
+            color: rgba(255, 255, 255, 0.3);
+            font-style: italic;
+        }
+        .url-parse-full {
+            grid-column: 1 / -1;
+        }
+        @media (max-width: 480px) {
+            .url-parse-grid {
+                grid-template-columns: 1fr;
+            }
+            .url-parse-full {
+                grid-column: 1;
+            }
+        }
+
+        /* 字符统计 & 复制按钮 */
+        .result-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .char-count {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .char-count span {
+            color: var(--theme-accent);
+            font-weight: 500;
+        }
+        .char-count .diff-positive { color: #34d399; }
+        .char-count .diff-negative { color: #f87171; }
+        .char-count .diff-zero { color: var(--text-muted); }
+
+        .copy-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-muted);
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.78rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--theme-accent);
+            color: #fff;
+        }
+        .copy-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 解析按钮高亮状态 */
+        .tool-btn.parse-btn {
+            background: rgba(52, 211, 153, 0.15);
+            border-color: rgba(52, 211, 153, 0.3);
+        }
+        .tool-btn.parse-btn:hover {
+            background: rgba(52, 211, 153, 0.25);
+            border-color: #34d399;
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="index.html" class="back-home-btn" title="返回工具首页"><i class="fas fa-arrow-left"></i></a>
+
+    <div id="toast"><i class="fas fa-info-circle" style="color: #a5b4fc;"></i><span id="toast-msg">提示信息</span></div>
+
+    <div class="glass-card tool-card">
+        <h1><i class="fas fa-link"></i> URL 编解码</h1>
+        <div class="tool-subtitle">URL 编码 / 解码，支持中文和特殊字符</div>
+
+        <!-- 快捷示例 -->
+        <div class="tool-label"><i class="fas fa-bolt"></i> 快捷示例</div>
+        <div class="example-btns">
+            <span class="example-btn" onclick="loadExample(1)"><i class="fas fa-globe"></i> 含中文参数的URL</span>
+            <span class="example-btn" onclick="loadExample(2)"><i class="fas fa-search"></i> 带空格的查询字符串</span>
+            <span class="example-btn" onclick="loadExample(3)"><i class="fas fa-exclamation-triangle"></i> 含特殊字符("'&<>)的文本</span>
+        </div>
+
+        <!-- 选项：空格处理 + 逐行 -->
+        <div class="option-group">
+            <span class="opt-label"><i class="fas fa-space-shuttle"></i> 空格编码：</span>
+            <label class="radio-label" id="spaceLabelPlus">
+                <input type="radio" name="spaceMode" value="plus" onchange="updateSpaceUI()"> 使用 <code>+</code>
+            </label>
+            <label class="radio-label active" id="spaceLabelPercent">
+                <input type="radio" name="spaceMode" value="percent" checked onchange="updateSpaceUI()"> 使用 <code>%20</code>
+            </label>
+            <label class="batch-label">
+                <input type="checkbox" id="batchMode"> <i class="fas fa-list"></i> 逐行处理
+            </label>
+        </div>
+
+        <!-- 输入 -->
+        <div class="tool-label"><i class="fas fa-pencil-alt"></i> 输入文本</div>
+        <div class="tool-row">
+            <textarea id="urlInput" placeholder="在此输入要编码或解码的文本..." rows="4" style="flex:1;"></textarea>
+        </div>
+
+        <div class="tool-actions">
+            <button class="tool-btn primary" onclick="urlEncode()"><i class="fas fa-code"></i> 编码 (encodeURI)</button>
+            <button class="tool-btn" onclick="urlEncodeFull()"><i class="fas fa-code-branch"></i> 编码 (encodeURIComponent)</button>
+            <button class="tool-btn" onclick="urlDecode()"><i class="fas fa-unlink"></i> 解码</button>
+            <button class="tool-btn parse-btn" onclick="parseUrl()"><i class="fas fa-sitemap"></i> 解析</button>
+            <button class="tool-btn" onclick="clearUrl()"><i class="fas fa-eraser"></i> 清空</button>
+        </div>
+
+        <!-- URL 解析结果 -->
+        <div class="url-parse-result" id="urlParseResult">
+            <div class="tool-label" style="margin-top:0;margin-bottom:0;"><i class="fas fa-sitemap"></i> URL 解析结果</div>
+            <div class="url-parse-grid">
+                <div class="url-parse-item">
+                    <div class="plabel"><i class="fas fa-plug"></i> Protocol</div>
+                    <div class="pvalue empty" id="parse-protocol">—</div>
+                </div>
+                <div class="url-parse-item">
+                    <div class="plabel"><i class="fas fa-server"></i> Host</div>
+                    <div class="pvalue empty" id="parse-host">—</div>
+                </div>
+                <div class="url-parse-item">
+                    <div class="plabel"><i class="fas fa-folder"></i> Path</div>
+                    <div class="pvalue empty" id="parse-path">—</div>
+                </div>
+                <div class="url-parse-item">
+                    <div class="plabel"><i class="fas fa-search"></i> Query</div>
+                    <div class="pvalue empty" id="parse-query">—</div>
+                </div>
+                <div class="url-parse-item url-parse-full">
+                    <div class="plabel"><i class="fas fa-hashtag"></i> Hash</div>
+                    <div class="pvalue empty" id="parse-hash">—</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 结果 -->
+        <div class="tool-label"><i class="fas fa-file-alt"></i> 结果</div>
+        <div class="tool-row">
+            <textarea id="urlOutput" readonly placeholder="转换结果显示在这里..." rows="4" style="flex:1;cursor:pointer;" onclick="copyUrlOutput()" title="点击复制"></textarea>
+        </div>
+        <div class="result-footer">
+            <div class="char-count" id="charCount"></div>
+            <button class="copy-btn" onclick="copyUrlOutput()"><i class="fas fa-copy"></i> 复制结果</button>
+        </div>
+
+        <!-- 说明 -->
+        <div class="tool-label" style="margin-top:20px;"><i class="fas fa-info-circle"></i> 两种编码的区别</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);line-height:1.6;background:rgba(0,0,0,0.15);padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);">
+            <p><strong>encodeURI</strong>：对完整 URL 编码，保留 <code># ? & / =</code> 等 URL 特殊字符</p>
+            <p><strong>encodeURIComponent</strong>：对查询参数值编码，<em>所有</em> 非字母数字字符都转义</p>
+            <p style="margin-top:6px;"><span style="color:var(--theme-accent);">⚡ 空格编码</span>：<code>+</code> 适用于 <code>application/x-www-form-urlencoded</code>，<code>%20</code> 是标准 URL 编码（解码时两种都支持）</p>
+        </div>
+    </div>
+
+    <div class="author-credit">
+        <p>© 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        // ========== 当前空格模式 ==========
+        function getSpaceMode() {
+            const radios = document.getElementsByName('spaceMode');
+            for (const r of radios) {
+                if (r.checked) return r.value;
+            }
+            return 'percent';
+        }
+
+        function updateSpaceUI() {
+            const mode = getSpaceMode();
+            document.getElementById('spaceLabelPlus').classList.toggle('active', mode === 'plus');
+            document.getElementById('spaceLabelPercent').classList.toggle('active', mode === 'percent');
+        }
+
+        // ========== 批量处理辅助 ==========
+        function isBatch() {
+            return document.getElementById('batchMode').checked;
+        }
+
+        function processLines(input, fn) {
+            if (!isBatch()) {
+                const result = fn(input);
+                return { result, lines: [result] };
+            }
+            const lines = input.split('\n');
+            const results = lines.map(function(line) {
+                try { return fn(line); } catch (e) { return '[错误: ' + e.message + ']'; }
+            });
+            return { result: results.join('\n'), lines: results };
+        }
+
+        // ========== 应用空格模式 ==========
+        function applySpaceMode(str) {
+            if (getSpaceMode() === 'plus') {
+                return str.replace(/%20/g, '+');
+            }
+            return str;
+        }
+
+        // ========== 字符计数 ==========
+        function updateCharCount(input, output) {
+            var el = document.getElementById('charCount');
+            if (!input && !output) {
+                el.innerHTML = '';
+                return;
+            }
+            var inLen = input ? input.length : 0;
+            var outLen = output ? output.length : 0;
+            var diff = outLen - inLen;
+            var diffCls = 'diff-zero';
+            var diffSign = '';
+            if (diff > 0) { diffCls = 'diff-positive'; diffSign = '+'; }
+            else if (diff < 0) { diffCls = 'diff-negative'; diffSign = ''; }
+            el.innerHTML = '输入: <span>' + inLen + '</span> 字符 → 输出: <span>' + outLen +
+                '</span> 字符 <span class="' + diffCls + '">(' + diffSign + diff + ')</span>';
+        }
+
+        // ========== 核心功能 ==========
+        function urlEncode() {
+            var input = document.getElementById('urlInput').value;
+            if (!input) { showToast('请输入内容'); return; }
+            try {
+                var res = processLines(input, function(line) {
+                    return applySpaceMode(encodeURI(line));
+                });
+                document.getElementById('urlOutput').value = res.result;
+                document.getElementById('urlParseResult').classList.remove('show');
+                updateCharCount(input, res.result);
+                printLog('URL 编码(URI)', res.result);
+            } catch (e) { showToast('编码失败：' + e.message); }
+        }
+
+        function urlEncodeFull() {
+            var input = document.getElementById('urlInput').value;
+            if (!input) { showToast('请输入内容'); return; }
+            try {
+                var res = processLines(input, function(line) {
+                    return applySpaceMode(encodeURIComponent(line));
+                });
+                document.getElementById('urlOutput').value = res.result;
+                document.getElementById('urlParseResult').classList.remove('show');
+                updateCharCount(input, res.result);
+                printLog('URL 编码(Component)', res.result);
+            } catch (e) { showToast('编码失败：' + e.message); }
+        }
+
+        function urlDecode() {
+            var input = document.getElementById('urlInput').value;
+            if (!input) { showToast('请输入内容'); return; }
+            try {
+                var res = processLines(input, function(line) {
+                    // 先替换 + 为空格（form-urlencoded 风格），再解码
+                    return decodeURIComponent((line || '').replace(/\\+/g, ' '));
+                });
+                document.getElementById('urlOutput').value = res.result;
+                document.getElementById('urlParseResult').classList.remove('show');
+                updateCharCount(input, res.result);
+                printLog('URL 解码', res.result);
+            } catch (e) { showToast('解码失败：' + e.message); }
+        }
+
+        // ========== URL 解析 ==========
+        function parseUrl() {
+            var input = document.getElementById('urlInput').value.trim();
+            if (!input) { showToast('请输入 URL'); return; }
+            try {
+                // 如果没有 protocol，补上 https://
+                var urlStr = input;
+                if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(urlStr)) {
+                    urlStr = 'https://' + urlStr;
+                }
+                var url = new URL(urlStr);
+                document.getElementById('parse-protocol').textContent = url.protocol || '—';
+                document.getElementById('parse-protocol').className = 'pvalue' + (url.protocol ? '' : ' empty');
+                document.getElementById('parse-host').textContent = url.host || '—';
+                document.getElementById('parse-host').className = 'pvalue' + (url.host ? '' : ' empty');
+                document.getElementById('parse-path').textContent = url.pathname || '—';
+                document.getElementById('parse-path').className = 'pvalue' + (url.pathname && url.pathname !== '/' ? '' : ' empty');
+                document.getElementById('parse-query').textContent = url.search || '—';
+                document.getElementById('parse-query').className = 'pvalue' + (url.search ? '' : ' empty');
+                document.getElementById('parse-hash').textContent = url.hash || '—';
+                document.getElementById('parse-hash').className = 'pvalue' + (url.hash ? '' : ' empty');
+                document.getElementById('urlParseResult').classList.add('show');
+                showToast('URL 解析完成');
+                printLog('URL 解析', url.toString());
+            } catch (e) {
+                showToast('解析失败：不是有效的 URL');
+            }
+        }
+
+        // ========== 复制 ==========
+        function copyUrlOutput() {
+            var val = document.getElementById('urlOutput').value;
+            if (val) { copyText(val); }
+            else { showToast('没有内容可复制'); }
+        }
+
+        // ========== 清空 ==========
+        function clearUrl() {
+            document.getElementById('urlInput').value = '';
+            document.getElementById('urlOutput').value = '';
+            document.getElementById('urlParseResult').classList.remove('show');
+            document.getElementById('charCount').innerHTML = '';
+            document.getElementById('urlInput').focus();
+        }
+
+        // ========== 快捷示例 ==========
+        var EXAMPLES = {
+            1: 'https://www.example.com/search?q=你好世界&lang=zh-CN#结果',
+            2: 'name=John Doe&city=New York&query=hello world&tags=a b c',
+            3: 'She said "Hello" & it\\'s <cool>'
+        };
+
+        function loadExample(id) {
+            var input = document.getElementById('urlInput');
+            var text = EXAMPLES[id];
+            if (text !== undefined) {
+                input.value = text;
+                input.focus();
+                showToast('已加载示例 ' + id);
+            }
+        }
+
+        // ========== 输入框回车编码 ==========
+        document.getElementById('urlInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                urlEncode();
+            }
+        });
+
+        // ========== 点击特效 ==========
+        document.addEventListener('click', createClickEffect);
+        document.addEventListener('touchstart', function(e) {
+            var touch = e.touches[0];
+            createClickEffect({ clientX: touch.clientX, clientY: touch.clientY });
+        }, { passive: true });
+    </script>
+</body>
+</html>

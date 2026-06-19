@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="CSP" content="upgrade-insecure-requests">
+    <title>历史上的今天 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* ---- 历史上的今天 特有样式 ---- */
+        .today-container {
+            padding: 0 4px;
+        }
+
+        /* 日期选择区 */
+        .date-picker {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .date-picker select {
+            padding: 10px 16px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 0.95rem;
+            outline: none;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            transition: border-color 0.3s;
+            min-width: 110px;
+        }
+        .date-picker select:focus { border-color: var(--theme-accent); }
+        .date-picker select option { background: #2a2a35; color: #fff; }
+        .date-picker .today-btn {
+            padding: 10px 20px;
+            background: rgba(165,180,252,0.15);
+            border: 1px solid var(--theme-accent);
+            border-radius: 12px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.25s;
+            white-space: nowrap;
+        }
+        .date-picker .today-btn:hover { background: rgba(165,180,252,0.3); }
+
+        /* 分类标签 */
+        .category-tabs {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .category-tabs .cat-btn {
+            padding: 6px 16px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            font-size: 0.78rem;
+            transition: all 0.25s;
+            white-space: nowrap;
+        }
+        .category-tabs .cat-btn:hover {
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+        }
+        .category-tabs .cat-btn.active {
+            background: rgba(165,180,252,0.2);
+            border-color: var(--theme-accent);
+            color: #fff;
+        }
+        .category-tabs .cat-btn .cat-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+
+        /* 统计栏 */
+        .today-stats {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-bottom: 16px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+        }
+        .today-stats span { display: flex; align-items: center; gap: 4px; }
+        .today-stats .stat-num { color: var(--theme-accent); font-weight: 600; }
+
+        /* 事件列表 */
+        .event-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .event-list .event-empty {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .event-list .event-empty i {
+            font-size: 2.5rem;
+            display: block;
+            margin-bottom: 12px;
+            opacity: 0.4;
+        }
+
+        /* 单个事件卡片 */
+        .event-item {
+            display: flex;
+            gap: 14px;
+            padding: 16px 18px;
+            margin-bottom: 10px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            transition: all 0.25s;
+            position: relative;
+        }
+        .event-item:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.12);
+        }
+        .event-item .event-year {
+            flex-shrink: 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--theme-accent);
+            min-width: 60px;
+            line-height: 1.3;
+        }
+        .event-item .event-body {
+            flex: 1;
+            min-width: 0;
+        }
+        .event-item .event-desc {
+            font-size: 0.92rem;
+            line-height: 1.6;
+            word-break: break-word;
+            margin-bottom: 6px;
+        }
+        .event-item .event-meta {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .event-item .event-tag {
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 0.65rem;
+            font-weight: 500;
+        }
+        .tag-politics { background: rgba(248,113,113,0.2); color: #f87171; }
+        .tag-tech     { background: rgba(96,165,250,0.2); color: #60a5fa; }
+        .tag-culture  { background: rgba(251,191,36,0.2); color: #fbbf24; }
+        .tag-sports   { background: rgba(52,211,153,0.2); color: #34d399; }
+        .tag-disaster { background: rgba(168,85,247,0.2); color: #a855f7; }
+
+        .event-item .event-actions {
+            flex-shrink: 0;
+            display: flex;
+            gap: 6px;
+            align-items: flex-start;
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+        .event-item:hover .event-actions { opacity: 1; }
+        .event-actions .act-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.5);
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .event-actions .act-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        .event-actions .act-btn.fav-btn:hover { background: rgba(251,191,36,0.2); color: #fbbf24; }
+        .event-actions .act-btn.fav-btn.active { color: #fbbf24; background: rgba(251,191,36,0.15); }
+        .event-actions .act-btn.copy-btn:hover { background: rgba(96,165,250,0.2); color: #60a5fa; }
+
+        /* 收藏夹面板 */
+        .fav-toggle-wrap {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .fav-toggle-wrap button {
+            background: rgba(251,191,36,0.1);
+            border: 1px solid rgba(251,191,36,0.2);
+            color: rgba(251,191,36,0.7);
+            padding: 8px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.78rem;
+            transition: all 0.25s;
+        }
+        .fav-toggle-wrap button:hover {
+            background: rgba(251,191,36,0.2);
+            color: #fbbf24;
+        }
+        .fav-toggle-wrap button.active {
+            background: rgba(251,191,36,0.2);
+            color: #fbbf24;
+            border-color: #fbbf24;
+        }
+
+        /* 收藏夹面板 */
+        .fav-panel {
+            display: none;
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.15);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            padding: 18px;
+        }
+        .fav-panel.show { display: block; }
+        .fav-panel h3 {
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+            color: #fbbf24;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .fav-panel .fav-list { list-style: none; padding: 0; margin: 0; }
+        .fav-panel .fav-item {
+            display: flex;
+            gap: 10px;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.82rem;
+            align-items: center;
+        }
+        .fav-panel .fav-item .fav-date {
+            flex-shrink: 0;
+            color: var(--theme-accent);
+            font-weight: 600;
+            font-size: 0.75rem;
+            min-width: 50px;
+        }
+        .fav-panel .fav-item .fav-text {
+            flex: 1;
+            min-width: 0;
+            word-break: break-word;
+        }
+        .fav-panel .fav-item .fav-del {
+            flex-shrink: 0;
+            background: none;
+            border: none;
+            color: rgba(248,113,113,0.5);
+            cursor: pointer;
+            font-size: 0.75rem;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+        .fav-panel .fav-item .fav-del:hover { color: #f87171; }
+        .fav-panel .fav-empty {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
+        @media (max-width: 600px) {
+            .event-item .event-year { font-size: 1.1rem; min-width: 45px; }
+            .event-item { padding: 12px 14px; }
+            .event-actions { opacity: 1; }
+            .event-actions .act-btn { width: 36px; height: 36px; font-size: 0.85rem; }
+            .date-picker select { min-width: 90px; padding: 8px 12px; font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="index.html" class="back-home-btn" title="返回工具首页"><i class="fas fa-arrow-left"></i></a>
+
+    <div id="toast"><i class="fas fa-info-circle" style="color: #a5b4fc;"></i><span id="toast-msg">提示信息</span></div>
+
+    <div class="glass-card tool-card">
+        <h1><i class="fas fa-calendar-alt"></i> 历史上的今天</h1>
+        <div class="tool-subtitle">探索每一天的重大历史事件</div>
+
+        <!-- 日期选择器 -->
+        <div class="date-picker">
+            <select id="monthSelect" onchange="onDateChange()">
+                <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+                <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+                <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
+                <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+            </select>
+            <select id="daySelect" onchange="onDateChange()">
+            </select>
+            <button class="today-btn" onclick="goToday()"><i class="fas fa-calendar-check"></i> 今天</button>
+        </div>
+
+        <!-- 分类标签 -->
+        <div class="category-tabs" id="categoryTabs">
+            <button class="cat-btn active" data-cat="all" onclick="setCategory('all')">全部</button>
+            <button class="cat-btn" data-cat="politics" onclick="setCategory('politics')"><span class="cat-dot" style="background:#f87171;"></span>政治</button>
+            <button class="cat-btn" data-cat="tech" onclick="setCategory('tech')"><span class="cat-dot" style="background:#60a5fa;"></span>科技</button>
+            <button class="cat-btn" data-cat="culture" onclick="setCategory('culture')"><span class="cat-dot" style="background:#fbbf24;"></span>文化</button>
+            <button class="cat-btn" data-cat="sports" onclick="setCategory('sports')"><span class="cat-dot" style="background:#34d399;"></span>体育</button>
+            <button class="cat-btn" data-cat="disaster" onclick="setCategory('disaster')"><span class="cat-dot" style="background:#a855f7;"></span>灾难</button>
+        </div>
+
+        <!-- 统计栏 -->
+        <div class="today-stats" id="todayStats">
+            <span>📅 <span id="displayDate">--</span></span>
+            <span>事件 <span class="stat-num" id="statTotal">0</span></span>
+            <span>筛选后 <span class="stat-num" id="statFiltered">0</span></span>
+        </div>
+
+        <!-- 收藏夹切换 -->
+        <div class="fav-toggle-wrap">
+            <button id="favToggleBtn" onclick="toggleFavPanel()"><i class="fas fa-star"></i> 我的收藏 (<span id="favCount">0</span>)</button>
+        </div>
+
+        <!-- 收藏夹面板 -->
+        <div class="fav-panel" id="favPanel">
+            <h3><i class="fas fa-star"></i> 收藏的事件</h3>
+            <div class="fav-list" id="favList">
+                <div class="fav-empty"><i class="fas fa-star" style="display:block;font-size:1.5rem;margin-bottom:8px;opacity:0.4;"></i>暂无收藏</div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <div class="author-credit">
+        <p>© 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        // ==================== 历史上的今天 ====================
+
+        const FAV_KEY = 'xiongda_today_favs';
+        let currentMonth = new Date().getMonth() + 1;
+        let currentDay = new Date().getDate();
+        let currentCategory = 'all';
+        let favorites = [];
+
+        // ---------- 事件数据 ----------
+
+        const EVENTS = {};
+
+        // ---- 1月 ----
+        EVENTS['1-1'] = [
+            { y: 1863, c: 'politics', d: '美国《解放宣言》正式生效，所有奴隶获得自由' },
+            { y: 1912, c: 'politics', d: '中华民国临时政府在南京成立，孙中山就任临时大总统' },
+            { y: 1959, c: 'politics', d: '古巴革命胜利，菲德尔·卡斯特罗领导的革命军推翻巴蒂斯塔政权' },
+            { y: 1981, c: 'culture', d: '希腊正式加入欧洲经济共同体（欧盟前身）' },
+            { y: 1995, c: 'politics', d: '世界贸易组织（WTO）正式成立' }
+        ];
+        EVENTS['1-2'] = [
+            { y: 1492, c: 'culture', d: '西班牙收复格拉纳达，结束对摩尔人的 Reconquista 运动' },
+            { y: 1905, c: 'politics', d: '日俄战争中，俄军旅顺要塞向日军投降' },
+            { y: 1959, c: 'tech', d: '苏联发射月球1号探测器，首次实现人造物体脱离地球引力' },
+            { y: 1971, c: 'politics', d: '美国国会通过《联邦选举竞选法案》，限制政治献金' }
+        ];
+        EVENTS['1-3'] = [
+            { y: 1521, c: 'culture', d: '教皇利奥十世发布训谕，将马丁·路德处以绝罚' },
+            { y: 1777, c: 'politics', d: '美国独立战争：普林斯顿战役中乔治·华盛顿击败英军' },
+            { y: 1833, c: 'politics', d: '英国重新占领福克兰群岛（马尔维纳斯群岛）' },
+            { y: 1961, c: 'politics', d: '美国与古巴断交' }
+        ];
+        EVENTS['1-4'] = [
+            { y: 1642, c: 'politics', d: '英国内战：查理一世试图逮捕五名议会成员未果' },
+            { y: 1896, c: 'politics', d: '犹他州成为美国第45个州' },
+            { y: 1948, c: 'politics', d: '缅甸脱离英联邦宣布独立' },
+            { y: 1958, c: 'tech', d: '苏联发射斯普特尼克1号卫星的末级火箭坠入大气层' }
+        ];
+        EVENTS['1-5'] = [
+            { y: 1895, c: 'politics', d: '德国物理学家伦琴宣布发现X射线' },
+            { y: 1919, c: 'politics', d: '德国工人党（纳粹党前身）在慕尼黑成立' },
+            { y: 1949, c: 'politics', d: '美国总统杜鲁门提出"公平施政"纲领' },
+            { y: 1968, c: 'politics', d: '捷克斯洛伐克"布拉格之春"改革运动开始' }
+        ];
+        EVENTS['1-6'] = [
+            { y: 1412, c: 'culture', d: '法国民族英雄圣女贞德出生' },
+            { y: 1838, c: 'tech', d: '美国发明家塞缪尔·摩尔斯首次公开演示电报' },
+            { y: 1912, c: 'tech', d: '德国地球物理学家阿尔弗雷德·魏格纳提出大陆漂移学说' },
+            { y: 1941, c: 'politics', d: '美国总统罗斯福发表"四大自由"演说' }
+        ];
+        EVENTS['1-7'] = [
+            { y: 1598, c: 'politics', d: '俄国沙皇费奥多尔一世去世，留里克王朝终结' },
+            { y: 1610, c: 'tech', d: '伽利略用自制望远镜发现木星的四颗卫星' },
+            { y: 1714, c: 'tech', d: '英国发明家亨利·米尔获得打字机专利' },
+            { y: 1979, c: 'politics', d: '越南军队攻入柬埔寨首都金边，红色高棉政权倒台' }
+        ];
+        EVENTS['1-8'] = [
+            { y: 1642, c: 'tech', d: '意大利天文学家伽利略去世' },
+            { y: 1935, c: 'culture', d: '美国摇滚乐歌手"猫王"埃尔维斯·普雷斯利出生' },
+            { y: 1959, c: 'politics', d: '古巴革命领导人菲德尔·卡斯特罗进入哈瓦那' },
+            { y: 1973, c: 'tech', d: '苏联发射月球21号探测器' }
+        ];
+        EVENTS['1-9'] = [
+            { y: 1793, c: 'tech', d: '法国人让-皮埃尔·布兰查德首次在美国进行热气球飞行' },
+            { y: 1839, c: 'tech', d: '法国科学院公布达盖尔摄影术' },
+            { y: 1945, c: 'politics', d: '美军在菲律宾吕宋岛登陆' },
+            { y: 1964, c: 'politics', d: '巴拿马发生反美抗议，学生与美军冲突' }
+        ];
+        EVENTS['1-10'] = [
+            { y: 1920, c: 'politics', d: '国际联盟在日内瓦正式成立' },
+            { y: 1946, c: 'politics', d: '联合国大会第一届会议在伦敦召开' },
+            { y: 2000, c: 'tech', d: '美国在线（AOL）宣布与时代华纳合并' },
+            { y: 2001, c: 'culture', d: '维基百科正式上线运行' }
+        ];
+        EVENTS['1-11'] = [
+            { y: 1569, c: 'culture', d: '英国第一家彩票在伦敦发行' },
+            { y: 1759, c: 'culture', d: '美国第一家人寿保险公司成立' },
+            { y: 1922, c: 'culture', d: '加拿大医生班廷首次使用胰岛素治疗糖尿病' },
+            { y: 1964, c: 'politics', d: '美国卫生部长宣布吸烟可能导致肺癌' }
+        ];
+        EVENTS['1-12'] = [
+            { y: 1876, c: 'culture', d: '美国作家杰克·伦敦出生' },
+            { y: 1945, c: 'politics', d: '第二次世界大战：苏军开始维斯瓦河-奥得河攻势' },
+            { y: 1970, c: 'politics', d: '尼日利亚内战结束，比夫拉投降' },
+            { y: 1998, c: 'culture', d: '19个欧洲国家签署《禁止克隆人协议》' }
+        ];
+        EVENTS['1-13'] = [
+            { y: 1906, c: 'culture', d: '伊朗立宪革命爆发' },
+            { y: 1910, c: 'tech', d: '第一次无线电广播实验成功' },
+            { y: 1941, c: 'culture', d: '美国作家詹姆斯·乔伊斯去世' },
+            { y: 2001, c: 'disaster', d: '萨尔瓦多发生里氏7.6级大地震，造成约1000人死亡' }
+        ];
+        EVENTS['1-14'] = [
+            { y: 1742, c: 'tech', d: '英国天文学家哈雷去世，哈雷彗星以其命名' },
+            { y: 1784, c: 'politics', d: '美国正式批准《巴黎条约》，独立战争结束' },
+            { y: 1907, c: 'disaster', d: '牙买加金斯顿发生8.0级大地震，约1000人死亡' },
+            { y: 1943, c: 'politics', d: '卡萨布兰卡会议召开，罗斯福与丘吉尔商讨二战战略' }
+        ];
+        EVENTS['1-15'] = [
+            { y: 1559, c: 'politics', d: '英格兰女王伊丽莎白一世加冕' },
+            { y: 1759, c: 'culture', d: '英国大英博物馆正式对外开放' },
+            { y: 1892, c: 'sports', d: '篮球运动发明者詹姆斯·奈史密斯公布篮球规则' },
+            { y: 2001, c: 'culture', d: '维基百科正式上线英文版' }
+        ];
+        EVENTS['1-16'] = [
+            { y: 1547, c: 'politics', d: '伊凡四世加冕为俄国首位沙皇' },
+            { y: 1883, c: 'culture', d: '美国剧作家尤金·奥尼尔出生' },
+            { y: 1920, c: 'politics', d: '国际联盟正式成立' },
+            { y: 1979, c: 'politics', d: '伊朗国王巴列维流亡海外' }
+        ];
+        EVENTS['1-17'] = [
+            { y: 1706, c: 'culture', d: '美国政治家、科学家本杰明·富兰克林出生' },
+            { y: 1773, c: 'tech', d: '英国探险家库克船长首次穿越南极圈' },
+            { y: 1912, c: 'tech', d: '英国探险家斯科特抵达南极' },
+            { y: 1995, c: 'disaster', d: '日本阪神淡路大地震（7.3级），约6400人死亡' }
+        ];
+        EVENTS['1-18'] = [
+            { y: 1871, c: 'politics', d: '德意志帝国在凡尔赛宫镜厅宣告成立' },
+            { y: 1919, c: 'culture', d: '巴黎和会召开，讨论一战善后' },
+            { y: 1943, c: 'politics', d: '华沙犹太区起义爆发' },
+            { y: 1977, c: 'tech', d: '科学家首次发现深海热液喷口生态系统' }
+        ];
+        EVENTS['1-19'] = [
+            { y: 1809, c: 'culture', d: '美国作家埃德加·爱伦·坡出生' },
+            { y: 1915, c: 'tech', d: '德国首次使用齐柏林飞艇轰炸英国' },
+            { y: 1949, c: 'culture', d: '古巴作家阿莱霍·卡彭铁尔发表《这个世界王国》' },
+            { y: 1981, c: 'politics', d: '美国与伊朗达成人质释放协议' }
+        ];
+        EVENTS['1-20'] = [
+            { y: 1265, c: 'politics', d: '英格兰首次召开议会' },
+            { y: 1896, c: 'culture', d: '法国电影导演乔治·梅里埃放映首部电影' },
+            { y: 1942, c: 'politics', d: '纳粹德国在万湖会议上决定"最终解决方案"' },
+            { y: 1981, c: 'politics', d: '罗纳德·里根就任美国总统' }
+        ];
+        EVENTS['1-21'] = [
+            { y: 1793, c: 'politics', d: '法国大革命：路易十六被送上断头台' },
+            { y: 1924, c: 'politics', d: '列宁因病去世，斯大林开始掌权' },
+            { y: 1950, c: 'politics', d: '美国宣布氢弹研发计划' },
+            { y: 1976, c: 'tech', d: '协和式超音速客机首次商业飞行' }
+        ];
+        EVENTS['1-22'] = [
+            { y: 1440, c: 'culture', d: '古登堡发明活字印刷术' },
+            { y: 1901, c: 'politics', d: '英国维多利亚女王去世，爱德华七世即位' },
+            { y: 1970, c: 'tech', d: '波音747首次商业飞行' },
+            { y: 1973, c: 'politics', d: '美国最高法院在罗诉韦德案中裁定堕胎合法化' }
+        ];
+        EVENTS['1-23'] = [
+            { y: 1556, c: 'disaster', d: '中国陕西华县发生8级大地震，约83万人死亡' },
+            { y: 1719, c: 'politics', d: '列支敦士登公国建立' },
+            { y: 1960, c: 'tech', d: '美国深海潜水器"的里雅斯特号"潜入马里亚纳海沟' },
+            { y: 1996, c: 'culture', d: '拉姆齐·克拉克成为美国首位因反战被起诉的前司法部长' }
+        ];
+        EVENTS['1-24'] = [
+            { y: 76, c: 'culture', d: '罗马教皇圣克莱特一世去世' },
+            { y: 1848, c: 'disaster', d: '美国加州发现黄金，引发淘金热' },
+            { y: 1965, c: 'politics', d: '英国前首相温斯顿·丘吉尔在伦敦去世' },
+            { y: 1986, c: 'tech', d: '旅行者2号探测器飞越天王星' }
+        ];
+        EVENTS['1-25'] = [
+            { y: 1755, c: 'culture', d: '俄罗斯莫斯科大学成立' },
+            { y: 1915, c: 'tech', d: '美国发明家亚历山大·贝尔在纽约进行首次越洋电话通话' },
+            { y: 1949, c: 'politics', d: '苏联及东欧国家成立经济互助委员会（经互会）' },
+            { y: 1990, c: 'politics', d: '巴拿马前总统诺列加被美军俘虏' }
+        ];
+        EVENTS['1-26'] = [
+            { y: 1500, c: 'tech', d: '西班牙探险家维森特·亚涅斯·平松抵达巴西海岸' },
+            { y: 1788, c: 'politics', d: '英国首批流放犯人抵达澳大利亚悉尼港' },
+            { y: 1950, c: 'politics', d: '印度正式成立共和国，首任总统拉金德拉·普拉萨德就职' },
+            { y: 1998, c: 'politics', d: '美国总统克林顿在电视上否认与莱温斯基有染' }
+        ];
+        EVENTS['1-27'] = [
+            { y: 1880, c: 'tech', d: '美国发明家爱迪生获得白炽灯专利' },
+            { y: 1926, c: 'tech', d: '英国工程师约翰·贝尔德第一次公开演示电视系统' },
+            { y: 1945, c: 'politics', d: '苏联红军解放奥斯维辛集中营' },
+            { y: 2010, c: 'culture', d: '苹果公司发布第一代iPad平板电脑' }
+        ];
+        EVENTS['1-28'] = [
+            { y: 1547, c: 'politics', d: '亨利八世之子爱德华六世加冕为英格兰国王' },
+            { y: 1813, c: 'culture', d: '英国作家简·奥斯汀出版《傲慢与偏见》' },
+            { y: 1878, c: 'culture', d: '美国第一台商用电话交换机在纽黑文开通' },
+            { y: 1986, c: 'disaster', d: '美国挑战者号航天飞机升空73秒后爆炸，7名宇航员遇难' }
+        ];
+        EVENTS['1-29'] = [
+            { y: 1845, c: 'culture', d: '美国作家埃德加·爱伦·坡发表诗作《乌鸦》' },
+            { y: 1886, c: 'tech', d: '德国工程师卡尔·本茨获得汽车专利' },
+            { y: 1916, c: 'disaster', d: '德军首次使用齐柏林飞艇轰炸巴黎' },
+            { y: 1963, c: 'culture', d: '法国诗人纪尧姆·阿波利奈尔逝世' }
+        ];
+        EVENTS['1-30'] = [
+            { y: 1649, c: 'politics', d: '英国国王查理一世被处决' },
+            { y: 1882, c: 'culture', d: '富兰克林·德拉诺·罗斯福诞生' },
+            { y: 1933, c: 'politics', d: '希特勒就任德国总理' },
+            { y: 1968, c: 'politics', d: '越南战争：春节攻势爆发' }
+        ];
+        EVENTS['1-31'] = [
+            { y: 1606, c: 'tech', d: '盖伊·福克斯因火药阴谋被处决' },
+            { y: 1797, c: 'culture', d: '奥地利作曲家弗朗茨·舒伯特出生' },
+            { y: 1946, c: 'politics', d: '南斯拉夫联邦人民共和国通过新宪法' },
+            { y: 1990, c: 'culture', d: '麦当劳在莫斯科开设首家分店' }
+        ];
+
+        // ---- 2月 ----
+        EVENTS['2-1'] = [
+            { y: 1662, c: 'politics', d: '郑成功收复台湾，驱逐荷兰殖民者' },
+            { y: 1793, c: 'politics', d: '法国大革命期间对英国宣战' },
+            { y: 1896, c: 'culture', d: '意大利作曲家普契尼的歌剧《波希米亚人》首演' },
+            { y: 2003, c: 'disaster', d: '美国哥伦比亚号航天飞机在重返大气层时解体，7名宇航员遇难' }
+        ];
+        EVENTS['2-2'] = [
+            { y: 1536, c: 'politics', d: '阿根廷城市布宜诺斯艾利斯由西班牙人建立' },
+            { y: 1848, c: 'politics', d: '美墨战争结束，美国获得加州等大片领土' },
+            { y: 1943, c: 'politics', d: '斯大林格勒战役结束，德军投降' },
+            { y: 1971, c: 'politics', d: '伊朗拉姆萨尔国际湿地公约签署' }
+        ];
+        EVENTS['2-3'] = [
+            { y: 1468, c: 'tech', d: '德国印刷术发明家古登堡去世' },
+            { y: 1690, c: 'culture', d: '美国第一张纸质纸币在马萨诸塞州发行' },
+            { y: 1916, c: 'politics', d: '美国与海地签署条约，建立保护国关系' },
+            { y: 1966, c: 'tech', d: '苏联月球9号探测器成功在月球软着陆' }
+        ];
+        EVENTS['2-4'] = [
+            { y: 1789, c: 'politics', d: '美国首任总统乔治·华盛顿当选' },
+            { y: 1899, c: 'politics', d: '美菲战争爆发' },
+            { y: 1945, c: 'politics', d: '雅尔塔会议召开，罗斯福、丘吉尔、斯大林会晤' },
+            { y: 1975, c: 'disaster', d: '中国海城发生7.3级地震，成功预报减少伤亡' }
+        ];
+        EVENTS['2-5'] = [
+            { y: 1788, c: 'politics', d: '乔治·华盛顿正式成为美国第一任总统' },
+            { y: 1880, c: 'tech', d: '英国发明家约翰·杜威提出十进制图书分类法' },
+            { y: 1917, c: 'politics', d: '墨西哥宪法获得通过' },
+            { y: 1974, c: 'culture', d: '美国作家约翰·斯坦贝克去世' }
+        ];
+        EVENTS['2-6'] = [
+            { y: 1778, c: 'politics', d: '法国正式承认美国独立' },
+            { y: 1819, c: 'politics', d: '英国殖民者斯坦福·莱佛士建立新加坡殖民地' },
+            { y: 1952, c: 'politics', d: '英国女王伊丽莎白二世登基' },
+            { y: 1958, c: 'sports', d: '慕尼黑空难：一架载有曼联球员的飞机坠毁，23人死亡' }
+        ];
+        EVENTS['2-7'] = [
+            { y: 1301, c: 'politics', d: '英格兰王位继承人爱德华一世成为威尔士亲王' },
+            { y: 1812, c: 'culture', d: '英国作家查尔斯·狄更斯出生' },
+            { y: 1885, c: 'tech', d: '伦敦地铁开通首条电动线路' },
+            { y: 1992, c: 'politics', d: '欧盟前身《马斯特里赫特条约》签署' }
+        ];
+        EVENTS['2-8'] = [
+            { y: 1587, c: 'culture', d: '苏格兰女王玛丽·斯图亚特被处决' },
+            { y: 1904, c: 'disaster', d: '日俄战争爆发' },
+            { y: 1915, c: 'culture', d: '美国导演格里菲斯执导电影《一个国家的诞生》首映' },
+            { y: 1975, c: 'tech', d: '苏联发射金星9号探测器' }
+        ];
+        EVENTS['2-9'] = [
+            { y: 1773, c: 'culture', d: '美国作家威廉·亨利·哈里森出生' },
+            { y: 1895, c: 'sports', d: '美国排球运动发明者威廉·摩根发明排球' },
+            { y: 1943, c: 'politics', d: '二战中瓜达尔卡纳尔岛战役结束，盟军获胜' },
+            { y: 1971, c: 'tech', d: '美国阿波罗14号登月任务返回地球' }
+        ];
+        EVENTS['2-10'] = [
+            { y: 1496, c: 'culture', d: '意大利画家达芬奇开始创作《最后的晚餐》' },
+            { y: 1763, c: 'politics', d: '七年战争结束，巴黎条约签署' },
+            { y: 1906, c: 'tech', d: '英国无畏号战列舰下水' },
+            { y: 1996, c: 'tech', d: 'IBM超级计算机"深蓝"首次击败国际象棋世界冠军卡斯帕罗夫' }
+        ];
+        EVENTS['2-11'] = [
+            { y: 1847, c: 'tech', d: '美国发明家爱迪生出生' },
+            { y: 1929, c: 'politics', d: '意大利与梵蒂冈签署《拉特兰条约》' },
+            { y: 1970, c: 'tech', d: '日本发射首颗人造卫星"大隅号"' },
+            { y: 1979, c: 'politics', d: '伊朗伊斯兰革命成功，霍梅尼掌权' }
+        ];
+        EVENTS['2-12'] = [
+            { y: 1554, c: 'politics', d: '英国女王简·格雷被处决' },
+            { y: 1809, c: 'culture', d: '英国博物学家查尔斯·达尔文出生' },
+            { y: 1924, c: 'culture', d: '美国作曲家乔治·格什温的《蓝色狂想曲》首演' },
+            { y: 1999, c: 'politics', d: '美国总统克林顿在弹劾案中被宣告无罪' }
+        ];
+        EVENTS['2-13'] = [
+            { y: 1668, c: 'politics', d: '西班牙承认葡萄牙独立' },
+            { y: 1867, c: 'culture', d: '奥地利作曲家小约翰·施特劳斯创作《蓝色多瑙河》' },
+            { y: 1945, c: 'disaster', d: '二战盟军对德国德累斯顿进行大规模轰炸' },
+            { y: 2017, c: 'tech', d: 'SpaceX首次成功回收猎鹰9号火箭整流罩' }
+        ];
+        EVENTS['2-14'] = [
+            { y: 1852, c: 'culture', d: '英国画家、雕塑家米开朗基罗的生日' },
+            { y: 1912, c: 'politics', d: '亚利桑那州成为美国第48个州' },
+            { y: 1945, c: 'politics', d: '二战中乌拉圭向德国宣战' },
+            { y: 1990, c: 'tech', d: '旅行者1号探测器拍摄到太阳系全家福照片' }
+        ];
+        EVENTS['2-15'] = [
+            { y: 1564, c: 'tech', d: '意大利天文学家伽利略·伽利雷出生' },
+            { y: 1898, c: 'disaster', d: '美国战舰"缅因号"在哈瓦那港爆炸沉没' },
+            { y: 1946, c: 'tech', d: '世界上第一台电子数字计算机ENIAC在美国问世' },
+            { y: 1989, c: 'politics', d: '苏联完成从阿富汗撤军' }
+        ];
+        EVENTS['2-16'] = [
+            { y: 1918, c: 'politics', d: '立陶宛宣布独立' },
+            { y: 1923, c: 'tech', d: '英国考古学家霍华德·卡特打开图坦卡蒙墓室' },
+            { y: 1959, c: 'politics', d: '菲德尔·卡斯特罗就任古巴总理' },
+            { y: 2005, c: 'politics', d: '联合国《京都议定书》正式生效' }
+        ];
+        EVENTS['2-17'] = [
+            { y: 1600, c: 'culture', d: '意大利哲学家乔尔丹诺·布鲁诺被火刑处死' },
+            { y: 1848, c: 'politics', d: '意大利托斯卡纳大公国通过宪法' },
+            { y: 1936, c: 'tech', d: '美国发明家华莱士·卡罗瑟斯发明尼龙' },
+            { y: 1972, c: 'politics', d: '美国总统尼克松访问中国，中美关系破冰' }
+        ];
+        EVENTS['2-18'] = [
+            { y: 1516, c: 'politics', d: '英格兰国王亨利八世的女儿玛丽一世出生' },
+            { y: 1564, c: 'culture', d: '意大利艺术家米开朗基罗去世' },
+            { y: 1885, c: 'culture', d: '美国作家马克·吐温出版《哈克贝利·费恩历险记》' },
+            { y: 1965, c: 'politics', d: '冈比亚独立' }
+        ];
+        EVENTS['2-19'] = [
+            { y: 1473, c: 'tech', d: '波兰天文学家哥白尼出生' },
+            { y: 1878, c: 'tech', d: '爱迪生获得留声机专利' },
+            { y: 1942, c: 'disaster', d: '二战中日本轰炸澳大利亚达尔文港' },
+            { y: 2008, c: 'politics', d: '古巴国务委员会主席菲德尔·卡斯特罗宣布退休' }
+        ];
+        EVENTS['2-20'] = [
+            { y: 1798, c: 'culture', d: '英国诗人威廉·华兹华斯与塞缪尔·柯勒律治合著《抒情歌谣集》' },
+            { y: 1872, c: 'tech', d: '纽约大都会艺术博物馆正式对外开放' },
+            { y: 1962, c: 'tech', d: '美国宇航员约翰·格伦首次绕地球轨道飞行' },
+            { y: 1988, c: 'politics', d: '纳戈尔诺-卡拉巴赫自治州投票决定脱离阿塞拜疆' }
+        ];
+        EVENTS['2-21'] = [
+            { y: 1848, c: 'culture', d: '马克思与恩格斯发表《共产党宣言》' },
+            { y: 1916, c: 'politics', d: '凡尔登战役开始' },
+            { y: 1972, c: 'politics', d: '美国总统尼克松正式访问中国' },
+            { y: 1975, c: 'politics', d: '越南战争结束' }
+        ];
+        EVENTS['2-22'] = [
+            { y: 1732, c: 'politics', d: '美国首任总统乔治·华盛顿出生' },
+            { y: 1847, c: 'politics', d: '美墨战争中美国占领墨西哥城' },
+            { y: 1958, c: 'politics', d: '阿拉伯联合共和国（埃及与叙利亚合并）成立' },
+            { y: 1980, c: 'sports', d: '美国冰球队在普莱西德湖冬奥会上击败苏联队' }
+        ];
+        EVENTS['2-23'] = [
+            { y: 1455, c: 'culture', d: '古登堡《圣经》首次印刷' },
+            { y: 1685, c: 'culture', d: '德国作曲家乔治·弗里德里希·亨德尔出生' },
+            { y: 1905, c: 'politics', d: '美国与巴拿马签订《海-布诺-瓦里亚条约》' },
+            { y: 1945, c: 'politics', d: '硫磺岛战役中美国国旗插上折钵山' }
+        ];
+        EVENTS['2-24'] = [
+            { y: 1582, c: 'culture', d: '教皇格里高利十三世颁布格里高利历' },
+            { y: 1836, c: 'tech', d: '美国发明家塞缪尔·科尔特获得左轮手枪专利' },
+            { y: 1917, c: 'politics', d: '俄国二月革命开始' },
+            { y: 2008, c: 'politics', d: '古巴全国人民代表大会选举劳尔·卡斯特罗为国家主席' }
+        ];
+        EVENTS['2-25'] = [
+            { y: 1778, c: 'culture', d: '西班牙画家戈雅出生' },
+            { y: 1836, c: 'tech', d: '美国发明家塞缪尔·科尔特发明第一支左轮手枪' },
+            { y: 1901, c: 'politics', d: '美国钢铁公司成立' },
+            { y: 1947, c: 'politics', d: '日本北海道发生大规模罢工' }
+        ];
+        EVENTS['2-26'] = [
+            { y: 1815, c: 'politics', d: '拿破仑·波拿巴逃离厄尔巴岛' },
+            { y: 1848, c: 'politics', d: '法国二月革命推翻七月王朝' },
+            { y: 1917, c: 'culture', d: '美国爵士钢琴家费茨·沃勒出生' },
+            { y: 1993, c: 'disaster', d: '美国纽约世界贸易中心发生汽车炸弹袭击' }
+        ];
+        EVENTS['2-27'] = [
+            { y: 1892, c: 'culture', d: '美国舞蹈家、演员露西尔·鲍尔出生' },
+            { y: 1933, c: 'politics', d: '德国国会大厦纵火案发生' },
+            { y: 1939, c: 'politics', d: '美国最高法院裁定静坐罢工合法' },
+            { y: 1976, c: 'politics', d: '西撒哈拉宣布独立' }
+        ];
+        EVENTS['2-28'] = [
+            { y: 1854, c: 'politics', d: '美国共和党在威斯康星州成立' },
+            { y: 1900, c: 'culture', d: '德国哲学家弗里德里希·尼采去世' },
+            { y: 1935, c: 'tech', d: '美国化学家华莱士·卡罗瑟斯发明尼龙' },
+            { y: 1986, c: 'politics', d: '瑞典首相奥洛夫·帕尔梅遇刺身亡' }
+        ];
+        EVENTS['2-29'] = [
+            { y: 1504, c: 'tech', d: '哥伦布利用月食知识让牙买加土著人屈服' },
+            { y: 1692, c: 'disaster', d: '塞勒姆巫术审判开始' },
+            { y: 1940, c: 'culture', d: '英国电影《乱世佳人》首映' },
+            { y: 2012, c: 'tech', d: '日本东京晴空塔建成' }
+        ];
+
+        // ---- 3月 ----
+        EVENTS['3-1'] = [
+            { y: 1810, c: 'culture', d: '波兰作曲家弗雷德里克·肖邦在华沙出生' },
+            { y: 1896, c: 'tech', d: '法国物理学家亨利·贝可勒尔发现放射性' },
+            { y: 1912, c: 'politics', d: '美国陆军首次在军事行动中使用飞机' },
+            { y: 1954, c: 'politics', d: '美国在比基尼环礁试爆氢弹' }
+        ];
+        EVENTS['3-2'] = [
+            { y: 1797, c: 'politics', d: '英国海军将领霍雷肖·纳尔逊在圣文森特角海战获胜' },
+            { y: 1836, c: 'politics', d: '德克萨斯宣布从墨西哥独立' },
+            { y: 1902, c: 'culture', d: '美国作家约翰·斯坦贝克出生' },
+            { y: 1962, c: 'politics', d: '缅甸奈温将军发动军事政变' }
+        ];
+        EVENTS['3-3'] = [
+            { y: 1845, c: 'politics', d: '美国国会首次通过法案，允许总统否决单项拨款' },
+            { y: 1918, c: 'politics', d: '苏俄与德国签订《布列斯特-立托夫斯克和约》' },
+            { y: 1931, c: 'culture', d: '美国作曲家和指挥家约翰·菲利普·苏萨去世' },
+            { y: 1991, c: 'politics', d: '拉脱维亚和爱沙尼亚举行独立公投' }
+        ];
+        EVENTS['3-4'] = [
+            { y: 1789, c: 'politics', d: '美国宪法正式生效' },
+            { y: 1791, c: 'politics', d: '佛蒙特州成为美国第14个州' },
+            { y: 1825, c: 'politics', d: '约翰·昆西·亚当斯就任美国总统' },
+            { y: 1933, c: 'politics', d: '富兰克林·罗斯福就任美国总统，推行新政' }
+        ];
+        EVENTS['3-5'] = [
+            { y: 1770, c: 'politics', d: '波士顿惨案：英军向抗议者开枪，5人死亡' },
+            { y: 1824, c: 'politics', d: '缅甸与英国爆发第一次英缅战争' },
+            { y: 1946, c: 'politics', d: '英国首相丘吉尔发表"铁幕演说"' },
+            { y: 1953, c: 'politics', d: '苏联领导人斯大林去世' }
+        ];
+        EVENTS['3-6'] = [
+            { y: 1475, c: 'culture', d: '意大利雕塑家米开朗基罗·博纳罗蒂出生' },
+            { y: 1836, c: 'disaster', d: '阿拉莫战役结束，墨西哥军队获胜' },
+            { y: 1899, c: 'tech', d: '德国化学家菲利克斯·霍夫曼发明阿司匹林' },
+            { y: 1987, c: 'disaster', d: '英国渡轮"自由企业先驱号"在比利时泽布吕赫港倾覆' }
+        ];
+        EVENTS['3-7'] = [
+            { y: 1799, c: 'tech', d: '英国天文学家威廉·赫歇尔发现天王星' },
+            { y: 1876, c: 'tech', d: '亚历山大·贝尔获得电话专利' },
+            { y: 1912, c: 'tech', d: '挪威探险家阿蒙森宣布抵达南极' },
+            { y: 1965, c: 'politics', d: '美国开始对北越实施"滚雷行动"轰炸' }
+        ];
+        EVENTS['3-8'] = [
+            { y: 1702, c: 'politics', d: '英格兰女王安妮即位，开启斯图亚特王朝末代统治' },
+            { y: 1844, c: 'politics', d: '瑞典与挪威因边界争端发生冲突' },
+            { y: 1917, c: 'politics', d: '俄国二月革命爆发，沙皇尼古拉二世退位' },
+            { y: 1978, c: 'tech', d: '美国首次使用卫星实现全球电话通信' }
+        ];
+        EVENTS['3-9'] = [
+            { y: 1796, c: 'politics', d: '拿破仑·波拿巴与约瑟芬·博阿尔内结婚' },
+            { y: 1862, c: 'politics', d: '美国南北战争中汉普顿锚地海战爆发' },
+            { y: 1908, c: 'culture', d: '意大利国际米兰足球俱乐部成立' },
+            { y: 1959, c: 'culture', d: '美国芭比娃娃在纽约玩具展首次亮相' }
+        ];
+        EVENTS['3-10'] = [
+            { y: 1876, c: 'tech', d: '亚历山大·贝尔首次成功进行电话通话' },
+            { y: 1910, c: 'disaster', d: '中国福建省发生特大水灾' },
+            { y: 1959, c: 'politics', d: '西藏叛乱：达赖喇嘛流亡印度' },
+            { y: 1990, c: 'politics', d: '立陶宛宣布从苏联独立' }
+        ];
+        EVENTS['3-11'] = [
+            { y: 1669, c: 'disaster', d: '意大利埃特纳火山爆发，破坏卡塔尼亚城' },
+            { y: 1861, c: 'politics', d: '美国南方邦联通过第一部宪法' },
+            { y: 1918, c: 'culture', d: '西班牙流感首次在美国军营爆发' },
+            { y: 2011, c: 'disaster', d: '日本东北地区发生9.0级大地震并引发海啸与福岛核事故' }
+        ];
+        EVENTS['3-12'] = [
+            { y: 1664, c: 'politics', d: '新泽西成为英国殖民地' },
+            { y: 1894, c: 'tech', d: '美国可口可乐公司首次以瓶装形式销售' },
+            { y: 1930, c: 'politics', d: '印度圣雄甘地领导食盐进军开始' },
+            { y: 1994, c: 'culture', d: '英国圣公会首次任命女牧师' }
+        ];
+        EVENTS['3-13'] = [
+            { y: 1567, c: 'politics', d: '尼德兰八十年战争爆发' },
+            { y: 1781, c: 'tech', d: '英国天文学家威廉·赫歇尔发现天王星' },
+            { y: 1900, c: 'politics', d: '布尔战争中英国占领布隆方丹' },
+            { y: 2013, c: 'politics', d: '教皇方济各当选为第266任天主教教皇' }
+        ];
+        EVENTS['3-14'] = [
+            { y: 1879, c: 'tech', d: '德国物理学家阿尔伯特·爱因斯坦出生' },
+            { y: 1883, c: 'culture', d: '德国哲学家卡尔·马克思在伦敦去世' },
+            { y: 1905, c: 'culture', d: '法国作家保罗·克洛岱尔出生' },
+            { y: 1980, c: 'disaster', d: '波兰华沙发生空难，87人死亡' }
+        ];
+        EVENTS['3-15'] = [
+            { y: 44, c: 'politics', d: '罗马共和国独裁官凯撒被元老院贵族刺杀' },
+            { y: 1493, c: 'tech', d: '哥伦布首次远航后返回西班牙' },
+            { y: 1892, c: 'tech', d: '美国发明家杰西·雷诺发明自动扶梯' },
+            { y: 1917, c: 'politics', d: '俄国沙皇尼古拉二世宣布退位' }
+        ];
+        EVENTS['3-16'] = [
+            { y: 1660, c: 'politics', d: '英国长期议会解散' },
+            { y: 1802, c: 'tech', d: '美国西点军校成立' },
+            { y: 1926, c: 'tech', d: '美国物理学家罗伯特·戈达德发射了第一枚液体燃料火箭' },
+            { y: 1968, c: 'politics', d: '越南战争中美国军队屠杀美莱村村民' }
+        ];
+        EVENTS['3-17'] = [
+            { y: 1762, c: 'culture', d: '纽约市首次举行圣帕特里克节游行' },
+            { y: 1805, c: 'tech', d: '意大利物理学家亚历山德罗·伏打发明电池' },
+            { y: 1905, c: 'tech', d: '美籍德国物理学家阿尔伯特·爱因斯坦发表布朗运动论文' },
+            { y: 1992, c: 'politics', d: '南非白人公投支持结束种族隔离制度' }
+        ];
+        EVENTS['3-18'] = [
+            { y: 1766, c: 'politics', d: '英国废除《印花税法》' },
+            { y: 1871, c: 'politics', d: '法国巴黎公社起义爆发' },
+            { y: 1965, c: 'tech', d: '苏联宇航员阿列克谢·列昂诺夫进行人类首次太空行走' },
+            { y: 1996, c: 'disaster', d: '菲律宾奥塞罗岛大火造成严重伤亡' }
+        ];
+        EVENTS['3-19'] = [
+            { y: 1279, c: 'politics', d: '南宋与元朝在崖山展开最后决战，南宋灭亡' },
+            { y: 1853, c: 'culture', d: '中国天平天国攻占南京并定都' },
+            { y: 1953, c: 'culture', d: '美国奥斯卡金像奖首次电视转播' },
+            { y: 2003, c: 'politics', d: '美国发动伊拉克战争' }
+        ];
+        EVENTS['3-20'] = [
+            { y: 1602, c: 'politics', d: '荷兰东印度公司成立' },
+            { y: 1854, c: 'politics', d: '美国共和党在威斯康星州成立' },
+            { y: 1896, c: 'tech', d: '法国天文学家首次发现木卫六' },
+            { y: 2003, c: 'politics', d: '伊拉克战争正式爆发' }
+        ];
+        EVENTS['3-21'] = [
+            { y: 1685, c: 'culture', d: '德国作曲家约翰·塞巴斯蒂安·巴赫出生' },
+            { y: 1804, c: 'politics', d: '法国颁布《拿破仑法典》' },
+            { y: 1960, c: 'politics', d: '南非沙佩维尔惨案：和平示威者遭枪杀' },
+            { y: 2010, c: 'politics', d: '美国众议院通过《患者保护与平价医疗法案》' }
+        ];
+        EVENTS['3-22'] = [
+            { y: 1312, c: 'politics', d: '教皇克莱门特五世解散圣殿骑士团' },
+            { y: 1621, c: 'politics', d: '美国首个感恩节由清教徒与印第安人共同庆祝' },
+            { y: 1765, c: 'politics', d: '英国通过《印花税法》，引发北美殖民地抗议' },
+            { y: 1995, c: 'tech', d: '俄罗斯宇航员瓦列里·波利亚科夫创造太空停留438天纪录' }
+        ];
+        EVENTS['3-23'] = [
+            { y: 1775, c: 'politics', d: '美国独立战争期间帕特里克·亨利发表"不自由毋宁死"演讲' },
+            { y: 1801, c: 'politics', d: '俄国沙皇保罗一世被刺杀' },
+            { y: 1903, c: 'tech', d: '美国莱特兄弟获得飞机专利' },
+            { y: 2001, c: 'disaster', d: '俄罗斯和平号空间站坠入太平洋' }
+        ];
+        EVENTS['3-24'] = [
+            { y: 1603, c: 'politics', d: '英王詹姆斯一世即位，开启斯图亚特王朝' },
+            { y: 1882, c: 'tech', d: '德国科学家罗伯特·科赫发现结核杆菌' },
+            { y: 1958, c: 'culture', d: '美国歌手埃尔维斯·普雷斯利应征入伍' },
+            { y: 1989, c: 'disaster', d: '埃克森·瓦尔迪兹号油轮在阿拉斯加漏油' }
+        ];
+        EVENTS['3-25'] = [
+            { y: 1306, c: 'politics', d: '苏格兰民族英雄罗伯特·布鲁斯加冕为苏格兰国王' },
+            { y: 1807, c: 'tech', d: '英国国会废除奴隶贸易法案获得通过' },
+            { y: 1911, c: 'disaster', d: '美国纽约三角内衣厂火灾致146人死亡' },
+            { y: 1975, c: 'politics', d: '沙特阿拉伯国王费萨尔遇刺身亡' }
+        ];
+        EVENTS['3-26'] = [
+            { y: 1827, c: 'culture', d: '德国作曲家路德维希·范·贝多芬在维也纳去世' },
+            { y: 1845, c: 'tech', d: '美国发明家古德伊尔获得硫化橡胶专利' },
+            { y: 1913, c: 'disaster', d: '美国俄亥俄州发生大洪水' },
+            { y: 1979, c: 'politics', d: '埃及与以色列签署和平条约' }
+        ];
+        EVENTS['3-27'] = [
+            { y: 1513, c: 'tech', d: '西班牙探险家庞塞·德莱昂发现佛罗里达' },
+            { y: 1854, c: 'politics', d: '英国与法国对俄国宣战，克里米亚战争爆发' },
+            { y: 1958, c: 'politics', d: '赫鲁晓夫接任苏联最高领导人' },
+            { y: 1977, c: 'disaster', d: '特内里费空难：两架波音747相撞，583人死亡' }
+        ];
+        EVENTS['3-28'] = [
+            { y: 1797, c: 'tech', d: '美国发明家纳撒尼尔·布里格斯发明洗衣机' },
+            { y: 1854, c: 'politics', d: '英国与法国在克里米亚战争中对俄宣战' },
+            { y: 1910, c: 'tech', d: '法国工程师亨利·法布尔首次驾驶水上飞机飞行' },
+            { y: 1979, c: 'disaster', d: '美国三里岛核电站发生部分堆芯熔毁事故' }
+        ];
+        EVENTS['3-29'] = [
+            { y: 1461, c: 'politics', d: '英国玫瑰战争中爱德华四世取得王位' },
+            { y: 1638, c: 'culture', d: '瑞典殖民者在北美特拉华河畔建立殖民地' },
+            { y: 1849, c: 'politics', d: '英国吞并旁遮普地区' },
+            { y: 1973, c: 'politics', d: '美军完成从南越撤军' }
+        ];
+        EVENTS['3-30'] = [
+            { y: 1820, c: 'culture', d: '英国作家安娜·西韦尔出生' },
+            { y: 1842, c: 'tech', d: '美国医生克劳福德·朗首次使用乙醚进行麻醉手术' },
+            { y: 1856, c: 'politics', d: '克里米亚战争结束，《巴黎条约》签署' },
+            { y: 1981, c: 'politics', d: '美国总统里根遇刺未遂' }
+        ];
+        EVENTS['3-31'] = [
+            { y: 1492, c: 'politics', d: '西班牙王室驱逐犹太教信徒' },
+            { y: 1596, c: 'culture', d: '法国数学家、哲学家笛卡尔出生' },
+            { y: 1889, c: 'tech', d: '法国埃菲尔铁塔正式对外开放' },
+            { y: 1966, c: 'tech', d: '苏联发射月球10号探测器' }
+        ];
+
+        // ---- 4月 ----
+        EVENTS['4-1'] = [
+            { y: 1867, c: 'politics', d: '新加坡成为英国皇家殖民地' },
+            { y: 1918, c: 'tech', d: '英国皇家空军正式成立' },
+            { y: 1945, c: 'disaster', d: '美军在冲绳战役中开始登陆' },
+            { y: 1976, c: 'tech', d: '苹果公司由乔布斯、沃兹尼亚克和韦恩创立' }
+        ];
+        EVENTS['4-2'] = [
+            { y: 1513, c: 'tech', d: '西班牙探险家胡安·庞塞·德莱昂发现佛罗里达' },
+            { y: 1800, c: 'culture', d: '奥地利作曲家贝多芬举办首场公开演奏会' },
+            { y: 1917, c: 'politics', d: '美国总统威尔逊请求国会批准参加一战' },
+            { y: 1982, c: 'politics', d: '阿根廷入侵福克兰群岛，马岛战争爆发' }
+        ];
+        EVENTS['4-3'] = [
+            { y: 1860, c: 'tech', d: '美国驿马快递首次从密苏里州到达加州' },
+            { y: 1882, c: 'culture', d: '美国亡命徒杰西·詹姆斯被枪杀' },
+            { y: 1936, c: 'tech', d: '布鲁诺·豪普特曼因林德伯格绑架案被电椅处决' },
+            { y: 1968, c: 'politics', d: '美国民权运动领袖马丁·路德·金在孟菲斯遇刺' }
+        ];
+        EVENTS['4-4'] = [
+            { y: 1581, c: 'tech', d: '英国航海家弗朗西斯·德雷克完成环球航行' },
+            { y: 1818, c: 'politics', d: '美国国会通过旗帜法案，规定美国国旗样式' },
+            { y: 1841, c: 'politics', d: '美国第九任总统威廉·亨利·哈里森就职仅一个月后去世' },
+            { y: 1968, c: 'politics', d: '美国民权运动领袖马丁·路德·金遇刺身亡' }
+        ];
+        EVENTS['4-5'] = [
+            { y: 1614, c: 'culture', d: '美国原住民公主波卡洪塔斯与英国殖民者约翰·罗尔夫结婚' },
+            { y: 1722, c: 'tech', d: '荷兰探险家雅各布·罗格文发现复活节岛' },
+            { y: 1815, c: 'disaster', d: '印度尼西亚坦博拉火山爆发，为史上最大火山喷发之一' },
+            { y: 1955, c: 'politics', d: '英国首相丘吉尔因健康原因辞职' }
+        ];
+        EVENTS['4-6'] = [
+            { y: 1776, c: 'politics', d: '美国大陆会议准许对英国实施私掠船行动' },
+            { y: 1830, c: 'culture', d: '美国后期圣徒运动（摩门教）由约瑟夫·史密斯创立' },
+            { y: 1896, c: 'sports', d: '第一届现代奥运会在希腊雅典开幕' },
+            { y: 1917, c: 'politics', d: '美国正式参加第一次世界大战' }
+        ];
+        EVENTS['4-7'] = [
+            { y: 1506, c: 'culture', d: '葡萄牙探险家、航海家恩里克王子去世' },
+            { y: 1770, c: 'culture', d: '英国诗人威廉·华兹华斯出生' },
+            { y: 1922, c: 'politics', d: '美国内政部批准在怀俄明州设立石油储备' },
+            { y: 1948, c: 'politics', d: '世界卫生组织正式成立' }
+        ];
+        EVENTS['4-8'] = [
+            { y: 1513, c: 'tech', d: '西班牙探险家庞塞·德莱昂宣布佛罗里达为西班牙领土' },
+            { y: 1820, c: 'culture', d: '古希腊著名的断臂维纳斯雕像在米洛斯岛被发现' },
+            { y: 1911, c: 'tech', d: '荷兰物理学家卡默林·昂内斯发现超导现象' },
+            { y: 1974, c: 'sports', d: '美国棒球运动员汉克·阿伦打破本垒打纪录' }
+        ];
+        EVENTS['4-9'] = [
+            { y: 1865, c: 'politics', d: '美国南北战争：南方军总司令李将军向格兰特将军投降' },
+            { y: 1917, c: 'politics', d: '加拿大军队在维米岭战役中获胜' },
+            { y: 1940, c: 'politics', d: '德国入侵丹麦和挪威' },
+            { y: 1963, c: 'politics', d: '英国政治家温斯顿·丘吉尔获得美国荣誉公民称号' }
+        ];
+        EVENTS['4-10'] = [
+            { y: 1815, c: 'disaster', d: '印尼坦博拉火山爆发，全球进入"无夏之年"' },
+            { y: 1866, c: 'culture', d: '美国防止虐待动物协会（ASPCA）成立' },
+            { y: 1912, c: 'tech', d: '泰坦尼克号从英国南安普顿启航' },
+            { y: 2019, c: 'tech', d: '人类首次拍摄到黑洞照片公布' }
+        ];
+        EVENTS['4-11'] = [
+            { y: 1814, c: 'politics', d: '拿破仑被流放到厄尔巴岛' },
+            { y: 1894, c: 'culture', d: '美国电影导演威廉·惠勒出生' },
+            { y: 1951, c: 'politics', d: '麦克阿瑟被杜鲁门解除联合国军司令职务' },
+            { y: 1970, c: 'tech', d: '美国阿波罗13号发射升空' }
+        ];
+        EVENTS['4-12'] = [
+            { y: 1606, c: 'politics', d: '英格兰詹姆斯一世创立联合王国国旗' },
+            { y: 1861, c: 'politics', d: '美国南北战争爆发，攻打萨姆特堡' },
+            { y: 1937, c: 'tech', d: '英国发明家弗兰克·惠特尔首次测试喷气发动机' },
+            { y: 1961, c: 'tech', d: '苏联宇航员尤里·加加林成为人类首位太空人' }
+        ];
+        EVENTS['4-13'] = [
+            { y: 1598, c: 'politics', d: '法国国王亨利四世颁布《南特敕令》' },
+            { y: 1742, c: 'culture', d: '德国作曲家乔治·弗里德里希·亨德尔的《弥赛亚》首演' },
+            { y: 1919, c: 'disaster', d: '印度阿姆利则惨案：英国军队向和平集会者开枪' },
+            { y: 1970, c: 'disaster', d: '阿波罗13号服务舱发生爆炸，宇航员险象环生' }
+        ];
+        EVENTS['4-14'] = [
+            { y: 1759, c: 'culture', d: '德国作曲家乔治·弗里德里希·亨德尔去世' },
+            { y: 1828, c: 'culture', d: '美国词典编纂家诺亚·韦伯斯特出版《韦氏词典》' },
+            { y: 1865, c: 'politics', d: '美国总统林肯在福特剧院遇刺' },
+            { y: 1912, c: 'disaster', d: '泰坦尼克号在北大西洋撞上冰山沉没' }
+        ];
+        EVENTS['4-15'] = [
+            { y: 1452, c: 'culture', d: '意大利艺术家列奥纳多·达芬奇出生' },
+            { y: 1755, c: 'culture', d: '英国词典编纂家塞缪尔·约翰逊出版《英语词典》' },
+            { y: 1892, c: 'tech', d: '美国通用电气公司成立' },
+            { y: 2013, c: 'disaster', d: '美国波士顿马拉松赛发生连环爆炸案' }
+        ];
+        EVENTS['4-16'] = [
+            { y: 1746, c: 'politics', d: '苏格兰詹姆斯党起义在卡洛登战役中被镇压' },
+            { y: 1848, c: 'politics', d: '法国废除奴隶制' },
+            { y: 1917, c: 'politics', d: '列宁从瑞士乘坐密封火车返回俄国' },
+            { y: 1972, c: 'tech', d: '美国阿波罗16号登月任务发射' }
+        ];
+        EVENTS['4-17'] = [
+            { y: 1492, c: 'politics', d: '西班牙女王伊莎贝拉与哥伦布签订《圣塔菲协议》' },
+            { y: 1790, c: 'culture', d: '美国政治家、科学家本杰明·富兰克林去世' },
+            { y: 1961, c: 'politics', d: '美国中情局策划的猪湾入侵行动失败' },
+            { y: 1982, c: 'politics', d: '加拿大正式从英国收回宪法' }
+        ];
+        EVENTS['4-18'] = [
+            { y: 1506, c: 'culture', d: '圣彼得大教堂在梵蒂冈开始动工建设' },
+            { y: 1775, c: 'politics', d: '美国独立战争正式爆发，列克星敦和康科德战斗' },
+            { y: 1906, c: 'disaster', d: '美国旧金山发生8.3级大地震及大火' },
+            { y: 1955, c: 'tech', d: '德国物理学家阿尔伯特·爱因斯坦去世' }
+        ];
+        EVENTS['4-19'] = [
+            { y: 1775, c: 'politics', d: '美国独立战争正式打响' },
+            { y: 1882, c: 'culture', d: '英国博物学家查尔斯·达尔文去世' },
+            { y: 1897, c: 'sports', d: '第一届波士顿马拉松赛举行' },
+            { y: 1943, c: 'politics', d: '华沙犹太区起义爆发' }
+        ];
+        EVENTS['4-20'] = [
+            { y: 1657, c: 'tech', d: '荷兰人发明了摆钟' },
+            { y: 1792, c: 'politics', d: '法国对奥地利宣战，法国革命战争开始' },
+            { y: 1889, c: 'politics', d: '德国纳粹党领袖阿道夫·希特勒出生' },
+            { y: 2010, c: 'disaster', d: '墨西哥湾深水地平线号钻井平台爆炸，引发大规模漏油' }
+        ];
+        EVENTS['4-21'] = [
+            { y: 753, c: 'politics', d: '传说为罗马建城日' },
+            { y: 1836, c: 'politics', d: '德克萨斯独立战争中的圣哈辛托战役' },
+            { y: 1918, c: 'politics', d: '一战中德国王牌飞行员"红男爵"里希特霍芬战死' },
+            { y: 1967, c: 'politics', d: '希腊发生军政府政变' }
+        ];
+        EVENTS['4-22'] = [
+            { y: 1500, c: 'tech', d: '葡萄牙探险家佩德罗·阿尔瓦雷斯·卡布拉尔发现巴西' },
+            { y: 1870, c: 'culture', d: '俄国革命家列宁出生' },
+            { y: 1930, c: 'culture', d: '英国首相詹姆斯·卡拉汉出生' },
+            { y: 1970, c: 'culture', d: '第一个"地球日"活动在美国举行' }
+        ];
+        EVENTS['4-23'] = [
+            { y: 1564, c: 'culture', d: '英国戏剧家威廉·莎士比亚出生' },
+            { y: 1616, c: 'culture', d: '莎士比亚与塞万提斯同日去世' },
+            { y: 1791, c: 'politics', d: '美国第15任总统詹姆斯·布坎南出生' },
+            { y: 1949, c: 'politics', d: '中国人民解放军占领南京' }
+        ];
+        EVENTS['4-24'] = [
+            { y: 1704, c: 'culture', d: '美国第一份连续出版的报纸《波士顿新闻信》创刊' },
+            { y: 1800, c: 'politics', d: '美国国会图书馆成立' },
+            { y: 1915, c: 'disaster', d: '奥斯曼帝国开始大规模驱逐亚美尼亚人' },
+            { y: 1967, c: 'disaster', d: '苏联联盟1号飞船返回时坠毁，宇航员科马罗夫遇难' }
+        ];
+        EVENTS['4-25'] = [
+            { y: 1599, c: 'politics', d: '英国政治家奥利弗·克伦威尔出生' },
+            { y: 1792, c: 'tech', d: '法国首次使用断头台执行死刑' },
+            { y: 1859, c: 'tech', d: '苏伊士运河在埃及动工开凿' },
+            { y: 1915, c: 'politics', d: '第一次世界大战加里波利战役开始' }
+        ];
+        EVENTS['4-26'] = [
+            { y: 1865, c: 'politics', d: '美国南北战争南方军总司令约翰斯顿将军投降' },
+            { y: 1937, c: 'disaster', d: '西班牙内战期间德军轰炸格尔尼卡' },
+            { y: 1954, c: 'politics', d: '日内瓦会议召开，讨论印度支那问题' },
+            { y: 1986, c: 'disaster', d: '苏联切尔诺贝利核电站4号反应堆发生爆炸' }
+        ];
+        EVENTS['4-27'] = [
+            { y: 1521, c: 'tech', d: '葡萄牙探险家麦哲伦在菲律宾被杀' },
+            { y: 1565, c: 'politics', d: '西班牙在菲律宾建立首个殖民地' },
+            { y: 1810, c: 'culture', d: '德国作曲家罗伯特·舒曼出生' },
+            { y: 1960, c: 'politics', d: '多哥脱离法国独立' }
+        ];
+        EVENTS['4-28'] = [
+            { y: 1758, c: 'politics', d: '美国第五任总统詹姆斯·门罗出生' },
+            { y: 1789, c: 'politics', d: '英国皇家海军邦蒂号哗变事件发生' },
+            { y: 1945, c: 'politics', d: '意大利独裁者墨索里尼及其情妇被处决' },
+            { y: 1969, c: 'politics', d: '法国总统戴高乐在公投失败后辞职' }
+        ];
+        EVENTS['4-29'] = [
+            { y: 1770, c: 'tech', d: '英国探险家詹姆斯·库克抵达澳大利亚植物学湾' },
+            { y: 1854, c: 'politics', d: '美国通过堪萨斯-内布拉斯加法案' },
+            { y: 1916, c: 'politics', d: '第一次世界大战期间爱尔兰复活节起义爆发' },
+            { y: 1992, c: 'disaster', d: '美国洛杉矶因罗德尼·金案发生大规模暴动' }
+        ];
+        EVENTS['4-30'] = [
+            { y: 1789, c: 'politics', d: '乔治·华盛顿在纽约就任美国首任总统' },
+            { y: 1803, c: 'politics', d: '美国从法国手中购买路易斯安那' },
+            { y: 1945, c: 'politics', d: '纳粹德国元首希特勒在柏林自杀' },
+            { y: 1975, c: 'politics', d: '越南战争结束，西贡（今胡志明市）被北越攻占' }
+        ];
+
+        // ---- 5月 ----
+        EVENTS['5-1'] = [
+            { y: 1707, c: 'politics', d: '英格兰与苏格兰合并为大不列颠王国' },
+            { y: 1834, c: 'politics', d: '英国殖民地废除奴隶制' },
+            { y: 1886, c: 'politics', d: '美国芝加哥发生干草市场暴乱，五一国际劳动节起源' },
+            { y: 2004, c: 'politics', d: '欧盟正式接纳10个新成员国' }
+        ];
+        EVENTS['5-2'] = [
+            { y: 1519, c: 'culture', d: '意大利艺术家列奥纳多·达芬奇去世' },
+            { y: 1863, c: 'politics', d: '美国南北战争中钱斯勒斯维尔战役爆发' },
+            { y: 1945, c: 'politics', d: '二战柏林战役结束，苏军占领柏林' },
+            { y: 2011, c: 'politics', d: '极端组织头目本·拉登被美军击毙' }
+        ];
+        EVENTS['5-3'] = [
+            { y: 1494, c: 'tech', d: '西班牙探险家哥伦布首次发现牙买加' },
+            { y: 1791, c: 'politics', d: '波兰议会通过《五三宪法》，为欧洲首部成文宪法' },
+            { y: 1937, c: 'culture', d: '美国作家玛格丽特·米切尔的《飘》获得普利策奖' },
+            { y: 1960, c: 'culture', d: '《铁臂阿童木》动画在富士电视台首播' }
+        ];
+        EVENTS['5-4'] = [
+            { y: 1493, c: 'politics', d: '教皇亚历山大大帝划定教皇子午线' },
+            { y: 1776, c: 'culture', d: '美国罗德岛州宣布独立' },
+            { y: 1919, c: 'politics', d: '中国五四运动在北京爆发' },
+            { y: 1970, c: 'politics', d: '美国俄亥俄州国民警卫队向肯特州立大学学生开枪' }
+        ];
+        EVENTS['5-5'] = [
+            { y: 1818, c: 'politics', d: '德国哲学家卡尔·马克思在特里尔出生' },
+            { y: 1862, c: 'politics', d: '普埃布拉战役中墨西哥击败法国军队' },
+            { y: 1891, c: 'culture', d: '纽约卡内基音乐厅正式开幕' },
+            { y: 1961, c: 'tech', d: '美国宇航员艾伦·谢泼德进行亚轨道飞行' }
+        ];
+        EVENTS['5-6'] = [
+            { y: 1889, c: 'tech', d: '法国埃菲尔铁塔在巴黎世界博览会开幕' },
+            { y: 1937, c: 'disaster', d: '德国齐柏林飞艇兴登堡号在新泽西州失火焚毁' },
+            { y: 1940, c: 'tech', d: '美国工程师约翰·阿塔纳索夫展示电子计算机原型' },
+            { y: 1994, c: 'culture', d: '英吉利海峡隧道正式通车' }
+        ];
+        EVENTS['5-7'] = [
+            { y: 1718, c: 'culture', d: '美国新奥尔良市由法国殖民者建立' },
+            { y: 1824, c: 'culture', d: '奥地利作曲家贝多芬的《第九交响曲》首演' },
+            { y: 1915, c: 'disaster', d: '英国客轮卢西塔尼亚号被德国潜艇击沉' },
+            { y: 1945, c: 'politics', d: '德国签署无条件投降书，二战欧洲战场结束' }
+        ];
+        EVENTS['5-8'] = [
+            { y: 1429, c: 'politics', d: '法国民族英雄圣女贞德解奥尔良之围' },
+            { y: 1886, c: 'culture', d: '美国药剂师约翰·彭伯顿发明可口可乐' },
+            { y: 1945, c: 'politics', d: '欧洲胜利日：德国正式投降' },
+            { y: 1980, c: 'politics', d: '世界卫生组织宣布消灭天花' }
+        ];
+        EVENTS['5-9'] = [
+            { y: 1502, c: 'tech', d: '哥伦布第四次也是最后一次远航出发' },
+            { y: 1874, c: 'culture', d: '英国作家霍华德·卡特出生' },
+            { y: 1936, c: 'politics', d: '意大利占领埃塞俄比亚' },
+            { y: 1950, c: 'politics', d: '法国外长舒曼提出"舒曼计划"，为欧盟雏形' }
+        ];
+        EVENTS['5-10'] = [
+            { y: 1774, c: 'politics', d: '法国国王路易十五去世，路易十六继位' },
+            { y: 1857, c: 'politics', d: '印度民族大起义爆发' },
+            { y: 1865, c: 'politics', d: '美国南方邦联总统戴维斯被俘' },
+            { y: 1994, c: 'politics', d: '纳尔逊·曼德拉就任南非首位黑人总统' }
+        ];
+        EVENTS['5-11'] = [
+            { y: 330, c: 'politics', d: '君士坦丁大帝将拜占庭更名为新罗马（君士坦丁堡）' },
+            { y: 1858, c: 'politics', d: '明尼苏达州成为美国第32个州' },
+            { y: 1910, c: 'culture', d: '美国冰川国家公园在蒙大拿州成立' },
+            { y: 1997, c: 'tech', d: 'IBM超级计算机"深蓝"击败国际象棋冠军卡斯帕罗夫' }
+        ];
+        EVENTS['5-12'] = [
+            { y: 1551, c: 'culture', d: '墨西哥国立自治大学成立' },
+            { y: 1874, c: 'politics', d: '英国将斐济变为殖民地' },
+            { y: 1926, c: 'politics', d: '波兰毕苏斯基发动政变' },
+            { y: 2008, c: 'disaster', d: '中国四川汶川发生8.0级特大地震，约8.7万人死' }
+        ];
+        EVENTS['5-13'] = [
+            { y: 1607, c: 'tech', d: '英国殖民者在北美建立詹姆斯敦殖民地' },
+            { y: 1846, c: 'politics', d: '美墨战争爆发' },
+            { y: 1917, c: 'culture', d: '葡萄牙法蒂玛圣母显现事件' },
+            { y: 1981, c: 'politics', d: '罗马教皇约翰·保罗二世遇刺未遂' }
+        ];
+        EVENTS['5-14'] = [
+            { y: 1264, c: 'politics', d: '西蒙·德·蒙德福特召开英国首次议会' },
+            { y: 1796, c: 'tech', d: '英国医生爱德华·詹纳首次实施牛痘接种' },
+            { y: 1948, c: 'politics', d: '以色列宣布独立建国' },
+            { y: 1973, c: 'tech', d: '美国首个空间站"天空实验室"发射升空' }
+        ];
+        EVENTS['5-15'] = [
+            { y: 1718, c: 'tech', d: '英国发明家詹姆斯·瓦特出生' },
+            { y: 1859, c: 'culture', d: '法国化学家路易·巴斯德发明巴氏消毒法' },
+            { y: 1928, c: 'culture', d: '华特·迪士尼创作的米老鼠首次亮相' },
+            { y: 1990, c: 'culture', d: '荷兰画家凡·高的《加谢医生的肖像》拍出天价' }
+        ];
+        EVENTS['5-16'] = [
+            { y: 1770, c: 'politics', d: '法国王太子（后来的路易十六）与玛丽·安托瓦内特结婚' },
+            { y: 1866, c: 'tech', d: '美国发明家查尔斯·芬蒂发明电解法提纯铝' },
+            { y: 1918, c: 'politics', d: '美国通过《煽动法》限制言论自由' },
+            { y: 1929, c: 'culture', d: '首届奥斯卡金像奖颁奖典礼在好莱坞举行' }
+        ];
+        EVENTS['5-17'] = [
+            { y: 1536, c: 'politics', d: '英国王后安妮·博林被处决' },
+            { y: 1792, c: 'politics', d: '纽约股票交易所在华尔街成立' },
+            { y: 1954, c: 'politics', d: '美国最高法院在布朗诉教育委员会案中裁定种族隔离违宪' },
+            { y: 1990, c: 'tech', d: '世界卫生组织将同性恋从疾病分类中删除' }
+        ];
+        EVENTS['5-18'] = [
+            { y: 1804, c: 'politics', d: '拿破仑·波拿巴称帝，建立法兰西第一帝国' },
+            { y: 1896, c: 'politics', d: '美国最高法院在普莱西诉弗格森案中确立"隔离但平等"原则' },
+            { y: 1910, c: 'culture', d: '意大利作曲家贾科莫·普契尼的歌剧《西部女郎》首演' },
+            { y: 1980, c: 'disaster', d: '美国华盛顿州圣海伦火山爆发' }
+        ];
+        EVENTS['5-19'] = [
+            { y: 1536, c: 'politics', d: '英国王后安妮·博林被斩首' },
+            { y: 1568, c: 'politics', d: '英国女王伊丽莎白一世下令逮捕苏格兰女王玛丽' },
+            { y: 1921, c: 'culture', d: '美国通过《移民法》限制移民数量' },
+            { y: 1994, c: 'politics', d: '南非首位黑人总统曼德拉就职' }
+        ];
+        EVENTS['5-20'] = [
+            { y: 1498, c: 'tech', d: '葡萄牙探险家达伽马抵达印度卡利卡特' },
+            { y: 1834, c: 'tech', d: '法国化学家拉瓦锡去世' },
+            { y: 1902, c: 'politics', d: '美国正式结束对古巴军事占领' },
+            { y: 2013, c: 'culture', d: '美国俄克拉荷马州遭遇EF5级龙卷风袭击' }
+        ];
+        EVENTS['5-21'] = [
+            { y: 1471, c: 'culture', d: '德国画家阿尔布雷希特·丢勒出生' },
+            { y: 1881, c: 'culture', d: '美国红十字会由克拉拉·巴顿创立' },
+            { y: 1927, c: 'tech', d: '美国飞行员林德伯格完成首次单人跨大西洋飞行' },
+            { y: 1956, c: 'tech', d: '美国首次在比基尼环礁试爆空投氢弹' }
+        ];
+        EVENTS['5-22'] = [
+            { y: 1455, c: 'politics', d: '英国玫瑰战争中的圣奥尔本斯战役爆发' },
+            { y: 1819, c: 'politics', d: '美国蒸汽船萨凡纳号从纽约出发，首次横渡大西洋' },
+            { y: 1906, c: 'tech', d: '美国莱特兄弟获得飞机设计专利' },
+            { y: 1972, c: 'politics', d: '美国总统尼克松访问苏联' }
+        ];
+        EVENTS['5-23'] = [
+            { y: 1618, c: 'politics', d: '布拉格抛窗事件引发三十年战争' },
+            { y: 1701, c: 'politics', d: '英国航海家、海盗威廉·基德被处决' },
+            { y: 1934, c: 'disaster', d: '美国银行抢劫犯邦妮和克莱德被警方击毙' },
+            { y: 1949, c: 'politics', d: '德意志联邦共和国（西德）成立' }
+        ];
+        EVENTS['5-24'] = [
+            { y: 1689, c: 'politics', d: '英国通过《宽容法案》保护新教徒' },
+            { y: 1819, c: 'culture', d: '英国维多利亚女王出生' },
+            { y: 1883, c: 'tech', d: '美国布鲁克林大桥正式开通' },
+            { y: 1941, c: 'disaster', d: '二战中德国战列舰俾斯麦号击沉英国胡德号战列巡洋舰' }
+        ];
+        EVENTS['5-25'] = [
+            { y: 1787, c: 'politics', d: '美国制宪会议在费城召开' },
+            { y: 1895, c: 'culture', d: '英国作家、剧作家奥斯卡·王尔德被判入狱' },
+            { y: 1961, c: 'politics', d: '美国总统肯尼迪宣布阿波罗登月计划' },
+            { y: 1977, c: 'culture', d: '电影《星球大战》在美国上映' }
+        ];
+        EVENTS['5-26'] = [
+            { y: 1731, c: 'politics', d: '英国天文学家约翰·弗拉姆斯蒂德去世' },
+            { y: 1896, c: 'tech', d: '美国发明家尼古拉·特斯拉获得无线控制技术专利' },
+            { y: 1940, c: 'politics', d: '二战中敦刻尔克大撤退开始' },
+            { y: 1969, c: 'tech', d: '美国阿波罗10号登月舱测试飞行成功' }
+        ];
+        EVENTS['5-27'] = [
+            { y: 1679, c: 'politics', d: '英国通过《人身保护法案》' },
+            { y: 1832, c: 'politics', d: '德国作曲家、作家约翰·沃尔夫冈·冯·歌德去世' },
+            { y: 1905, c: 'disaster', d: '日俄对马海战中俄国波罗的海舰队覆灭' },
+            { y: 1930, c: 'tech', d: '美国物理学家理查德·费曼出生' }
+        ];
+        EVENTS['5-28'] = [
+            { y: 1754, c: 'politics', d: '七年战争中英法在北美发生冲突' },
+            { y: 1830, c: 'politics', d: '美国《印第安人迁移法案》由总统杰克逊签署' },
+            { y: 1934, c: 'culture', d: '加拿大迪翁五胞胎姐妹出生' },
+            { y: 1971, c: 'tech', d: '苏联发射火星3号探测器' }
+        ];
+        EVENTS['5-29'] = [
+            { y: 1453, c: 'politics', d: '奥斯曼帝国攻陷君士坦丁堡，拜占庭帝国灭亡' },
+            { y: 1660, c: 'politics', d: '英国查理二世复辟' },
+            { y: 1919, c: 'tech', d: '爱因斯坦的广义相对论在日食观测中得到验证' },
+            { y: 1953, c: 'tech', d: '人类首次登顶珠穆朗玛峰：埃德蒙·希拉里和丹增·诺尔盖' }
+        ];
+        EVENTS['5-30'] = [
+            { y: 1431, c: 'culture', d: '法国民族英雄圣女贞德在鲁昂被火刑处死' },
+            { y: 1806, c: 'politics', d: '美国总统安德鲁·杰克逊在决斗中杀死查尔斯·迪金森' },
+            { y: 1848, c: 'politics', d: '法兰克福国民议会召开' },
+            { y: 1966, c: 'tech', d: '美国发射月球勘测者1号探测器' }
+        ];
+        EVENTS['5-31'] = [
+            { y: 1859, c: 'politics', d: '伦敦大本钟首次报时' },
+            { y: 1910, c: 'politics', d: '南非联邦成立' },
+            { y: 1916, c: 'politics', d: '日德兰海战：一战中最大规模的海战' },
+            { y: 1961, c: 'politics', d: '南非退出英联邦，成立共和国' }
+        ];
+
+        // ---- 6月 ----
+        EVENTS['6-1'] = [
+            { y: 1796, c: 'politics', d: '田纳西州成为美国第16个州' },
+            { y: 1918, c: 'politics', d: '第一次世界大战中德军用巴黎大炮轰炸巴黎' },
+            { y: 1958, c: 'politics', d: '法国戴高乐重新执政' },
+            { y: 2009, c: 'disaster', d: '法国航空447号班机在大西洋坠毁，228人遇难' }
+        ];
+        EVENTS['6-2'] = [
+            { y: 1775, c: 'politics', d: '美国独立战争中大陆会议授权攻击加拿大' },
+            { y: 1857, c: 'culture', d: '英国建筑家埃德温·鲁琴斯出生' },
+            { y: 1896, c: 'tech', d: '意大利发明家古列尔莫·马可尼获得无线电专利' },
+            { y: 1953, c: 'politics', d: '英国女王伊丽莎白二世加冕' }
+        ];
+        EVENTS['6-3'] = [
+            { y: 1726, c: 'politics', d: '詹姆斯党人起义失败后英国议会加强对苏格兰的控制' },
+            { y: 1861, c: 'politics', d: '美国南北战争中西弗吉尼亚脱离弗吉尼亚' },
+            { y: 1935, c: 'disaster', d: '法国作家埃德蒙·罗斯坦德去世' },
+            { y: 1965, c: 'tech', d: '美国宇航员爱德华·怀特进行首次美国太空行走' }
+        ];
+        EVENTS['6-4'] = [
+            { y: 780, c: 'politics', d: '英格兰麦西亚王国国王奥法去世' },
+            { y: 1876, c: 'tech', d: '美国发明家爱迪生展示留声机' },
+            { y: 1942, c: 'politics', d: '二战中日本联合舰队在中途岛战役中惨败' },
+            { y: 1989, c: 'politics', d: '伊朗精神领袖霍梅尼去世' }
+        ];
+        EVENTS['6-5'] = [
+            { y: 1783, c: 'tech', d: '法国蒙戈尔菲耶兄弟首次公开热气球飞行实验' },
+            { y: 1849, c: 'politics', d: '丹麦颁布宪法，成为君主立宪国家' },
+            { y: 1898, c: 'culture', d: '西班牙画家费德里科·加西亚·洛尔迦出生' },
+            { y: 1967, c: 'politics', d: '六日战争：以色列突袭埃及等阿拉伯国家' }
+        ];
+        EVENTS['6-6'] = [
+            { y: 1674, c: 'politics', d: '波兰国王约翰三世·索别斯基登基' },
+            { y: 1844, c: 'culture', d: '基督教青年会（YMCA）在伦敦成立' },
+            { y: 1918, c: 'politics', d: '第一次世界大战中第二次马恩河战役开始' },
+            { y: 1944, c: 'politics', d: '诺曼底登陆日（D-Day）：盟军在诺曼底登陆' }
+        ];
+        EVENTS['6-7'] = [
+            { y: 1099, c: 'politics', d: '第一次十字军东征开始围攻耶路撒冷' },
+            { y: 1329, c: 'politics', d: '苏格兰国王罗伯特一世去世' },
+            { y: 1776, c: 'politics', d: '美国大陆会议提出美国独立决议案' },
+            { y: 1965, c: 'tech', d: '美国最高法院在格里斯沃尔德诉康涅狄格州案中裁定避孕合法' }
+        ];
+        EVENTS['6-8'] = [
+            { y: 452, c: 'politics', d: '匈奴王阿提拉入侵意大利' },
+            { y: 1761, c: 'disaster', d: '英国利物浦附近发生地震' },
+            { y: 1861, c: 'politics', d: '美国南北战争中田纳西州脱离联邦' },
+            { y: 1968, c: 'politics', d: '美国参议员罗伯特·F·肯尼迪遇刺身亡' }
+        ];
+        EVENTS['6-9'] = [
+            { y: 1791, c: 'politics', d: '美国国会批准建立华盛顿哥伦比亚特区' },
+            { y: 1815, c: 'politics', d: '维也纳会议结束，重新划分欧洲版图' },
+            { y: 1885, c: 'politics', d: '法国与清政府签订《中法新约》' },
+            { y: 1934, c: 'culture', d: '美国动画角色唐老鸭首次亮相' }
+        ];
+        EVENTS['6-10'] = [
+            { y: 1190, c: 'politics', d: '神圣罗马帝国皇帝腓特烈一世在小亚细亚溺亡' },
+            { y: 1692, c: 'disaster', d: '塞勒姆女巫审判中第一名受害者被处决' },
+            { y: 1942, c: 'disaster', d: '纳粹德军将捷克利迪策村夷为平地' },
+            { y: 2003, c: 'tech', d: '中国神舟五号载人航天计划宣布' }
+        ];
+        EVENTS['6-11'] = [
+            { y: 1509, c: 'politics', d: '英国国王亨利八世与阿拉贡的凯瑟琳结婚' },
+            { y: 1770, c: 'tech', d: '英国探险家库克船长发现大堡礁' },
+            { y: 1913, c: 'culture', d: '德国作家、哲学家阿尔图尔·叔本华出生' },
+            { y: 1963, c: 'politics', d: '越南佛教徒抗议，僧侣释广德自焚' }
+        ];
+        EVENTS['6-12'] = [
+            { y: 1665, c: 'politics', d: '英国在北美设立纽约殖民地' },
+            { y: 1898, c: 'politics', d: '菲律宾宣布脱离西班牙独立' },
+            { y: 1942, c: 'culture', d: '美国好莱坞女星安妮·弗兰克开始写日记' },
+            { y: 1991, c: 'politics', d: '俄罗斯联邦举行首次总统选举，叶利钦当选' }
+        ];
+        EVENTS['6-13'] = [
+            { y: 1635, c: 'politics', d: '英国设立北美殖民地邮政服务' },
+            { y: 1774, c: 'politics', d: '罗德岛州成为北美第一个禁止奴隶输入的殖民地' },
+            { y: 1893, c: 'politics', d: '美国废除君主制的夏威夷王国被推翻' },
+            { y: 1971, c: 'politics', d: '美国《纽约时报》开始刊登五角大楼文件' }
+        ];
+        EVENTS['6-14'] = [
+            { y: 1645, c: 'politics', d: '英国内战中的内斯比战役爆发' },
+            { y: 1775, c: 'politics', d: '美国大陆军正式组建' },
+            { y: 1777, c: 'politics', d: '美国国会正式确定星条旗为国旗' },
+            { y: 1940, c: 'politics', d: '二战中巴黎被德军占领' }
+        ];
+        EVENTS['6-15'] = [
+            { y: 1215, c: 'politics', d: '英格兰国王约翰签署《大宪章》' },
+            { y: 1752, c: 'tech', d: '美国政治家、科学家本杰明·富兰克林进行风筝雷电实验' },
+            { y: 1836, c: 'politics', d: '阿肯色州成为美国第25个州' },
+            { y: 1992, c: 'culture', d: '美国最高法院裁定焚烧国旗合法' }
+        ];
+        EVENTS['6-16'] = [
+            { y: 1846, c: 'politics', d: '教皇庇护九世即位' },
+            { y: 1903, c: 'culture', d: '福特汽车公司在美国成立' },
+            { y: 1911, c: 'tech', d: '美国IBM公司前身在纽约州成立' },
+            { y: 1963, c: 'tech', d: '苏联宇航员瓦莲京娜·捷列什科娃成为首位女太空人' }
+        ];
+        EVENTS['6-17'] = [
+            { y: 1497, c: 'politics', d: '英国国王亨利七世派遣卡伯特探索北美' },
+            { y: 1565, c: 'politics', d: '日本战国时代武田信玄与上杉谦信在川中岛交战' },
+            { y: 1775, c: 'politics', d: '美国独立战争中的邦克山战役爆发' },
+            { y: 1972, c: 'politics', d: '美国水门大厦闯入事件发生' }
+        ];
+        EVENTS['6-18'] = [
+            { y: 1429, c: 'politics', d: '法国在帕泰战役中击败英国，圣女贞德取得重大胜利' },
+            { y: 1812, c: 'politics', d: '美国对英国宣战，1812年战争开始' },
+            { y: 1815, c: 'politics', d: '拿破仑·波拿巴在滑铁卢战役中惨败' },
+            { y: 1983, c: 'tech', d: '美国航天飞机挑战者号首次执行任务' }
+        ];
+        EVENTS['6-19'] = [
+            { y: 1846, c: 'sports', d: '历史上第一场有记录的棒球比赛在新泽西举行' },
+            { y: 1865, c: 'politics', d: '美国德克萨斯州奴隶最后获得解放的消息（六月节）' },
+            { y: 1910, c: 'culture', d: '美国父亲节首次庆祝' },
+            { y: 1953, c: 'politics', d: '美国间谍罗森堡夫妇因叛国罪被处决' }
+        ];
+        EVENTS['6-20'] = [
+            { y: 1782, c: 'politics', d: '美国国玺正式获得通过' },
+            { y: 1837, c: 'politics', d: '英国维多利亚女王登基' },
+            { y: 1863, c: 'politics', d: '美国西弗吉尼亚州成为第35个州' },
+            { y: 1960, c: 'politics', d: '马里联邦成立（后分裂为马里和塞内加尔）' }
+        ];
+        EVENTS['6-21'] = [
+            { y: 1734, c: 'culture', d: '加拿大蒙特利尔市正式建市' },
+            { y: 1859, c: 'politics', d: '西班牙与摩洛哥开启德特图安战役' },
+            { y: 1945, c: 'politics', d: '二战中冲绳战役结束，美军获胜' },
+            { y: 1982, c: 'politics', d: '福克兰战争结束，英军重新控制福克兰群岛' }
+        ];
+        EVENTS['6-22'] = [
+            { y: 1633, c: 'culture', d: '意大利天文学家伽利略被迫在宗教法庭上放弃日心说' },
+            { y: 1774, c: 'politics', d: '英国通过《魁北克法案》' },
+            { y: 1941, c: 'politics', d: '德国发动巴巴罗萨行动入侵苏联' },
+            { y: 1986, c: 'sports', d: '阿根廷球星马拉多纳在世界杯上演"上帝之手"' }
+        ];
+        EVENTS['6-23'] = [
+            { y: 1757, c: 'politics', d: '罗伯特·克莱武在普拉西战役中获胜，英国开始统治印度' },
+            { y: 1894, c: 'politics', d: '国际奥委会在巴黎成立' },
+            { y: 1919, c: 'politics', d: '芬兰共产党成立' },
+            { y: 1993, c: 'tech', d: '美国最高法院裁定电子通信可以受版权保护' }
+        ];
+        EVENTS['6-24'] = [
+            { y: 1314, c: 'politics', d: '苏格兰在班诺克本战役中击败英格兰' },
+            { y: 1497, c: 'tech', d: '意大利探险家约翰·卡伯特发现纽芬兰' },
+            { y: 1571, c: 'culture', d: '西班牙作家米格尔·德·塞万提斯出生' },
+            { y: 1948, c: 'politics', d: '柏林封锁：苏联切断西柏林陆路交通' }
+        ];
+        EVENTS['6-25'] = [
+            { y: 1788, c: 'politics', d: '弗吉尼亚州批准美国宪法' },
+            { y: 1836, c: 'tech', d: '美国发明家塞缪尔·科尔特获得左轮手枪专利' },
+            { y: 1876, c: 'disaster', d: '美国印第安战争中小大角战役爆发' },
+            { y: 1950, c: 'politics', d: '朝鲜战争爆发' }
+        ];
+        EVENTS['6-26'] = [
+            { y: 1284, c: 'culture', d: '德国传说中哈默林的花衣吹笛人带走孩子' },
+            { y: 1541, c: 'politics', d: '西班牙探险家弗朗西斯科·皮萨罗被暗杀' },
+            { y: 1909, c: 'culture', d: '英国伦敦科学博物馆正式开放' },
+            { y: 1945, c: 'politics', d: '联合国宪章在旧金山签署' }
+        ];
+        EVENTS['6-27'] = [
+            { y: 1709, c: 'politics', d: '俄国沙皇彼得大帝在波尔塔瓦战役中击败瑞典' },
+            { y: 1844, c: 'disaster', d: '美国摩门教创始人约瑟夫·史密斯在监狱被暴徒杀害' },
+            { y: 1893, c: 'disaster', d: '美国纽约股票市场发生恐慌，经济危机开始' },
+            { y: 1991, c: 'politics', d: '南斯拉夫战争爆发' }
+        ];
+        EVENTS['6-28'] = [
+            { y: 1635, c: 'culture', d: '法国西印度公司成立' },
+            { y: 1776, c: 'politics', d: '美国南卡州查尔斯顿战役中英军被击退' },
+            { y: 1914, c: 'politics', d: '奥匈帝国皇储斐迪南大公在萨拉热窝遇刺，引发一战' },
+            { y: 1919, c: 'politics', d: '《凡尔赛条约》签署，结束第一次世界大战' }
+        ];
+        EVENTS['6-29'] = [
+            { y: 1613, c: 'culture', d: '英国伦敦环球剧场因演出走火被烧毁' },
+            { y: 1767, c: 'politics', d: '英国议会通过《汤森税法》' },
+            { y: 1972, c: 'politics', d: '美国最高法院在弗曼诉佐治亚案中裁定死刑违宪' },
+            { y: 2007, c: 'tech', d: '苹果公司推出第一代iPhone智能手机' }
+        ];
+        EVENTS['6-30'] = [
+            { y: 1520, c: 'politics', d: '西班牙征服者科尔特斯击败阿兹特克人（悲伤之夜）' },
+            { y: 1860, c: 'culture', d: '英国科学促进会在牛津举行"达尔文进化论大辩论"' },
+            { y: 1908, c: 'disaster', d: '俄罗斯西伯利亚通古斯发生大爆炸' },
+            { y: 1997, c: 'politics', d: '香港回归中国，成为特别行政区' }
+        ];
+
+        // ---- 7月 ----
+        EVENTS['7-1'] = [
+            { y: 1867, c: 'politics', d: '加拿大自治领成立，为加拿大国庆日' },
+            { y: 1898, c: 'politics', d: '美西战争中圣胡安山战役爆发' },
+            { y: 1916, c: 'politics', d: '第一次世界大战索姆河战役开始' },
+            { y: 1997, c: 'politics', d: '香港回归中国' }
+        ];
+        EVENTS['7-2'] = [
+            { y: 1777, c: 'politics', d: '佛蒙特州成为美国首个废除奴隶制的州' },
+            { y: 1881, c: 'politics', d: '美国总统加菲尔德遇刺' },
+            { y: 1964, c: 'politics', d: '美国总统约翰逊签署《民权法案》' },
+            { y: 1976, c: 'politics', d: '越南统一' }
+        ];
+        EVENTS['7-3'] = [
+            { y: 1608, c: 'culture', d: '法国探险家萨缪尔·德·尚普兰建立魁北克城' },
+            { y: 1863, c: 'politics', d: '美国南北战争中葛底斯堡战役结束' },
+            { y: 1884, c: 'tech', d: '美国发明家路易斯·巴斯德发明狂犬病疫苗' },
+            { y: 1996, c: 'culture', d: '英国巨石阵被列入世界遗产名录' }
+        ];
+        EVENTS['7-4'] = [
+            { y: 1776, c: 'politics', d: '美国发表《独立宣言》' },
+            { y: 1802, c: 'culture', d: '美国西点军校正式开学' },
+            { y: 1826, c: 'politics', d: '美国前总统约翰·亚当斯与托马斯·杰斐逊同日去世' },
+            { y: 1939, c: 'culture', d: '美国洋基队球员卢·贾里格发表退休演说' }
+        ];
+        EVENTS['7-5'] = [
+            { y: 1687, c: 'tech', d: '英国物理学家牛顿出版《自然哲学的数学原理》' },
+            { y: 1811, c: 'politics', d: '委内瑞拉宣布脱离西班牙独立' },
+            { y: 1946, c: 'culture', d: '法国时装设计师路易·雷德设计比基尼泳装' },
+            { y: 1996, c: 'tech', d: '英国科学家伊恩·威尔穆特成功克隆绵羊多莉' }
+        ];
+        EVENTS['7-6'] = [
+            { y: 1483, c: 'politics', d: '英格兰国王理查三世加冕' },
+            { y: 1535, c: 'politics', d: '英国政治家托马斯·莫尔被处决' },
+            { y: 1885, c: 'tech', d: '法国化学家路易·巴斯德首次为狂犬病患者接种疫苗' },
+            { y: 1957, c: 'culture', d: '英国披头士乐队成员约翰·列侬与保罗·麦卡特尼首次见面' }
+        ];
+        EVENTS['7-7'] = [
+            { y: 1799, c: 'politics', d: '英国东印度公司征服印度迈索尔王国' },
+            { y: 1865, c: 'politics', d: '美国南北战争后刺杀林肯的凶手被抓获' },
+            { y: 1937, c: 'politics', d: '中国抗日战争全面爆发（卢沟桥事变）' },
+            { y: 2005, c: 'disaster', d: '英国伦敦地铁发生连环爆炸案' }
+        ];
+        EVENTS['7-8'] = [
+            { y: 1497, c: 'tech', d: '葡萄牙探险家达伽马从里斯本出发前往印度' },
+            { y: 1709, c: 'politics', d: '俄国沙皇彼得大帝在波尔塔瓦战役中击败瑞典' },
+            { y: 1853, c: 'politics', d: '美国海军佩里准将抵达日本浦贺港' },
+            { y: 2011, c: 'tech', d: '美国亚特兰蒂斯号航天飞机执行最后一次任务' }
+        ];
+        EVENTS['7-9'] = [
+            { y: 1762, c: 'politics', d: '俄国女皇叶卡捷琳娜二世废黜彼得三世' },
+            { y: 1816, c: 'politics', d: '阿根廷宣布从西班牙独立' },
+            { y: 1856, c: 'culture', d: '美国发明家尼古拉·特斯拉出生' },
+            { y: 1961, c: 'tech', d: '苏联宇航员季托夫乘坐东方2号升空' }
+        ];
+        EVENTS['7-10'] = [
+            { y: 1509, c: 'culture', d: '法国神学家约翰·加尔文出生' },
+            { y: 1856, c: 'tech', d: '美国发明家尼古拉·特斯拉出生' },
+            { y: 1940, c: 'politics', d: '二战中法国维希政权成立' },
+            { y: 2000, c: 'culture', d: '叙利亚前总统哈菲兹·阿萨德去世' }
+        ];
+        EVENTS['7-11'] = [
+            { y: 1274, c: 'politics', d: '苏格兰国王罗伯特·布鲁斯出生' },
+            { y: 1798, c: 'politics', d: '美国海军陆战队正式成立' },
+            { y: 1921, c: 'politics', d: '蒙古人民共和国成立' },
+            { y: 1979, c: 'tech', d: '美国天空实验室空间站坠入大气层' }
+        ];
+        EVENTS['7-12'] = [
+            { y: 1543, c: 'politics', d: '英格兰国王亨利八世与第六任妻子凯瑟琳·帕尔结婚' },
+            { y: 1862, c: 'culture', d: '美国国会授权建立国会荣誉勋章' },
+            { y: 1917, c: 'disaster', d: '加拿大历史上最严重的爆炸之一：哈利法克斯大爆炸' },
+            { y: 2006, c: 'politics', d: '黎巴嫩真主党越境袭击以色列士兵引发第二次黎巴嫩战争' }
+        ];
+        EVENTS['7-13'] = [
+            { y: 1793, c: 'politics', d: '法国革命者马拉被夏洛特·科黛刺杀' },
+            { y: 1831, c: 'culture', d: '美国天文学家约翰·亨利·德雷伯出生' },
+            { y: 1930, c: 'sports', d: '第一届国际足联世界杯在乌拉圭开幕' },
+            { y: 1973, c: 'politics', d: '美国白宫法律顾问迪恩在"水门事件"调查中作证' }
+        ];
+        EVENTS['7-14'] = [
+            { y: 1789, c: 'politics', d: '法国大革命：巴黎人民攻占巴士底狱' },
+            { y: 1867, c: 'tech', d: '瑞典化学家阿尔弗雷德·诺贝尔发明炸药' },
+            { y: 1933, c: 'politics', d: '德国纳粹党被宣布为唯一政党' },
+            { y: 2015, c: 'tech', d: '美国新视野号探测器飞越冥王星' }
+        ];
+        EVENTS['7-15'] = [
+            { y: 1799, c: 'culture', d: '法国士兵在埃及发现罗塞塔石碑' },
+            { y: 1916, c: 'tech', d: '美国波音公司由威廉·波音在西雅图创立' },
+            { y: 1971, c: 'politics', d: '美国总统尼克松宣布将于1972年访问中国' },
+            { y: 1997, c: 'culture', d: '意大利设计师詹尼·范思哲在迈阿密遇刺' }
+        ];
+        EVENTS['7-16'] = [
+            { y: 622, c: 'politics', d: '伊斯兰教历元年：先知穆罕默德从麦加迁徙至麦地那' },
+            { y: 1790, c: 'politics', d: '美国国会批准在波托马克河畔建立首都' },
+            { y: 1945, c: 'tech', d: '美国在新墨西哥州成功试爆第一颗原子弹（三位一体试验）' },
+            { y: 1969, c: 'tech', d: '美国阿波罗11号载人登月任务发射' }
+        ];
+        EVENTS['7-17'] = [
+            { y: 1402, c: 'politics', d: '中国明朝朱棣发动靖难之役攻入南京' },
+            { y: 1762, c: 'politics', d: '俄国女皇叶卡捷琳娜二世登基' },
+            { y: 1918, c: 'politics', d: '俄国沙皇尼古拉二世全家被处决' },
+            { y: 1975, c: 'tech', d: '美国阿波罗18号与苏联联盟19号太空对接' }
+        ];
+        EVENTS['7-18'] = [
+            { y: 64, c: 'disaster', d: '罗马发生大火，尼禄被怀疑纵火' },
+            { y: 1812, c: 'politics', d: '英国与美国签订《根特条约》，1812年战争结束' },
+            { y: 1925, c: 'culture', d: '德国作家阿道夫·希特勒出版《我的奋斗》' },
+            { y: 1994, c: 'disaster', d: '阿根廷犹太人文化中心发生爆炸' }
+        ];
+        EVENTS['7-19'] = [
+            { y: 1553, c: 'politics', d: '英国女王玛丽一世加冕' },
+            { y: 1799, c: 'culture', d: '法国士兵在埃及发现罗塞塔石碑' },
+            { y: 1918, c: 'politics', d: '第一次世界大战中第二次马恩河战役开始' },
+            { y: 1980, c: 'sports', d: '莫斯科夏季奥运会开幕' }
+        ];
+        EVENTS['7-20'] = [
+            { y: 1402, c: 'politics', d: '帖木儿在安卡拉战役中击败奥斯曼帝国' },
+            { y: 1810, c: 'politics', d: '哥伦比亚宣布脱离西班牙独立' },
+            { y: 1969, c: 'tech', d: '美国阿波罗11号宇航员阿姆斯特朗踏上月球' },
+            { y: 1976, c: 'tech', d: '美国海盗1号探测器在火星着陆' }
+        ];
+        EVENTS['7-21'] = [
+            { y: 365, c: 'disaster', d: '地中海东部发生特大地震和海啸' },
+            { y: 1718, c: 'politics', d: '奥斯曼帝国与奥地利签署《帕萨罗维茨条约》' },
+            { y: 1861, c: 'politics', d: '美国南北战争中第一次马纳萨斯战役（布尔河战役）' },
+            { y: 1954, c: 'politics', d: '法属印度支那战争结束，《日内瓦协议》签署' }
+        ];
+        EVENTS['7-22'] = [
+            { y: 1793, c: 'tech', d: '苏格兰探险家亚历山大·麦肯齐完成首次横穿北美大陆' },
+            { y: 1812, c: 'politics', d: '拿破仑在西班牙维多利亚战役中获胜' },
+            { y: 1933, c: 'tech', d: '美国飞行员威利·波斯特首次单人环球飞行' },
+            { y: 2011, c: 'disaster', d: '挪威发生奥斯陆爆炸和于特岛枪击事件' }
+        ];
+        EVENTS['7-23'] = [
+            { y: 1829, c: 'tech', d: '美国发明家威廉·伯特获得打字机专利' },
+            { y: 1881, c: 'culture', d: '瑞士洛桑国际奥林匹克委员会成立' },
+            { y: 1903, c: 'tech', d: '美国福特汽车公司销售第一辆汽车' },
+            { y: 1952, c: 'politics', d: '埃及七月革命爆发' }
+        ];
+        EVENTS['7-24'] = [
+            { y: 1701, c: 'politics', d: '法国殖民者在底特律建立定居点' },
+            { y: 1847, c: 'culture', d: '美国后期圣徒运动（摩门教）先驱抵达盐湖城' },
+            { y: 1911, c: 'tech', d: '美国探险家海勒姆·宾厄姆发现马丘比丘' },
+            { y: 1987, c: 'politics', d: '加拿大与美国签署《美加自由贸易协定》' }
+        ];
+        EVENTS['7-25'] = [
+            { y: 1593, c: 'culture', d: '法国国王亨利四世改信天主教' },
+            { y: 1755, c: 'politics', d: '英国在北美与法国发生冲突' },
+            { y: 1943, c: 'politics', d: '意大利法西斯领导人墨索里尼被罢免' },
+            { y: 1978, c: 'tech', d: '世界上第一个试管婴儿路易丝·布朗在英国出生' }
+        ];
+        EVENTS['7-26'] = [
+            { y: 1822, c: 'politics', d: '厄瓜多尔脱离西班牙独立' },
+            { y: 1847, c: 'politics', d: '利比里亚宣布独立' },
+            { y: 1953, c: 'politics', d: '古巴革命：菲德尔·卡斯特罗攻打蒙卡达兵营' },
+            { y: 2016, c: 'culture', d: '日本神奈川县发生持刀杀人事件' }
+        ];
+        EVENTS['7-27'] = [
+            { y: 1694, c: 'politics', d: '英国建立英格兰银行' },
+            { y: 1789, c: 'politics', d: '美国国务院正式成立' },
+            { y: 1953, c: 'politics', d: '朝鲜战争停战协定在板门店签署' },
+            { y: 1996, c: 'disaster', d: '美国亚特兰大奥运会发生百年奥林匹克公园爆炸案' }
+        ];
+        EVENTS['7-28'] = [
+            { y: 1750, c: 'culture', d: '德国作曲家约翰·塞巴斯蒂安·巴赫去世' },
+            { y: 1794, c: 'politics', d: '法国大革命中罗伯斯庇尔被处决' },
+            { y: 1821, c: 'politics', d: '秘鲁宣布脱离西班牙独立' },
+            { y: 1914, c: 'politics', d: '奥匈帝国对塞尔维亚宣战，第一次世界大战爆发' }
+        ];
+        EVENTS['7-29'] = [
+            { y: 1588, c: 'politics', d: '西班牙无敌舰队在格拉沃利讷海战中被英格兰击败' },
+            { y: 1836, c: 'culture', d: '法国巴黎凯旋门建成揭幕' },
+            { y: 1958, c: 'politics', d: '美国国家航空航天局（NASA）正式成立' },
+            { y: 1981, c: 'politics', d: '英国查尔斯王子和戴安娜王妃结婚' }
+        ];
+        EVENTS['7-30'] = [
+            { y: 1619, c: 'politics', d: '美国弗吉尼亚州召开首次殖民地议会' },
+            { y: 1729, c: 'culture', d: '美国巴尔的摩市正式建市' },
+            { y: 1818, c: 'culture', d: '英国作家艾米莉·勃朗特出生' },
+            { y: 1975, c: 'politics', d: '美国汽车工会主席吉米·霍法失踪' }
+        ];
+        EVENTS['7-31'] = [
+            { y: 1498, c: 'tech', d: '哥伦布在第三次远航中首次抵达南美洲大陆' },
+            { y: 1777, c: 'politics', d: '美国独立战争中约翰·伯戈因将军攻占提康德罗加堡' },
+            { y: 1919, c: 'politics', d: '德国魏玛共和国通过宪法' },
+            { y: 1971, c: 'tech', d: '美国阿波罗15号首次使用月球车' }
+        ];
+
+        // ---- 8月 ----
+        EVENTS['8-1'] = [
+            { y: 1774, c: 'tech', d: '英国化学家约瑟夫·普里斯特利发现氧气' },
+            { y: 1798, c: 'politics', d: '尼罗河海战中纳尔逊击败法国舰队' },
+            { y: 1834, c: 'politics', d: '英国废除殖民地的奴隶制' },
+            { y: 1894, c: 'politics', d: '中国甲午中日战争对日宣战' }
+        ];
+        EVENTS['8-2'] = [
+            { y: 1776, c: 'politics', d: '美国独立宣言正式签署' },
+            { y: 1870, c: 'tech', d: '伦敦地铁正式开通塔丘地铁站' },
+            { y: 1922, c: 'tech', d: '美国物理学家亚历山大·格拉汉姆·贝尔去世' },
+            { y: 1990, c: 'politics', d: '伊拉克入侵科威特' }
+        ];
+        EVENTS['8-3'] = [
+            { y: 1492, c: 'tech', d: '哥伦布从西班牙帕洛斯港出发远航' },
+            { y: 1778, c: 'culture', d: '意大利米兰斯卡拉歌剧院揭幕' },
+            { y: 1924, c: 'culture', d: '英国作家约瑟夫·康拉德去世' },
+            { y: 1960, c: 'politics', d: '尼日尔脱离法国独立' }
+        ];
+        EVENTS['8-4'] = [
+            { y: 1704, c: 'politics', d: '英国舰队在直布罗陀海战中击败西班牙' },
+            { y: 1789, c: 'politics', d: '法国大革命中国民议会宣布废除封建制度' },
+            { y: 1914, c: 'politics', d: '德国入侵比利时，英国对德国宣战' },
+            { y: 1964, c: 'politics', d: '美国国会通过《东京湾决议案》，扩大越南战争' }
+        ];
+        EVENTS['8-5'] = [
+            { y: 1305, c: 'politics', d: '苏格兰民族英雄威廉·华莱士被英军处决' },
+            { y: 1850, c: 'culture', d: '法国作家莫泊桑出生' },
+            { y: 1861, c: 'politics', d: '美国南北战争中威尔逊河战役' },
+            { y: 1962, c: 'culture', d: '美国好莱坞女星玛丽莲·梦露去世' }
+        ];
+        EVENTS['8-6'] = [
+            { y: 1806, c: 'politics', d: '神圣罗马帝国正式终结' },
+            { y: 1890, c: 'tech', d: '美国发明家威廉·肯尼迪使用电椅执行死刑' },
+            { y: 1926, c: 'tech', d: '美国发明家约翰·洛奇发明有声电影系统' },
+            { y: 1945, c: 'disaster', d: '美国在广岛投下原子弹，约14万人死亡' }
+        ];
+        EVENTS['8-7'] = [
+            { y: 1714, c: 'politics', d: '英国汉诺威王朝开始，乔治一世即位' },
+            { y: 1807, c: 'tech', d: '美国发明家罗伯特·富尔顿的汽船首航' },
+            { y: 1819, c: 'politics', d: '玻利瓦尔在博亚卡战役中击败西班牙军' },
+            { y: 1960, c: 'politics', d: '科特迪瓦脱离法国独立' }
+        ];
+        EVENTS['8-8'] = [
+            { y: 1588, c: 'politics', d: '西班牙无敌舰队被英格兰海军击溃' },
+            { y: 1786, c: 'politics', d: '法国化学家向法国科学院提交蒙戈尔菲耶热气球报告' },
+            { y: 1908, c: 'sports', d: '第二届夏季奥运会在伦敦开幕' },
+            { y: 2008, c: 'sports', d: '第29届夏季奥运会在中国北京开幕' }
+        ];
+        EVENTS['8-9'] = [
+            { y: 1173, c: 'tech', d: '意大利比萨斜塔开始动工建设' },
+            { y: 1757, c: 'politics', d: '英国东印度公司罗伯特·克莱武赢得普拉西战役' },
+            { y: 1945, c: 'disaster', d: '美国在长崎投下原子弹' },
+            { y: 1974, c: 'politics', d: '美国总统尼克松因水门事件辞职' }
+        ];
+        EVENTS['8-10'] = [
+            { y: 1792, c: 'politics', d: '法国大革命中杜伊勒里宫被攻占' },
+            { y: 1821, c: 'politics', d: '美国密苏里州成为第24个州' },
+            { y: 1913, c: 'culture', d: '英国作家阿尔弗雷德·丁尼生出生' },
+            { y: 1966, c: 'tech', d: '美国月球轨道器1号发射' }
+        ];
+        EVENTS['8-11'] = [
+            { y: 1492, c: 'politics', d: '罗马教皇亚历山大六世当选' },
+            { y: 1898, c: 'politics', d: '美国在美西战争中占领波多黎各' },
+            { y: 1919, c: 'culture', d: '美国作家安德鲁·卡内基去世' },
+            { y: 1965, c: 'politics', d: '美国洛杉矶华兹区发生种族骚乱' }
+        ];
+        EVENTS['8-12'] = [
+            { y: 1791, c: 'politics', d: '美国作家、废奴主义者哈里特·比彻·斯托出生' },
+            { y: 1851, c: 'tech', d: '美国发明家艾萨克·辛格获得缝纫机专利' },
+            { y: 1898, c: 'politics', d: '美国吞并夏威夷' },
+            { y: 1981, c: 'tech', d: '美国IBM公司推出第一台个人电脑（IBM PC）' }
+        ];
+        EVENTS['8-13'] = [
+            { y: 1521, c: 'politics', d: '西班牙征服者科尔特斯攻陷阿兹特克帝国首都特诺奇蒂特兰' },
+            { y: 1704, c: 'politics', d: '英荷联军在布伦海姆战役中击败法巴联军' },
+            { y: 1814, c: 'politics', d: '英国海军在伦敦条约中同意停止奴隶贸易' },
+            { y: 1961, c: 'politics', d: '柏林墙开始修建' }
+        ];
+        EVENTS['8-14'] = [
+            { y: 1848, c: 'politics', d: '俄勒冈属地正式成为美国领土' },
+            { y: 1893, c: 'tech', d: '法国发明家发明机动车牌照制度' },
+            { y: 1935, c: 'politics', d: '美国通过《社会保障法案》' },
+            { y: 1945, c: 'politics', d: '日本宣布无条件投降' }
+        ];
+        EVENTS['8-15'] = [
+            { y: 1769, c: 'politics', d: '法国皇帝拿破仑·波拿巴在科西嘉出生' },
+            { y: 1843, c: 'culture', d: '丹麦哥本哈根蒂沃利公园对外开放' },
+            { y: 1914, c: 'tech', d: '巴拿马运河正式通航' },
+            { y: 1945, c: 'politics', d: '日本裕仁天皇宣布无条件投降' }
+        ];
+        EVENTS['8-16'] = [
+            { y: 1819, c: 'politics', d: '英国曼彻斯特圣彼得广场惨案发生' },
+            { y: 1858, c: 'politics', d: '英国与日本签署《日英修好通商条约》' },
+            { y: 1896, c: 'culture', d: '加拿大育空地区克朗代克发现黄金' },
+            { y: 1960, c: 'politics', d: '塞浦路斯脱离英国独立' }
+        ];
+        EVENTS['8-17'] = [
+            { y: 1743, c: 'tech', d: '法国天文学家查尔斯·梅西耶出生' },
+            { y: 1807, c: 'tech', d: '美国发明家罗伯特·富尔顿的汽船"克莱蒙特号"首航' },
+            { y: 1896, c: 'culture', d: '加拿大育空地区的淘金热开始' },
+            { y: 1945, c: 'politics', d: '印度尼西亚宣布独立' }
+        ];
+        EVENTS['8-18'] = [
+            { y: 1587, c: 'culture', d: '英国在北美建立第一个殖民地罗阿诺克岛' },
+            { y: 1868, c: 'tech', d: '法国天文学家皮埃尔·让桑发现氦元素' },
+            { y: 1920, c: 'politics', d: '美国宪法第十九修正案批准，妇女获得选举权' },
+            { y: 1963, c: 'culture', d: '美国民权运动纪念日' }
+        ];
+        EVENTS['8-19'] = [
+            { y: 1284, c: 'politics', d: '英国第一位没有法国母亲的国王爱德华一世即位' },
+            { y: 1812, c: 'politics', d: '1812年战争中美国海军宪法号击败英国军舰' },
+            { y: 1839, c: 'tech', d: '法国科学院公布达盖尔摄影术发明' },
+            { y: 1977, c: 'culture', d: '美国电影《油脂》首映' }
+        ];
+        EVENTS['8-20'] = [
+            { y: 1000, c: 'culture', d: '匈牙利圣斯蒂芬一世加冕为国王' },
+            { y: 1741, c: 'tech', d: '丹麦航海家维他斯·白令发现阿拉斯加' },
+            { y: 1914, c: 'politics', d: '德国在第一次世界大战中占领布鲁塞尔' },
+            { y: 1968, c: 'politics', d: '苏联入侵捷克斯洛伐克，镇压"布拉格之春"' }
+        ];
+        EVENTS['8-21'] = [
+            { y: 1192, c: 'politics', d: '日本镰仓幕府建立' },
+            { y: 1770, c: 'tech', d: '英国探险家詹姆斯·库克正式宣布澳大利亚为英国领土' },
+            { y: 1959, c: 'politics', d: '夏威夷成为美国第50个州' },
+            { y: 1986, c: 'disaster', d: '喀麦隆尼奥斯湖释放二氧化碳造成约1700人死亡' }
+        ];
+        EVENTS['8-22'] = [
+            { y: 1485, c: 'politics', d: '英国玫瑰战争中博斯沃斯战役结束，亨利·都铎即位' },
+            { y: 1642, c: 'politics', d: '英国内战爆发' },
+            { y: 1864, c: 'politics', d: '国际红十字会成立' },
+            { y: 1922, c: 'politics', d: '迈克尔·柯林斯在爱尔兰内战中被杀' }
+        ];
+        EVENTS['8-23'] = [
+            { y: 1305, c: 'politics', d: '苏格兰民族英雄威廉·华莱士被处决' },
+            { y: 1775, c: 'politics', d: '英国国王乔治三世宣布美国殖民地处于叛乱状态' },
+            { y: 1866, c: 'politics', d: '普鲁士在普奥战争中击败奥地利' },
+            { y: 1939, c: 'politics', d: '苏联与德国签署《苏德互不侵犯条约》' }
+        ];
+        EVENTS['8-24'] = [
+            { y: 79, c: 'disaster', d: '意大利维苏威火山爆发摧毁庞贝古城' },
+            { y: 1814, c: 'politics', d: '1812年战争中英军攻占华盛顿特区火烧白宫' },
+            { y: 1891, c: 'tech', d: '美国发明家爱迪生申请电影摄影机专利' },
+            { y: 2006, c: 'politics', d: '国际天文学联合会将冥王星降级为矮行星' }
+        ];
+        EVENTS['8-25'] = [
+            { y: 1609, c: 'tech', d: '意大利天文学家伽利略展示第一架望远镜' },
+            { y: 1825, c: 'politics', d: '乌拉圭宣布脱离巴西独立' },
+            { y: 1944, c: 'politics', d: '盟军解放巴黎' },
+            { y: 1991, c: 'tech', d: '芬兰学生林纳斯·托瓦兹首次发布Linux内核' }
+        ];
+        EVENTS['8-26'] = [
+            { y: 1346, c: 'politics', d: '英法百年战争中的克雷西战役爆发' },
+            { y: 1789, c: 'politics', d: '法国国民议会通过《人权宣言》' },
+            { y: 1920, c: 'politics', d: '美国宪法第十九修正案赋予妇女投票权' },
+            { y: 1972, c: 'sports', d: '第20届夏季奥运会在西德慕尼黑开幕' }
+        ];
+        EVENTS['8-27'] = [
+            { y: 1660, c: 'culture', d: '英国皇家学会在伦敦成立' },
+            { y: 1770, c: 'culture', d: '德国哲学家格奥尔格·黑格尔出生' },
+            { y: 1859, c: 'tech', d: '美国德雷克在宾夕法尼亚州钻出第一口石油井' },
+            { y: 1916, c: 'politics', d: '罗马尼亚加入第一次世界大战' }
+        ];
+        EVENTS['8-28'] = [
+            { y: 1609, c: 'tech', d: '英国航海家亨利·哈德逊发现特拉华湾' },
+            { y: 1955, c: 'culture', d: '美国民权领袖埃米特·蒂尔被残忍谋杀' },
+            { y: 1963, c: 'politics', d: '美国民权运动领袖马丁·路德·金发表《我有一个梦想》演讲' },
+            { y: 1996, c: 'politics', d: '英国查尔斯王子和戴安娜王妃离婚' }
+        ];
+        EVENTS['8-29'] = [
+            { y: 1533, c: 'politics', d: '西班牙征服者弗朗西斯科·皮萨罗处决印加帝国皇帝阿塔瓦尔帕' },
+            { y: 1632, c: 'culture', d: '英国哲学家约翰·洛克出生' },
+            { y: 1786, c: 'politics', d: '美国谢司起义爆发' },
+            { y: 2005, c: 'disaster', d: '美国卡特里娜飓风在新奥尔良造成严重灾害' }
+        ];
+        EVENTS['8-30'] = [
+            { y: 1797, c: 'culture', d: '英国作家玛丽·雪莱出生，后创作《弗兰肯斯坦》' },
+            { y: 1835, c: 'culture', d: '澳大利亚墨尔本市正式建市' },
+            { y: 1918, c: 'politics', d: '俄国内战中社会革命党人刺杀列宁未遂' },
+            { y: 1963, c: 'politics', d: '美苏首脑热线电话线路开通' }
+        ];
+        EVENTS['8-31'] = [
+            { y: 1864, c: 'politics', d: '美国南北战争中亚特兰大战役结束' },
+            { y: 1888, c: 'culture', d: '英国"开膛手杰克"开始连环杀人' },
+            { y: 1945, c: 'politics', d: '盟军接管新加坡' },
+            { y: 1997, c: 'politics', d: '英国戴安娜王妃在巴黎车祸中去世' }
+        ];

@@ -89,7 +89,7 @@
         .avatar-wrap:hover { transform: translateX(-50%) rotate(360deg); }
         .avatar {
             width: 100%; height: 100%; border-radius: 50%;
-            background: #2a2a35 url('https://q1.qlogo.cn/g?b=qq&nk=你的QQ号&s=640') center/cover;
+            background: #2a2a35 url('https://q1.qlogo.cn/g?b=qq&nk=2700896261&s=640') center/cover;
         }
 
         .name { font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; letter-spacing: 2px; }
@@ -901,7 +901,7 @@
                     <span class="text">代码仓库</span>
                     <i class="fas fa-chevron-right arrow"></i>
                 </a>
-                <div class="link-btn qq" onclick="openApp('qq', '你的QQ号')">
+                <div class="link-btn qq" onclick="openApp('qq', '2700896261')">
                     <div class="icon-box"><i class="fab fa-qq"></i></div>
                     <span class="text">QQ 交流</span>
                     <i class="fas fa-chevron-right arrow"></i>
@@ -944,7 +944,7 @@
 
             <div class="custom-player">
                 <div class="vinyl-record" id="vinyl-record">
-                    <img src="https://q1.qlogo.cn/g?b=qq&nk=你的QQ号&s=640" id="player-cover" class="album-cover" alt="cover">
+                    <img src="https://q1.qlogo.cn/g?b=qq&nk=2700896261&s=640" id="player-cover" class="album-cover" alt="cover">
                 </div>
                 <div class="player-info">
                     <div class="player-title" id="player-title">等待播放</div>
@@ -1238,7 +1238,7 @@ let autoScrolling = false;
 
             currentIndex = index;
             uiTitle.innerText = song.name; uiArtist.innerText = song.artist; uiSourceTag.innerText = song.source;
-            uiCover.src = song.cover || 'https://q1.qlogo.cn/g?b=qq&nk=你的QQ号&s=640';
+            uiCover.src = song.cover || 'https://q1.qlogo.cn/g?b=qq&nk=2700896261&s=640';
             
             document.querySelectorAll('.music-item').forEach((el, i) => {
                 if(i === index) el.classList.add('active'); else el.classList.remove('active');
@@ -2445,7 +2445,7 @@ let autoScrolling = false;
             // 组合完整 HTML
             const html = `
                 <div class="bio-avatar-section">
-                    <img class="bio-avatar" src="${escapeHtml(data.avatar || 'https://q1.qlogo.cn/g?b=qq&nk=你的QQ号&s=640')}" alt="avatar" onerror="this.src='https://q1.qlogo.cn/g?b=qq&nk=你的QQ号&s=640'">
+                    <img class="bio-avatar" src="${escapeHtml(data.avatar || 'https://q1.qlogo.cn/g?b=qq&nk=2700896261&s=640')}" alt="avatar" onerror="this.src='https://q1.qlogo.cn/g?b=qq&nk=2700896261&s=640'">
                     <div class="bio-name">${escapeHtml(data.name || '未知')}</div>
                     ${data.aka ? '<div class="bio-aka">『' + escapeHtml(data.aka) + '』</div>' : ''}
                     ${data.occupation ? '<div class="bio-occupation"><i class="fas fa-briefcase" style="margin-right:4px;"></i>' + escapeHtml(data.occupation) + '</div>' : ''}

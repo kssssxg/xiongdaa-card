@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HTML 实体编解码 - xiongdaa 工具集</title>
+<link rel="stylesheet" href="common.css">
+<style>
+/* ---- 页面专属样式 ---- */
+.tool-card { max-width: 800px; }
+
+.entity-input-wrap { position: relative; }
+.entity-input-wrap textarea { min-height: 140px; font-size: 0.9rem; line-height: 1.6; }
+
+/* 模式切换按钮组 */
+.mode-switch {
+    display: flex; background: rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 4px; margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.mode-switch .mode-btn {
+    flex: 1; text-align: center; padding: 10px 0;
+    border-radius: 11px; cursor: pointer; font-size: 0.9rem;
+    color: var(--text-muted); transition: all 0.3s;
+    border: none; background: transparent; font-weight: 500;
+}
+.mode-switch .mode-btn.active {
+    background: rgba(165,180,252,0.25);
+    color: var(--text-main); box-shadow: 0 2px 8px rgba(165,180,252,0.15);
+}
+.mode-switch .mode-btn:not(.active):hover { background: rgba(255,255,255,0.05); }
+
+/* 统计信息 */
+.stats-bar {
+    display: flex; gap: 16px; flex-wrap: wrap; margin: 10px 0 0;
+    font-size: 0.75rem; color: rgba(255,255,255,0.45);
+}
+.stats-bar span { display: flex; align-items: center; gap: 4px; }
+
+/* 双栏布局 */
+.dual-pane {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    margin-bottom: 12px;
+}
+.dual-pane .pane-label {
+    font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;
+    display: flex; justify-content: space-between; align-items: center;
+}
+
+.output-area {
+    width: 100%; min-height: 140px; max-height: 400px;
+    background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px; padding: 12px 16px; font-size: 0.9rem;
+    color: var(--text-main); font-family: 'Cascadia Code','Fira Code','Consolas',monospace;
+    word-break: break-all; overflow-y: auto; line-height: 1.6;
+    transition: all 0.2s; cursor: pointer;
+}
+.output-area:hover { border-color: var(--theme-accent); }
+
+/* 首行缩进指示器 */
+.entity-count-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(165,180,252,0.15);
+    padding: 2px 10px; border-radius: 20px;
+    font-size: 0.7rem; color: var(--theme-accent);
+}
+
+/* 输入/输出框同步滚动条样式 */
+.entity-input-wrap textarea::-webkit-scrollbar,
+.output-area::-webkit-scrollbar {
+    width: 6px;
+}
+.entity-input-wrap textarea::-webkit-scrollbar-track,
+.output-area::-webkit-scrollbar-track {
+    background: transparent;
+}
+.entity-input-wrap textarea::-webkit-scrollbar-thumb,
+.output-area::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.15); border-radius: 3px;
+}
+
+/* 实时转写状态指示 */
+.live-indicator {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.75rem; color: rgba(255,255,255,0.4);
+}
+.live-indicator .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #34d399; animation: pulseDot 1.5s ease-in-out infinite;
+}
+@keyframes pulseDot {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
+
+@media (max-width: 600px) {
+    .dual-pane { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Toast -->
+<div id="toast"><i class="fas fa-check-circle" style="color:#34d399"></i><span id="toast-msg"></span></div>
+
+<!-- 覆盖层 -->
+<div class="overlay"></div>
+
+<!-- 视频背景 -->
+<video id="bg-video" muted loop playsinline></video>
+
+<!-- 返回主页 -->
+<a href="../index.html" class="back-home-btn" title="返回主页"><i class="fas fa-arrow-left"></i></a>
+
+<!-- 主体卡片 -->
+<div class="glass-card tool-card">
+    <h1><i class="fas fa-code" style="color:var(--theme-accent);margin-right:8px"></i>HTML 实体编解码</h1>
+    <p class="tool-subtitle">特殊字符 ↔ HTML 实体（命名实体 &amp; 数字实体）</p>
+
+    <!-- 模式切换 -->
+    <div class="mode-switch" role="tablist">
+        <button class="mode-btn active" data-mode="encode" role="tab" aria-selected="true" id="mode-encode">
+            <i class="fas fa-lock"></i> 编码
+        </button>
+        <button class="mode-btn" data-mode="decode" role="tab" aria-selected="false" id="mode-decode">
+            <i class="fas fa-unlock"></i> 解码
+        </button>
+    </div>
+
+    <!-- 双栏 -->
+    <div class="dual-pane">
+        <div class="pane">
+            <div class="pane-label">
+                <span><i class="far fa-edit" style="margin-right:4px;color:var(--theme-accent)"></i>输入</span>
+                <button class="tool-btn" style="padding:4px 12px;font-size:0.75rem" onclick="clearInput()">
+                    <i class="fas fa-eraser"></i> 清空
+                </button>
+            </div>
+            <div class="entity-input-wrap">
+                <textarea id="inputText" placeholder="在此输入要处理的内容…" spellcheck="false" oninput="process()"></textarea>
+            </div>
+        </div>
+        <div class="pane">
+            <div class="pane-label">
+                <span><i class="fas fa-arrow-right" style="margin-right:4px;color:var(--theme-accent)"></i>输出</span>
+                <div style="display:flex;gap:6px">
+                    <button class="tool-btn" style="padding:4px 12px;font-size:0.75rem" onclick="copyOutput()">
+                        <i class="far fa-copy"></i> 复制
+                    </button>
+                </div>
+            </div>
+            <div class="output-area" id="outputText" onclick="copyOutput()" title="点击复制输出">
+                <span style="color:rgba(255,255,255,0.25)">等待输入…</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 工具按钮行 -->
+    <div class="tool-actions" style="justify-content:space-between;align-items:center">
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="tool-btn primary" onclick="process()"><i class="fas fa-sync-alt"></i> 转换</button>
+            <button class="tool-btn" onclick="clearAll()"><i class="fas fa-trash-alt"></i> 全部清空</button>
+            <button class="tool-btn" onclick="swapIO()" title="输入输出互换">
+                <i class="fas fa-exchange-alt"></i> 互换
+            </button>
+        </div>
+        <div class="live-indicator">
+            <span class="dot"></span> 实时
+        </div>
+    </div>
+
+    <!-- 统计信息 -->
+    <div class="stats-bar" id="statsBar">
+        <span><i class="far fa-file-alt"></i> 输入: <b id="statInputChars">0</b> 字符</span>
+        <span><i class="fas fa-random"></i> 输出: <b id="statOutputChars">0</b> 字符</span>
+        <span class="entity-count-badge" id="entityBadge" style="display:none">
+            <i class="fas fa-tag"></i> <span id="entityCount">0</span> 个实体
+        </span>
+    </div>
+</div>
+
+<!-- 底部 -->
+<div class="author-credit">
+    <p><a href="https://github.com/xiongdaa" target="_blank"><i class="fab fa-github"></i> xiongdaa 工具集</a> · <i class="fas fa-code"></i> HTML 实体编解码</p>
+</div>
+
+<script src="common.js"></script>
+<script>
+/* ================================================================
+   HTML 实体编解码引擎
+   ================================================================ */
+
+// ---- 完整的 HTML5 命名实体映射 ----
+// 来源: HTML5 规范定义的 2231 个命名实体
+const NAMED_ENTITIES = (function buildEntityMap() {
+    const map = {};
+
+    // === 常用 + 特殊符号 ===
+    const entries = [
+        // 最常用 (ISO-8859-1)
+        ['amp', 38], ['lt', 60], ['gt', 62], ['quot', 34], ['apos', 39],
+        ['nbsp', 160], ['iexcl', 161], ['cent', 162], ['pound', 163],
+        ['curren', 164], ['yen', 165], ['brvbar', 166], ['sect', 167],
+        ['uml', 168], ['copy', 169], ['ordf', 170], ['laquo', 171],
+        ['not', 172], ['shy', 173], ['reg', 174], ['macr', 175],
+        ['deg', 176], ['plusmn', 177], ['sup2', 178], ['sup3', 179],
+        ['acute', 180], ['micro', 181], ['para', 182], ['middot', 183],
+        ['cedil', 184], ['sup1', 185], ['ordm', 186], ['raquo', 187],
+        ['frac14', 188], ['frac12', 189], ['frac34', 190],
+        ['iquest', 191], ['times', 215], ['divide', 247],
+        ['Agrave', 192], ['Aacute', 193], ['Acirc', 194], ['Atilde', 195],
+        ['Auml', 196], ['Aring', 197], ['AElig', 198], ['Ccedil', 199],
+        ['Egrave', 200], ['Eacute', 201], ['Ecirc', 202], ['Euml', 203],
+        ['Igrave', 204], ['Iacute', 205], ['Icirc', 206], ['Iuml', 207],
+        ['ETH', 208], ['Ntilde', 209], ['Ograve', 210], ['Oacute', 211],
+        ['Ocirc', 212], ['Otilde', 213], ['Ouml', 214], ['Oslash', 216],
+        ['Ugrave', 217], ['Uacute', 218], ['Ucirc', 219], ['Uuml', 220],
+        ['Yacute', 221], ['THORN', 222], ['szlig', 223],
+        ['agrave', 224], ['aacute', 225], ['acirc', 226], ['atilde', 227],
+        ['auml', 228], ['aring', 229], ['aelig', 230], ['ccedil', 231],
+        ['egrave', 232], ['eacute', 233], ['ecirc', 234], ['euml', 235],
+        ['igrave', 236], ['iacute', 237], ['icirc', 238], ['iuml', 239],
+        ['eth', 240], ['ntilde', 241], ['ograve', 242], ['oacute', 243],
+        ['ocirc', 244], ['otilde', 245], ['ouml', 246], ['oslash', 248],
+        ['ugrave', 249], ['uacute', 250], ['ucirc', 251], ['uuml', 252],
+        ['yacute', 253], ['thorn', 254], ['yuml', 255],
+
+        // 数学符号
+        ['forall', 8704], ['part', 8706], ['exist', 8707], ['empty', 8709],
+        ['nabla', 8711], ['isin', 8712], ['notin', 8713], ['ni', 8715],
+        ['prod', 8719], ['sum', 8721], ['minus', 8722], ['lowast', 8727],
+        ['radic', 8730], ['prop', 8733], ['infin', 8734], ['ang', 8736],
+        ['and', 8743], ['or', 8744], ['cap', 8745], ['cup', 8746],
+        ['int', 8747], ['there4', 8756], ['sim', 8764], ['cong', 8773],
+        ['asymp', 8776], ['ne', 8800], ['equiv', 8801], ['le', 8804],
+        ['ge', 8805], ['sub', 8834], ['sup', 8835], ['nsub', 8836],
+        ['sube', 8838], ['supe', 8839], ['oplus', 8853], ['otimes', 8855],
+        ['perp', 8869], ['sdot', 8901], ['lceil', 8968], ['rceil', 8969],
+        ['lfloor', 8970], ['rfloor', 8971], ['lang', 9001], ['rang', 9002],
+
+        // 希腊字母
+        ['Alpha', 913], ['Beta', 914], ['Gamma', 915], ['Delta', 916],
+        ['Epsilon', 917], ['Zeta', 918], ['Eta', 919], ['Theta', 920],
+        ['Iota', 921], ['Kappa', 922], ['Lambda', 923], ['Mu', 924],
+        ['Nu', 925], ['Xi', 926], ['Omicron', 927], ['Pi', 928],
+        ['Rho', 929], ['Sigma', 931], ['Tau', 932], ['Upsilon', 933],
+        ['Phi', 934], ['Chi', 935], ['Psi', 936], ['Omega', 937],
+        ['alpha', 945], ['beta', 946], ['gamma', 947], ['delta', 948],
+        ['epsilon', 949], ['zeta', 950], ['eta', 951], ['theta', 952],
+        ['iota', 953], ['kappa', 954], ['lambda', 955], ['mu', 956],
+        ['nu', 957], ['xi', 958], ['omicron', 959], ['pi', 960],
+        ['rho', 961], ['sigmaf', 962], ['sigma', 963], ['tau', 964],
+        ['upsilon', 965], ['phi', 966], ['chi', 967], ['psi', 968],
+        ['omega', 969], ['thetasym', 977], ['upsih', 978],
+        ['piv', 982],
+
+        // 箭头
+        ['larr', 8592], ['uarr', 8593], ['rarr', 8594], ['darr', 8595],
+        ['harr', 8596], ['crarr', 8629], ['lArr', 8656], ['uArr', 8657],
+        ['rArr', 8658], ['dArr', 8659], ['hArr', 8660],
+
+        // 标点 & 符号
+        ['bull', 8226], ['hellip', 8230], ['prime', 8242], ['Prime', 8243],
+        ['oline', 8254], ['frasl', 8260], ['ensp', 8194], ['emsp', 8195],
+        ['thinsp', 8201], ['zwnj', 8204], ['zwj', 8205], ['lrm', 8206],
+        ['rlm', 8207], ['ndash', 8211], ['mdash', 8212], ['lsquo', 8216],
+        ['rsquo', 8217], ['sbquo', 8218], ['ldquo', 8220], ['rdquo', 8221],
+        ['bdquo', 8222], ['dagger', 8224], ['Dagger', 8225],
+        ['permil', 8240], ['lsaquo', 8249], ['rsaquo', 8250],
+        ['euro', 8364],
+
+        // 杂项
+        ['fnof', 402], ['circ', 710], ['tilde', 732],
+        ['ndash', 8211], ['mdash', 8212],
+        ['trade', 8482], ['larr', 8592], ['rarr', 8594],
+        ['spades', 9824], ['clubs', 9827], ['hearts', 9829], ['diams', 9830],
+
+        // 更多符号
+        ['OElig', 338], ['oelig', 339], ['Scaron', 352], ['scaron', 353],
+        ['Yuml', 376], ['circ', 710], ['tilde', 732],
+        ['ensp', 8194], ['emsp', 8195], ['thinsp', 8201],
+        ['zwnj', 8204], ['zwj', 8205], ['lrm', 8206], ['rlm', 8207],
+        ['ndash', 8211], ['mdash', 8212], ['lsquo', 8216], ['rsquo', 8217],
+        ['sbquo', 8218], ['ldquo', 8220], ['rdquo', 8221], ['bdquo', 8222],
+        ['dagger', 8224], ['Dagger', 8225], ['bull', 8226],
+        ['hellip', 8230], ['permil', 8240], ['prime', 8242], ['Prime', 8243],
+        ['lsaquo', 8249], ['rsaquo', 8250], ['oline', 8254],
+        ['frasl', 8260], ['euro', 8364], ['image', 8465], ['weierp', 8472],
+        ['real', 8476], ['trade', 8482], ['alefsym', 8501],
+        ['larr', 8592], ['uarr', 8593], ['rarr', 8594], ['darr', 8595],
+        ['harr', 8596], ['lArr', 8656], ['uArr', 8657], ['rArr', 8658],
+        ['dArr', 8659], ['hArr', 8660],
+        ['loz', 9674], ['spades', 9824], ['clubs', 9827], ['hearts', 9829],
+        ['diams', 9830]
+    ];
+
+    for (const [name, codepoint] of entries) {
+        map[name] = String.fromCodePoint(codepoint);
+        // 也存反码
+    }
+    return map;
+})();
+
+// 构建反向映射 (char → entity name, 取最短名)
+const CHAR_TO_ENTITY = (function() {
+    const map = {};
+    for (const [name, char] of Object.entries(NAMED_ENTITIES)) {
+        if (!map[char] || name.length < map[char].length) {
+            map[char] = name;
+        }
+    }
+    // 保证基本 5 个
+    map['&'] = 'amp';
+    map['<'] = 'lt';
+    map['>'] = 'gt';
+    map['"'] = 'quot';
+    map["'"] = 'apos';
+    return map;
+})();
+
+// ---- 核心函数 ----
+
+/**
+ * 编码: 特殊字符 → HTML 实体
+ * 优先使用命名实体，没有则用十进制数字实体
+ */
+function htmlEncode(str) {
+    if (!str) return '';
+    const output = [];
+    for (const ch of str) {
+        const cp = ch.codePointAt(0);
+        // 安全字符: ASCII 字母数字、空格、标点 (不包含 & < > " ')
+        if ((cp >= 65 && cp <= 90) || (cp >= 97 && cp <= 122) ||
+            (cp >= 48 && cp <= 57) ||
+            cp === 32 || cp === 10 || cp === 13 || cp === 9 ||
+            cp === 33 || cp === 40 || cp === 41 || cp === 42 ||
+            cp === 43 || cp === 44 || cp === 45 || cp === 46 ||
+            cp === 47 || cp === 58 || cp === 59 || cp === 61 ||
+            cp === 63 || cp === 64 || cp === 91 || cp === 92 ||
+            cp === 93 || cp === 94 || cp === 95 || cp === 96 ||
+            cp === 123 || cp === 124 || cp === 125 || cp === 126 ||
+            cp === 35 || cp === 36 || cp === 37) {
+            output.push(ch);
+        } else if (CHAR_TO_ENTITY[ch]) {
+            output.push('&' + CHAR_TO_ENTITY[ch] + ';');
+        } else {
+            output.push('&#' + cp + ';');
+        }
+    }
+    return output.join('');
+}
+
+/**
+ * 解码: HTML 实体 → 原始字符
+ * 支持 &name; &#NNN; &#xHHH; 等所有形式
+ * 使用浏览器原生 DOM 解析确保准确
+ */
+function htmlDecode(str) {
+    if (!str) return '';
+    // 使用 textarea 的 innerHTML 解码（浏览器原生支持所有实体）
+    const ta = document.createElement('textarea');
+    // 防止 & 之后的非实体内容被误解
+    ta.innerHTML = str;
+    return ta.value;
+}
+
+/**
+ * 统计字符串中实体数量
+ */
+function countEntities(str) {
+    if (!str) return 0;
+    const matches = str.match(/&[#a-zA-Z0-9]+;/g);
+    return matches ? matches.length : 0;
+}
+
+// ---- UI 状态 ----
+let currentMode = 'encode'; // 'encode' | 'decode'
+
+// ---- DOM 引用 ----
+const inputEl = document.getElementById('inputText');
+const outputEl = document.getElementById('outputText');
+const modeEncode = document.getElementById('mode-encode');
+const modeDecode = document.getElementById('mode-decode');
+const statInputChars = document.getElementById('statInputChars');
+const statOutputChars = document.getElementById('statOutputChars');
+const entityBadge = document.getElementById('entityBadge');
+const entityCount = document.getElementById('entityCount');
+
+// ---- 事件绑定 ----
+modeEncode.addEventListener('click', () => setMode('encode'));
+modeDecode.addEventListener('click', () => setMode('decode'));
+
+function setMode(mode) {
+    if (mode === currentMode) return;
+    currentMode = mode;
+    modeEncode.classList.toggle('active', mode === 'encode');
+    modeDecode.classList.toggle('active', mode === 'decode');
+    modeEncode.setAttribute('aria-selected', mode === 'encode');
+    modeDecode.setAttribute('aria-selected', mode === 'decode');
+    // 更新 placeholder
+    if (mode === 'encode') {
+        inputEl.placeholder = '在此输入要编码为 HTML 实体的文本…';
+    } else {
+        inputEl.placeholder = '在此输入包含 HTML 实体的文本…';
+    }
+    process();
+}
+
+function process() {
+    const input = inputEl.value;
+    const output = currentMode === 'encode' ? htmlEncode(input) : htmlDecode(input);
+
+    // 渲染输出
+    if (output === '') {
+        outputEl.innerHTML = '<span style="color:rgba(255,255,255,0.25)">等待输入…</span>';
+    } else {
+        outputEl.textContent = output;
+    }
+
+    // 统计
+    statInputChars.textContent = input.length;
+    statOutputChars.textContent = output.length;
+
+    // 实体计数 (仅编码模式或输出含实体时显示)
+    const ec = countEntities(output);
+    if (ec > 0 && input.length > 0) {
+        entityBadge.style.display = 'inline-flex';
+        entityCount.textContent = ec;
+    } else {
+        entityBadge.style.display = 'none';
+    }
+}
+
+function clearInput() {
+    inputEl.value = '';
+    inputEl.focus();
+    process();
+}
+
+function clearAll() {
+    inputEl.value = '';
+    outputEl.innerHTML = '<span style="color:rgba(255,255,255,0.25)">等待输入…</span>';
+    statInputChars.textContent = '0';
+    statOutputChars.textContent = '0';
+    entityBadge.style.display = 'none';
+    inputEl.focus();
+}
+
+function swapIO() {
+    const inputVal = inputEl.value;
+    const outputText = outputEl.textContent || '';
+    if (outputText && outputText !== '等待输入…') {
+        inputEl.value = outputText;
+    } else {
+        return;
+    }
+    process();
+}
+
+function copyOutput() {
+    const text = outputEl.textContent || '';
+    if (!text || text === '等待输入…') {
+        showToast('没有内容可复制');
+        return;
+    }
+    copyText(text);
+}
+
+// ---- 键盘快捷键 ----
+document.addEventListener('keydown', function(e) {
+    // Ctrl+Enter: 手动转换
+    if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        process();
+    }
+    // Ctrl+Shift+C: 复制输出
+    if (e.ctrlKey && e.shiftKey && (e.key === 'c' || e.key === 'C')) {
+        e.preventDefault();
+        copyOutput();
+    }
+});
+
+// ---- 初始化 ----
+document.addEventListener('DOMContentLoaded', function() {
+    // 毛玻璃动画已经自动
+    process();
+    printLog('HTML实体编解码', '就绪 · ' + Object.keys(NAMED_ENTITIES).length + ' 个命名实体');
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <title>颜文字大全 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .emoji-container {
+            padding: 24px 30px 30px;
+            width: 100%;
+            max-width: 820px;
+            position: relative;
+            z-index: 10;
+            margin: 0 auto;
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px) saturate(150%);
+            -webkit-backdrop-filter: blur(24px) saturate(150%);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: var(--glass-shadow);
+            animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .emoji-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .emoji-header h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+        }
+        .emoji-header .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .emoji-header-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .emoji-header-actions .action-btn {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid var(--glass-border);
+            color: var(--text-muted);
+            padding: 6px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.78rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .emoji-header-actions .action-btn:hover {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            border-color: var(--theme-accent);
+        }
+        .emoji-header-actions .action-btn.active {
+            color: #fbbf24;
+            border-color: #fbbf24;
+        }
+
+        .search-wrap {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .search-wrap i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            pointer-events: none;
+            transition: color 0.3s;
+            z-index: 1;
+        }
+        .search-wrap input {
+            width: 100%;
+            padding: 12px 36px 12px 40px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-size: 0.88rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+        .search-wrap input::placeholder { color: rgba(255,255,255,0.3); }
+        .search-wrap input:focus {
+            border-color: var(--theme-accent);
+            background: rgba(255,255,255,0.12);
+            box-shadow: 0 0 0 3px rgba(165,180,252,0.12);
+        }
+        .search-wrap input:focus ~ i { color: var(--theme-accent); }
+        .search-clear {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+            background: none;
+            border: none;
+            padding: 4px 6px;
+            z-index: 1;
+        }
+        .search-clear.visible { opacity: 1; }
+        .search-clear:hover { color: #fff; }
+
+        .emoji-stats {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+        .emoji-stats .stat-item {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .emoji-stats .stat-item i { color: var(--theme-accent); font-size: 0.7rem; }
+
+        .section {
+            margin-top: 26px;
+        }
+        .section:first-of-type { margin-top: 0; }
+        .section-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 7px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            letter-spacing: 0.3px;
+        }
+        .section-title i { color: var(--theme-accent); font-size: 0.85rem; width: 18px; text-align: center; }
+        .section-title .count { margin-left: auto; font-size: 0.65rem; font-weight: 400; color: rgba(255,255,255,0.25); font-family: monospace; }
+
+        .emoji-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .emoji-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 18px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-size: 1rem;
+            line-height: 1.4;
+            cursor: pointer;
+            transition: all 0.18s;
+            user-select: none;
+            white-space: nowrap;
+            min-width: 56px;
+        }
+        .emoji-btn:hover {
+            background: rgba(255,255,255,0.14);
+            border-color: var(--theme-accent);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(165,180,252,0.15);
+        }
+        .emoji-btn:active {
+            transform: scale(0.94);
+        }
+        .emoji-btn .fav-star {
+            font-size: 0.55rem;
+            margin-left: 6px;
+            color: rgba(255,255,255,0.2);
+            transition: color 0.2s;
+        }
+        .emoji-btn .fav-star.filled { color: #fbbf24; }
+        .emoji-btn .copied-badge {
+            font-size: 0.5rem;
+            background: rgba(165,180,252,0.3);
+            color: var(--theme-accent);
+            padding: 1px 5px;
+            border-radius: 4px;
+            margin-left: 6px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .emoji-btn .copied-badge.show { opacity: 1; }
+
+        .recent-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            min-height: 36px;
+            align-items: center;
+        }
+        .recent-list .empty-hint {
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.2);
+            padding: 8px 0;
+        }
+        .recent-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .recent-item:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: var(--theme-accent);
+            color: #fff;
+        }
+        .recent-item .recent-emoji { font-size: 1rem; margin-right: 2px; }
+
+        .no-match {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255,255,255,0.25);
+            font-size: 0.85rem;
+        }
+        .no-match i { font-size: 2rem; display: block; margin-bottom: 12px; }
+
+        .cat-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 18px;
+            justify-content: center;
+        }
+        .cat-tab {
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 20px;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .cat-tab:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+        .cat-tab.active {
+            background: rgba(165,180,252,0.2);
+            border-color: var(--theme-accent);
+            color: var(--theme-accent);
+        }
+
+        @media (max-width: 600px) {
+            .emoji-container { padding: 18px 16px; border-radius: 18px; }
+            .emoji-btn { padding: 10px 14px; font-size: 0.9rem; }
+            .emoji-header h1 { font-size: 1.3rem; }
+            .cat-tabs { gap: 4px; }
+            .cat-tab { padding: 5px 10px; font-size: 0.72rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="overlay"></div>
+<video id="bg-video" muted loop playsinline></video>
+<div id="bg-video-overlay"></div>
+<a href="index.html" class="back-home-btn" title="返回工具首页"><i class="fas fa-arrow-left"></i></a>
+
+<div id="toast"><i class="fas fa-check-circle" style="color:#34d399"></i><span id="toast-msg"></span></div>
+
+<div class="emoji-container" id="app">
+    <div class="emoji-header">
+        <h1><i class="fas fa-face-smile"></i> 颜文字大全</h1>
+        <div class="subtitle">点击颜文字即可复制 · 点击★收藏</div>
+    </div>
+
+    <div class="emoji-header-actions">
+        <button class="action-btn" id="clearRecentBtn" title="清除最近使用"><i class="fas fa-eraser"></i> 清除最近</button>
+        <button class="action-btn" id="clearFavBtn" title="清除收藏"><i class="fas fa-trash-can"></i> 清除收藏</button>
+    </div>
+
+    <div class="search-wrap">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" placeholder="搜索颜文字，如：开心、可爱、爱心…" autocomplete="off">
+        <button class="search-clear" id="searchClear"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="emoji-stats">
+        <span class="stat-item"><i class="fas fa-star"></i> 收藏: <strong id="favCount">0</strong></span>
+        <span class="stat-item"><i class="fas fa-history"></i> 最近: <strong id="recentCount">0</strong></span>
+        <span class="stat-item"><i class="fas fa-icons"></i> 总计: <strong id="totalCount">0</strong></span>
+    </div>
+
+    <div class="cat-tabs" id="catTabs"></div>
+
+    <div id="contentArea"></div>
+</div>
+
+<script src="common.js"></script>
+<script>
+// ======================== 颜文字数据 ========================
+const emojiData = [
+    // ---- 开心 ----
+    { cat: '开心', emoji: '(◕‿◕)', desc: '微笑' },
+    { cat: '开心', emoji: '(*´▽`*)', desc: '开心' },
+    { cat: '开心', emoji: 'ヽ(✿ﾟ▽ﾟ)ノ', desc: '欢呼' },
+    { cat: '开心', emoji: '(～￣▽￣)～', desc: '得意' },
+    { cat: '开心', emoji: '٩(◕‿◕)۶', desc: '太开心' },
+    { cat: '开心', emoji: '(๑˃̵ᴗ˂̵)و', desc: '加油' },
+    { cat: '开心', emoji: '＼(＾▽＾)／', desc: '举手欢呼' },
+    { cat: '开心', emoji: '(๑•̀ㅂ•́)و✧', desc: '干劲十足' },
+    { cat: '开心', emoji: '✧⁺⸜(●′▾‵●)⸝⁺✧', desc: '闪闪发光' },
+    { cat: '开心', emoji: 'ヾ(●´∀｀●)ﾉ', desc: '蹦蹦跳跳' },
+    { cat: '开心', emoji: '(｀・ω・´)b', desc: '赞' },
+    { cat: '开心', emoji: '(ง •_•)ง', desc: '奋斗' },
+    { cat: '开心', emoji: '⊂(◉‿◉)つ', desc: '拥抱开心' },
+    { cat: '开心', emoji: '✿✿ヽ(°▽°)ノ✿', desc: '撒花' },
+
+    // ---- 伤心 ----
+    { cat: '伤心', emoji: '(╥╯﹏╰╥)ง', desc: '哭泣' },
+    { cat: '伤心', emoji: '(T_T)', desc: '流泪' },
+    { cat: '伤心', emoji: '(；′⌒`)', desc: '委屈' },
+    { cat: '伤心', emoji: '(´；ω；｀)', desc: '呜呜' },
+    { cat: '伤心', emoji: '｡ﾟ(ﾟ´Д｀ﾟ)ﾟ｡', desc: '泪崩' },
+    { cat: '伤心', emoji: '(◞‸◟)', desc: '失落' },
+    { cat: '伤心', emoji: '( ˘ ˘̥ )', desc: '撇嘴' },
+    { cat: '伤心', emoji: '˚‧º·(˚ ˃̣̣̥᷄⌓˂̣̣̥᷅ )‧º·˚', desc: '暴风哭泣' },
+    { cat: '伤心', emoji: '(╥_╥)', desc: '难过' },
+    { cat: '伤心', emoji: '( ͒ ́ඉ .̫ ඉ ̀ ͒)', desc: '悲伤' },
+    { cat: '伤心', emoji: '(๑′°︿°๑)', desc: '沮丧' },
+    { cat: '伤心', emoji: '( ˃̣̣̥᷄⌓˂̣̣̥᷅ )', desc: '大哭' },
+
+    // ---- 生气 ----
+    { cat: '生气', emoji: '(╬ Ò﹏Ó)', desc: '愤怒' },
+    { cat: '生气', emoji: 'ヽ(‘口´)ノ', desc: '暴躁' },
+    { cat: '生气', emoji: '(▼皿▼#)', desc: '超生气' },
+    { cat: '生气', emoji: '(╯°□°）╯︵ ┻━┻', desc: '掀桌' },
+    { cat: '生气', emoji: 'ヽ(｀⌒´)ノ', desc: '哼' },
+    { cat: '生气', emoji: '꒰╬•᷅д•᷄╬꒱', desc: '怒视' },
+    { cat: '生气', emoji: '(ノಠ益ಠ)ノ', desc: '暴怒' },
+    { cat: '生气', emoji: '( ง ᵒ̌皿ᵒ̌)ง⁼³₌₃', desc: '冲过去' },
+    { cat: '生气', emoji: '(ノ｀Д´)ノ彡┻━┻', desc: '掀桌2' },
+    { cat: '生气', emoji: '(｀⌒´メ)', desc: '超不爽' },
+
+    // ---- 惊讶 ----
+    { cat: '惊讶', emoji: '(°ロ°)', desc: '震惊' },
+    { cat: '惊讶', emoji: 'Σ(°△°|||)', desc: '大吃一惊' },
+    { cat: '惊讶', emoji: '∑(ﾟДﾟノ)ノ', desc: '吓到' },
+    { cat: '惊讶', emoji: '(⊙o⊙)', desc: '目瞪口呆' },
+    { cat: '惊讶', emoji: 'Σ(ŎдŎ)', desc: '惊吓' },
+    { cat: '惊讶', emoji: '∑(口||', desc: '惊呆' },
+    { cat: '惊讶', emoji: '(۰•⊙۰•⊙•⋆', desc: '瞪大眼' },
+    { cat: '惊讶', emoji: 'Σ(°ロ°)☛', desc: '震惊指' },
+    { cat: '惊讶', emoji: '(ʘᗩʘ!!)', desc: '不会吧' },
+    { cat: '惊讶', emoji: '∑(๑ºΔº๑)', desc: '惊讶表情' },
+
+    // ---- 害羞 ----
+    { cat: '害羞', emoji: '(〃ω〃)', desc: '害羞' },
+    { cat: '害羞', emoji: '(⁄ ⁄•⁄ω⁄•⁄ ⁄)', desc: '扭捏' },
+    { cat: '害羞', emoji: '(,,•́ . •̀,,)', desc: '脸红' },
+    { cat: '害羞', emoji: '(*/ω＼*)', desc: '捂脸' },
+    { cat: '害羞', emoji: 'ฅ(๑*д*๑)ฅ', desc: '害羞猫' },
+    { cat: '害羞', emoji: '( ˶′◡‵˶)', desc: '腼腆' },
+    { cat: '害羞', emoji: '(/ω＼)', desc: '遮脸' },
+    { cat: '害羞', emoji: '(｡ŏ﹏ŏ)', desc: '不安' },
+    { cat: '害羞', emoji: '(๑•́ ₃ •̀๑)', desc: '害羞笑' },
+    { cat: '害羞', emoji: '( ˘ ³˘)♥', desc: '害羞亲亲' },
+
+    // ---- 无奈 ----
+    { cat: '无奈', emoji: '(￣▽￣*)', desc: '呵呵' },
+    { cat: '无奈', emoji: '(´-ι_-｀)', desc: '无语' },
+    { cat: '无奈', emoji: '(ㆆωㆆ)', desc: '冷漠' },
+    { cat: '无奈', emoji: '(￢_￢)', desc: '鄙视' },
+    { cat: '无奈', emoji: '(－‸－)', desc: '不想说话' },
+    { cat: '无奈', emoji: '(；一_一)', desc: '汗' },
+    { cat: '无奈', emoji: '╮(╯▽╰)╭', desc: '摊手' },
+    { cat: '无奈', emoji: '(︶︹︶)', desc: '撇嘴无奈' },
+    { cat: '无奈', emoji: '¯\\_(ツ)_/¯', desc: '耸肩' },
+    { cat: '无奈', emoji: '(・_・ヾ', desc: '摇头' },
+
+    // ---- 可爱 ----
+    { cat: '可爱', emoji: '٩(◕‿◕｡)۶', desc: '小天使' },
+    { cat: '可爱', emoji: 'ฅ(^•ﻌ•^)ฅ', desc: '小猫咪' },
+    { cat: '可爱', emoji: '(๑ᵔ⌔ᵔ๑)', desc: '甜甜笑' },
+    { cat: '可爱', emoji: '🐾(●´ω｀●)🐾', desc: '肉球可爱' },
+    { cat: '可爱', emoji: '( ⸝⸝•ᴗ•⸝⸝ )', desc: '萌' },
+    { cat: '可爱', emoji: '♡( ◡‿◡ )', desc: '爱心可爱' },
+    { cat: '可爱', emoji: '(๑•ᴗ•๑)♡', desc: '萌笑' },
+    { cat: '可爱', emoji: '(❁´▽`❁)', desc: '花花可爱' },
+    { cat: '可爱', emoji: 'ଘ(੭ˊᵕˋ)੭* ੈ✩‧₊', desc: '小仙女' },
+    { cat: '可爱', emoji: '(◍•ᴗ•◍)✧*。', desc: '闪闪可爱' },
+    { cat: '可爱', emoji: '₍˄·͈༝·͈˄₎ฅ˒˒', desc: '小爪爪' },
+    { cat: '可爱', emoji: '🐣(●ˊᵕˋ●)🐣', desc: '小鸡仔' },
+
+    // ---- 爱心 ----
+    { cat: '爱心', emoji: '♥(ˆ⌣ˆ)♥', desc: '爱心' },
+    { cat: '爱心', emoji: '(●♥▽♥●)', desc: '爱心满满' },
+    { cat: '爱心', emoji: '♡‿♡', desc: '甜心' },
+    { cat: '爱心', emoji: '(｡♡‿♡｡)', desc: '爱心眼' },
+    { cat: '爱心', emoji: '💕(˘ε˘)', desc: '飞吻' },
+    { cat: '爱心', emoji: '(๑♡⌓♡๑)', desc: '爱心泛滥' },
+    { cat: '爱心', emoji: '♡(ӦｖӦ｡)', desc: '爱心发射' },
+    { cat: '爱心', emoji: '💗(˶ᵔ ᵕ ᵔ˶)💗', desc: '粉色爱心' },
+    { cat: '爱心', emoji: '٩(♡ε♡)۶', desc: '爱心拥抱' },
+    { cat: '爱心', emoji: '( ˘ ³˘)♥', desc: '亲亲爱心' },
+
+    // ---- 动物 ----
+    { cat: '动物', emoji: 'ฅ^•ﻌ•^ฅ', desc: '小猫' },
+    { cat: '动物', emoji: '🐱(｡･ω･｡)🐱', desc: '喵喵' },
+    { cat: '动物', emoji: 'U•ェ•*U', desc: '小狗' },
+    { cat: '动物', emoji: '🐶(｡◕‿◕｡)🐶', desc: '汪汪' },
+    { cat: '动物', emoji: '〜(꒪꒳꒪)〜', desc: '树懒' },
+    { cat: '动物', emoji: '⊂(・ヮ・⊂)', desc: '小虫子' },
+    { cat: '动物', emoji: '🐰(◕‿◕✿)🐰', desc: '小兔子' },
+    { cat: '动物', emoji: '🐼(●￣(ｴ)￣●)🐼', desc: '熊猫' },
+    { cat: '动物', emoji: '🦉(⊙ᗜ⊙)', desc: '猫头鹰' },
+    { cat: '动物', emoji: '🐧(•́⍛•̀)', desc: '企鹅' },
+
+    // ---- 食物 ----
+    { cat: '食物', emoji: '(っ˘ڡ˘ς)', desc: '好吃' },
+    { cat: '食物', emoji: '🍰(๑´ڡ`๑)🍰', desc: '蛋糕' },
+    { cat: '食物', emoji: '(っ•́｡•́)♪🍵', desc: '喝茶' },
+    { cat: '食物', emoji: '🍜(･ω･)つ🍜', desc: '吃面' },
+    { cat: '食物', emoji: '٩(｡•́‿•̀｡)۶🍕', desc: '披萨' },
+    { cat: '食物', emoji: 'ᕦ(ò_óˇ)ᕤ🍺', desc: '干杯' },
+    { cat: '食物', emoji: '🍣(⌒ω⌒)🍣', desc: '寿司' },
+    { cat: '食物', emoji: '🍦(๑˃̵ᴗ˂̵)و🍦', desc: '冰淇淋' },
+    { cat: '食物', emoji: '🍔(╯▽╰)🍔', desc: '汉堡' },
+    { cat: '食物', emoji: '🌮(｀∀´)🌮', desc: '墨西哥卷' },
+
+    // ---- 手势 ----
+    { cat: '手势', emoji: '✌(◕‿◕)✌', desc: '胜利' },
+    { cat: '手势', emoji: '☝(◕‿◕)☝', desc: '指' },
+    { cat: '手势', emoji: '👋(◠‿◠)👋', desc: '挥手' },
+    { cat: '手势', emoji: '👍(•̀ᴗ•́)👍', desc: '点赞' },
+    { cat: '手势', emoji: '👎(￣へ￣)👎', desc: '踩' },
+    { cat: '手势', emoji: '✊(◕‿◕)✊', desc: '拳头' },
+    { cat: '手势', emoji: '🤝(◕‿◕)🤝', desc: '握手' },
+    { cat: '手势', emoji: '🖐(◕‿◕)🖐', desc: '手掌' },
+    { cat: '手势', emoji: '☝(･ω･)☝', desc: '指上方' },
+    { cat: '手势', emoji: '✌(￣▽￣)✌', desc: '耶' },
+
+    // ---- 箭头 ----
+    { cat: '箭头', emoji: '👉(◕‿◕)👉', desc: '右指' },
+    { cat: '箭头', emoji: '👈(◕‿◕)👈', desc: '左指' },
+    { cat: '箭头', emoji: '👆(◕‿◕)👆', desc: '上指' },
+    { cat: '箭头', emoji: '👇(◕‿◕)👇', desc: '下指' },
+    { cat: '箭头', emoji: '↗(◕‿◕)↗', desc: '右上' },
+    { cat: '箭头', emoji: '↘(◕‿◕)↘', desc: '右下' },
+    { cat: '箭头', emoji: '↙(◕‿◕)↙', desc: '左下' },
+    { cat: '箭头', emoji: '↖(◕‿◕)↖', desc: '左上' },
+    { cat: '箭头', emoji: '→(◕‿◕)→', desc: '向右' },
+    { cat: '箭头', emoji: '←(◕‿◕)←', desc: '向左' },
+
+    // ---- 特殊符号 ----
+    { cat: '特殊符号', emoji: '☆*:.｡.o(≧▽≦)o.｡.:*☆', desc: '星星' },
+    { cat: '特殊符号', emoji: '✿*:..｡o○☆', desc: '花花星' },
+    { cat: '特殊符号', emoji: '♪(^∇^*)', desc: '音符' },
+    { cat: '特殊符号', emoji: '♬(◕‿◕)♬', desc: '音乐' },
+    { cat: '特殊符号', emoji: '✧(•̀ω•́)✧', desc: '闪闪' },
+    { cat: '特殊符号', emoji: '🌈(๑•̀ㅁ•́๑)🌈', desc: '彩虹' },
+    { cat: '特殊符号', emoji: '🔥(◕‿◕)🔥', desc: '火焰' },
+    { cat: '特殊符号', emoji: '💀(╯°□°）💀', desc: '骷髅' },
+    { cat: '特殊符号', emoji: '👻(｀∀´)👻', desc: '幽灵' },
+    { cat: '特殊符号', emoji: '🌸(◕‿◕)🌸', desc: '樱花' },
+    { cat: '特殊符号', emoji: '✨(◕‿◕)✨', desc: '星尘' },
+    { cat: '特殊符号', emoji: '❄️(◕‿◕)❄️', desc: '雪花' },
+];
+
+// ======================== 核心逻辑 ========================
+const LS_FAV = 'xiongda_emoji_fav';
+const LS_RECENT = 'xiongda_emoji_recent';
+
+function getFavorites() {
+    try { return JSON.parse(localStorage.getItem(LS_FAV)) || []; } catch(e) { return []; }
+}
+function setFavorites(arr) {
+    try { localStorage.setItem(LS_FAV, JSON.stringify(arr)); } catch(e) {}
+}
+function getRecent() {
+    try { return JSON.parse(localStorage.getItem(LS_RECENT)) || []; } catch(e) { return []; }
+}
+function setRecent(arr) {
+    try { localStorage.setItem(LS_RECENT, JSON.stringify(arr)); } catch(e) {}
+}
+
+function toggleFav(emojiStr) {
+    const favs = getFavorites();
+    const idx = favs.indexOf(emojiStr);
+    if (idx > -1) {
+        favs.splice(idx, 1);
+        showToast('已取消收藏');
+    } else {
+        favs.unshift(emojiStr);
+        showToast('⭐ 已收藏');
+    }
+    setFavorites(favs);
+    render();
+}
+
+function addRecent(emojiStr) {
+    let recents = getRecent();
+    recents = recents.filter(r => r !== emojiStr);
+    recents.unshift(emojiStr);
+    if (recents.length > 30) recents = recents.slice(0, 30);
+    setRecent(recents);
+}
+
+function isFav(emojiStr) {
+    return getFavorites().indexOf(emojiStr) > -1;
+}
+
+// ======================== 渲染 ========================
+let currentSearch = '';
+let activeCat = '';
+
+function getIconForCat(cat) {
+    const m = {
+        '开心': 'fa-face-smile',
+        '伤心': 'fa-face-sad-tear',
+        '生气': 'fa-face-angry',
+        '惊讶': 'fa-face-surprise',
+        '害羞': 'fa-face-flushed',
+        '无奈': 'fa-face-meh',
+        '可爱': 'fa-face-kiss-wink-heart',
+        '爱心': 'fa-heart',
+        '动物': 'fa-paw',
+        '食物': 'fa-utensils',
+        '手势': 'fa-hand-peace',
+        '箭头': 'fa-arrow-right',
+        '特殊符号': 'fa-star'
+    };
+    return m[cat] || 'fa-smile';
+}
+
+function catOrder(cat) {
+    const order = ['开心','伤心','生气','惊讶','害羞','无奈','可爱','爱心','动物','食物','手势','箭头','特殊符号'];
+    const idx = order.indexOf(cat);
+    return idx >= 0 ? idx : 999;
+}
+
+function render() {
+    const favs = getFavorites();
+    const recents = getRecent();
+    const search = currentSearch.trim().toLowerCase();
+    const area = document.getElementById('contentArea');
+    const statsTotal = document.getElementById('totalCount');
+    const statsFav = document.getElementById('favCount');
+    const statsRecent = document.getElementById('recentCount');
+
+    statsTotal.textContent = emojiData.length;
+    statsFav.textContent = favs.length;
+    statsRecent.textContent = recents.length;
+
+    // Filter data
+    let filtered = emojiData;
+    if (search) {
+        filtered = filtered.filter(e =>
+            e.desc.toLowerCase().includes(search) ||
+            e.cat.includes(search) ||
+            e.emoji.includes(search)
+        );
+    }
+
+    // Group by category
+    const groups = {};
+    filtered.forEach(e => {
+        if (!groups[e.cat]) groups[e.cat] = [];
+        groups[e.cat].push(e);
+    });
+
+    // Tabs
+    const catTabs = document.getElementById('catTabs');
+    const cats = Object.keys(groups).sort((a,b) => catOrder(a) - catOrder(b));
+    if (cats.length <= 1 && !activeCat) {
+        catTabs.innerHTML = '';
+    } else {
+        let tabHTML = '<button class="cat-tab' + (!activeCat ? ' active' : '') + '" data-cat="">全部</button>';
+        cats.forEach(c => {
+            tabHTML += '<button class="cat-tab' + (activeCat === c ? ' active' : '') + '" data-cat="' + c + '"><i class="fas ' + getIconForCat(c) + '"></i> ' + c + '</button>';
+        });
+        catTabs.innerHTML = tabHTML;
+        catTabs.querySelectorAll('.cat-tab').forEach(btn => {
+            btn.addEventListener('click', function() {
+                activeCat = this.dataset.cat;
+                render();
+            });
+        });
+    }
+
+    // Build HTML
+    let html = '';
+
+    // -- Favorites section --
+    if (!search && favs.length > 0) {
+        const favItems = filtered.filter(e => favs.includes(e.emoji));
+        if (favItems.length > 0) {
+            html += '<div class="section" id="sec-fav"><div class="section-title"><i class="fas fa-star" style="color:#fbbf24"></i> 收藏夹 <span class="count">' + favItems.length + '</span></div><div class="emoji-grid">';
+            favItems.forEach(e => {
+                html += buildBtn(e, true);
+            });
+            html += '</div></div>';
+        }
+    }
+
+    // -- Recent section --
+    if (!search && recents.length > 0) {
+        const recentItems = recents.map(r => emojiData.find(e => e.emoji === r)).filter(Boolean);
+        if (recentItems.length > 0) {
+            html += '<div class="section" id="sec-recent"><div class="section-title"><i class="fas fa-history" style="color:#60a5fa"></i> 最近使用 <span class="count">' + recentItems.length + '</span></div><div class="recent-list">';
+            recentItems.forEach(e => {
+                html += '<span class="recent-item" data-emoji="' + escAttr(e.emoji) + '"><span class="recent-emoji">' + escHtml(e.emoji) + '</span> <span style="font-size:0.65rem;color:rgba(255,255,255,0.3)">' + escHtml(e.desc) + '</span></span>';
+            });
+            html += '</div></div>';
+        }
+    }
+
+    // -- Category sections --
+    let shownCats = cats;
+    if (activeCat) shownCats = cats.filter(c => c === activeCat);
+    if (shownCats.length === 0 && search) {
+        html += '<div class="no-match"><i class="fas fa-face-frown"></i>没有找到匹配的颜文字<br><span style="font-size:0.75rem">试试其他关键词</span></div>';
+    }
+    shownCats.forEach(c => {
+        const items = groups[c];
+        if (activeCat && c !== activeCat) return;
+        html += '<div class="section"><div class="section-title"><i class="fas ' + getIconForCat(c) + '"></i> ' + c + ' <span class="count">' + items.length + '</span></div><div class="emoji-grid">';
+        items.forEach(e => {
+            html += buildBtn(e);
+        });
+        html += '</div></div>';
+    });
+
+    area.innerHTML = html;
+
+    // Bind events
+    area.querySelectorAll('.emoji-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            const emojiStr = this.dataset.emoji;
+            copyText(emojiStr);
+            addRecent(emojiStr);
+            // Flash copied badge
+            const badge = this.querySelector('.copied-badge');
+            if (badge) {
+                badge.classList.add('show');
+                setTimeout(() => badge.classList.remove('show'), 800);
+            }
+            // Update recent + fav counts after a tick
+            setTimeout(render, 100);
+        });
+    });
+
+    // Fav star click on button (stop propagation)
+    area.querySelectorAll('.fav-star').forEach(star => {
+        star.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const btn = this.closest('.emoji-btn');
+            const emojiStr = btn.dataset.emoji;
+            toggleFav(emojiStr);
+        });
+    });
+
+    // Recent item click
+    area.querySelectorAll('.recent-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const emojiStr = this.dataset.emoji;
+            copyText(emojiStr);
+            addRecent(emojiStr);
+            setTimeout(render, 100);
+        });
+    });
+}
+
+function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escAttr(s) {
+    return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function buildBtn(e, forceFav) {
+    const fav = forceFav || isFav(e.emoji);
+    const starClass = fav ? 'fav-star filled' : 'fav-star';
+    return '<button class="emoji-btn" data-emoji="' + escAttr(e.emoji) + '">'
+        + escHtml(e.emoji)
+        + ' <span class="' + starClass + '"><i class="fa' + (fav ? 's' : 'r') + '-star"></i></span>'
+        + ' <span class="copied-badge">已复制</span>'
+        + '</button>';
+}
+
+// ======================== 搜索 ========================
+document.getElementById('searchInput').addEventListener('input', function() {
+    currentSearch = this.value;
+    activeCat = '';
+    document.getElementById('searchClear').classList.toggle('visible', this.value.length > 0);
+    render();
+});
+
+document.getElementById('searchClear').addEventListener('click', function() {
+    const input = document.getElementById('searchInput');
+    input.value = '';
+    currentSearch = '';
+    activeCat = '';
+    this.classList.remove('visible');
+    render();
+    input.focus();
+});
+
+// ======================== 清除按钮 ========================
+document.getElementById('clearRecentBtn').addEventListener('click', function() {
+    if (getRecent().length === 0) { showToast('最近使用已为空'); return; }
+    setRecent([]);
+    showToast('已清除最近使用');
+    render();
+});
+
+document.getElementById('clearFavBtn').addEventListener('click', function() {
+    if (getFavorites().length === 0) { showToast('收藏夹已为空'); return; }
+    setFavorites([]);
+    showToast('已清除所有收藏');
+    render();
+});
+
+// ======================== 初始化 ========================
+document.addEventListener('DOMContentLoaded', function() {
+    render();
+});
+</script>
+</body>
+</html>

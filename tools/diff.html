@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文本差异对比工具 - xiongdaa</title>
+    <link rel="stylesheet" href="common.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-image: url('https://img.8845.top/acg');
+        }
+        .diff-card {
+            padding: 30px 35px;
+            width: 100%;
+            max-width: 1100px;
+            position: relative;
+            z-index: 10;
+            min-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .diff-card h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        .diff-card .tool-subtitle {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .diff-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .diff-header h1 {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        /* 双文本框 */
+        .textarea-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .textarea-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .textarea-col .col-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .textarea-col .col-label span.label-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .textarea-col textarea {
+            width: 100%;
+            height: 200px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #fff;
+            padding: 12px 14px;
+            border-radius: 14px;
+            outline: none;
+            font-size: 0.85rem;
+            resize: vertical;
+            transition: all 0.3s;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            line-height: 1.6;
+        }
+        .textarea-col textarea:focus {
+            border-color: var(--theme-accent);
+            background: rgba(255,255,255,0.1);
+            box-shadow: 0 0 0 3px rgba(165,180,252,0.1);
+        }
+        .textarea-col textarea::placeholder {
+            color: rgba(255,255,255,0.25);
+        }
+
+        /* 按钮区 */
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-row .tool-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-row .tool-btn i {
+            font-size: 0.85rem;
+        }
+
+        /* 差异结果区 */
+        .diff-result {
+            display: none;
+            flex-direction: column;
+            gap: 14px;
+            margin-top: 4px;
+            flex: 1;
+        }
+        .diff-result.visible {
+            display: flex;
+        }
+
+        /* 统计面板 */
+        .stats-bar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 12px 18px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.08);
+            align-items: center;
+        }
+        .stats-bar .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .stats-bar .stat-item i {
+            font-size: 0.75rem;
+        }
+        .stats-bar .stat-item .num {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #fff;
+            min-width: 20px;
+        }
+        .stats-bar .stat-total .num { color: var(--theme-accent); }
+        .stats-bar .stat-added .num { color: #4ade80; }
+        .stats-bar .stat-deleted .num { color: #f87171; }
+        .stats-bar .stat-modified .num { color: #facc15; }
+        .stats-sep {
+            width: 1px;
+            height: 20px;
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* 两侧差异面板 */
+        .diff-panels {
+            display: flex;
+            gap: 16px;
+            flex: 1;
+            min-height: 0;
+        }
+        .diff-panel {
+            flex: 1;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.08);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            background: rgba(0,0,0,0.15);
+        }
+        .diff-panel .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 14px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.04);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .diff-panel .panel-header .panel-actions {
+            display: flex;
+            gap: 6px;
+        }
+        .diff-panel .panel-header .panel-actions .panel-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .diff-panel .panel-header .panel-actions .panel-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+        .diff-panel .panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.82rem;
+            line-height: 1.7;
+        }
+
+        /* 单行 */
+        .diff-line {
+            display: flex;
+            padding: 1px 14px;
+            transition: background 0.15s;
+            min-height: 24px;
+            align-items: flex-start;
+        }
+        .diff-line .line-num {
+            display: inline-block;
+            min-width: 32px;
+            text-align: right;
+            color: rgba(255,255,255,0.25);
+            font-size: 0.7rem;
+            padding-right: 12px;
+            user-select: none;
+            flex-shrink: 0;
+            line-height: 24px;
+        }
+        .diff-line .line-content {
+            flex: 1;
+            white-space: pre-wrap;
+            word-break: break-all;
+            line-height: 24px;
+        }
+        .diff-line .line-prefix {
+            display: inline-block;
+            min-width: 18px;
+            font-weight: 700;
+            flex-shrink: 0;
+            line-height: 24px;
+        }
+
+        /* 颜色 */
+        .diff-line.unchanged {
+            background: transparent;
+        }
+        .diff-line.unchanged .line-prefix { color: rgba(255,255,255,0.15); }
+
+        .diff-line.added {
+            background: rgba(74, 222, 128, 0.15);
+            border-left: 3px solid #4ade80;
+        }
+        .diff-line.added .line-prefix { color: #4ade80; }
+
+        .diff-line.deleted {
+            background: rgba(248, 113, 113, 0.15);
+            border-left: 3px solid #f87171;
+        }
+        .diff-line.deleted .line-prefix { color: #f87171; }
+
+        .diff-line.modified {
+            background: rgba(250, 204, 21, 0.12);
+            border-left: 3px solid #facc15;
+        }
+        .diff-line.modified .line-prefix { color: #facc15; }
+
+        .diff-line.modified-a {
+            background: rgba(248, 113, 113, 0.10);
+            border-left: 3px solid #f87171;
+        }
+        .diff-line.modified-a .line-prefix { color: #f87171; }
+
+        .diff-line.modified-b {
+            background: rgba(74, 222, 128, 0.10);
+            border-left: 3px solid #4ade80;
+        }
+        .diff-line.modified-b .line-prefix { color: #4ade80; }
+
+        /* 空状态 */
+        .diff-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            gap: 8px;
+        }
+        .diff-empty i {
+            font-size: 2rem;
+            opacity: 0.3;
+        }
+
+        /* 滚动条 */
+        .panel-body::-webkit-scrollbar {
+            width: 5px;
+        }
+        .panel-body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .panel-body::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.12);
+            border-radius: 10px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 800px) {
+            .textarea-row {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .diff-panels {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .diff-card {
+                padding: 20px;
+            }
+            .stats-bar {
+                gap: 8px;
+                padding: 10px 14px;
+            }
+            .stats-sep {
+                display: none;
+            }
+        }
+        @media (max-width: 480px) {
+            .diff-card {
+                padding: 14px;
+            }
+            .btn-row .tool-btn {
+                font-size: 0.78rem;
+                padding: 8px 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="toast">
+        <span id="toast-msg"></span>
+    </div>
+    <a href="../index.html" class="back-home-btn" title="返回主页">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <div class="glass-card diff-card">
+        <div class="diff-header">
+            <h1><i class="fas fa-not-equal" style="color: var(--theme-accent); margin-right: 8px;"></i>文本差异对比</h1>
+        </div>
+        <p class="tool-subtitle">逐行对比两个文本，高亮显示新增、删除和修改</p>
+
+        <!-- 双文本框 -->
+        <div class="textarea-row">
+            <div class="textarea-col">
+                <div class="col-label">
+                    <span><i class="fas fa-file" style="margin-right: 5px; color: var(--theme-accent);"></i>文本 A <span class="label-badge">左侧</span></span>
+                    <span style="font-size:0.7rem; opacity:0.5;" id="count-a">0 行</span>
+                </div>
+                <textarea id="textA" placeholder="在此粘贴文本 A&#10;（左侧 / 原始文本）"></textarea>
+            </div>
+            <div class="textarea-col">
+                <div class="col-label">
+                    <span><i class="fas fa-file" style="margin-right: 5px; color: #4ade80;"></i>文本 B <span class="label-badge">右侧</span></span>
+                    <span style="font-size:0.7rem; opacity:0.5;" id="count-b">0 行</span>
+                </div>
+                <textarea id="textB" placeholder="在此粘贴文本 B&#10;（右侧 / 修改后文本）"></textarea>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="btn-row">
+            <button class="tool-btn primary" onclick="runDiff()"><i class="fas fa-play"></i> 比较</button>
+            <button class="tool-btn" onclick="loadExample()"><i class="fas fa-flask"></i> 预设示例</button>
+            <button class="tool-btn" onclick="clearAll()"><i class="fas fa-eraser"></i> 清空</button>
+            <button class="tool-btn" onclick="swapText()"><i class="fas fa-exchange-alt"></i> 交换 AB</button>
+            <button class="tool-btn" id="mergeBtn" onclick="mergeLeftToRight()" disabled><i class="fas fa-arrow-right"></i> 从左合并到右</button>
+        </div>
+
+        <!-- 差异结果 -->
+        <div class="diff-result" id="diffResult">
+            <!-- 统计条 -->
+            <div class="stats-bar" id="statsBar">
+                <div class="stat-item stat-total"><i class="fas fa-list"></i> 总行: <span class="num" id="statTotal">0</span></div>
+                <div class="stats-sep"></div>
+                <div class="stat-item stat-added"><i class="fas fa-plus-circle"></i> 新增: <span class="num" id="statAdded">0</span></div>
+                <div class="stats-sep"></div>
+                <div class="stat-item stat-deleted"><i class="fas fa-minus-circle"></i> 删除: <span class="num" id="statDeleted">0</span></div>
+                <div class="stats-sep"></div>
+                <div class="stat-item stat-modified"><i class="fas fa-pencil-alt"></i> 修改: <span class="num" id="statModified">0</span></div>
+                <div style="flex:1;"></div>
+                <div style="display:flex; gap:6px;">
+                    <span style="font-size:0.7rem; color:var(--text-muted);"><span style="display:inline-block; width:10px; height:10px; border-radius:3px; background:rgba(74,222,128,0.4); vertical-align:middle; margin-right:3px;"></span> 新增</span>
+                    <span style="font-size:0.7rem; color:var(--text-muted);"><span style="display:inline-block; width:10px; height:10px; border-radius:3px; background:rgba(248,113,113,0.4); vertical-align:middle; margin-right:3px;"></span> 删除</span>
+                    <span style="font-size:0.7rem; color:var(--text-muted);"><span style="display:inline-block; width:10px; height:10px; border-radius:3px; background:rgba(250,204,21,0.4); vertical-align:middle; margin-right:3px;"></span> 修改</span>
+                </div>
+            </div>
+
+            <!-- 双面板 -->
+            <div class="diff-panels">
+                <div class="diff-panel">
+                    <div class="panel-header">
+                        <span><i class="fas fa-file" style="margin-right:5px;"></i>文本 A</span>
+                        <div class="panel-actions">
+                            <button class="panel-btn" onclick="copyPanel('A')" title="复制 A 结果"><i class="fas fa-copy"></i> 复制</button>
+                        </div>
+                    </div>
+                    <div class="panel-body" id="panelA">
+                        <div class="diff-empty"><i class="fas fa-hourglass-half"></i> 点击「比较」查看差异</div>
+                    </div>
+                </div>
+                <div class="diff-panel">
+                    <div class="panel-header">
+                        <span><i class="fas fa-file" style="margin-right:5px; color:#4ade80;"></i>文本 B</span>
+                        <div class="panel-actions">
+                            <button class="panel-btn" onclick="copyPanel('B')" title="复制 B 结果"><i class="fas fa-copy"></i> 复制</button>
+                        </div>
+                    </div>
+                    <div class="panel-body" id="panelB">
+                        <div class="diff-empty"><i class="fas fa-hourglass-half"></i> 点击「比较」查看差异</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="author-credit">
+        <p>Made with <i class="fas fa-heart" style="color:#f87171;"></i> by xiongdaa</p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+    // ================= LCS 差异算法 =================
+
+    /**
+     * 计算最长公共子序列 (LCS) 表
+     * @param {string[]} a - 文本 A 的行数组
+     * @param {string[]} b - 文本 B 的行数组
+     * @returns {number[][]} dp 表
+     */
+    function computeLCSTable(a, b) {
+        const m = a.length, n = b.length;
+        const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                if (a[i - 1] === b[j - 1]) {
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                } else {
+                    dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                }
+            }
+        }
+        return dp;
+    }
+
+    /**
+     * 从 LCS 表回溯，生成差异序列
+     * @param {string[]} a - 文本 A 的行数组
+     * @param {string[]} b - 文本 B 的行数组
+     * @param {number[][]} dp - LCS 表
+     * @returns {Object[]} diff 序列，每个元素: { type: 'unchanged'|'deleted'|'added'|'modified', lineA?: string, lineB?: string, indexA?: number, indexB?: number }
+     */
+    function backtraceDiff(a, b, dp) {
+        let i = a.length, j = b.length;
+        const result = [];
+
+        // 修改检测阈值：当 delete+add 成对出现时，如果两行相似度较高，视为修改
+        while (i > 0 && j > 0) {
+            if (a[i - 1] === b[j - 1]) {
+                result.push({
+                    type: 'unchanged',
+                    lineA: a[i - 1],
+                    lineB: b[j - 1],
+                    indexA: i - 1,
+                    indexB: j - 1
+                });
+                i--;
+                j--;
+            } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+                // A 有，B 没有 — 可能是删除，先标记
+                result.push({
+                    type: 'deleted',
+                    lineA: a[i - 1],
+                    lineB: null,
+                    indexA: i - 1,
+                    indexB: null
+                });
+                i--;
+            } else {
+                result.push({
+                    type: 'added',
+                    lineA: null,
+                    lineB: b[j - 1],
+                    indexA: null,
+                    indexB: j - 1
+                });
+                j--;
+            }
+        }
+        while (i > 0) {
+            result.push({
+                type: 'deleted',
+                lineA: a[i - 1],
+                lineB: null,
+                indexA: i - 1,
+                indexB: null
+            });
+            i--;
+        }
+        while (j > 0) {
+            result.push({
+                type: 'added',
+                lineA: null,
+                lineB: b[j - 1],
+                indexA: null,
+                indexB: j - 1
+            });
+            j--;
+        }
+
+        result.reverse();
+
+        // 后处理：将相邻的 deleted+added 合并为 modified
+        // 同时将单个 deleted 后面隔一些 unchanged 再出现 added 的不合并
+        const merged = [];
+        let k = 0;
+        while (k < result.length) {
+            const cur = result[k];
+            if (cur.type === 'deleted' && k + 1 < result.length && result[k + 1].type === 'added') {
+                // 紧邻的删除+添加 → 修改
+                merged.push({
+                    type: 'modified',
+                    lineA: cur.lineA,
+                    lineB: result[k + 1].lineB,
+                    indexA: cur.indexA,
+                    indexB: result[k + 1].indexB
+                });
+                k += 2;
+            } else if (cur.type === 'added' && k + 1 < result.length && result[k + 1].type === 'deleted') {
+                // 添加在前、删除在后 → 也视为修改
+                merged.push({
+                    type: 'modified',
+                    lineA: result[k + 1].lineA,
+                    lineB: cur.lineB,
+                    indexA: result[k + 1].indexA,
+                    indexB: cur.indexB
+                });
+                k += 2;
+            } else {
+                merged.push(cur);
+                k++;
+            }
+        }
+
+        return merged;
+    }
+
+    /**
+     * 执行两个文本的差异对比
+     * @param {string} textA
+     * @param {string} textB
+     * @returns {{ diff: Object[], stats: Object }}
+     */
+    function diffTexts(textA, textB) {
+        const linesA = textA === '' ? [] : textA.split('\n');
+        const linesB = textB === '' ? [] : textB.split('\n');
+
+        const dp = computeLCSTable(linesA, linesB);
+        const diffSeq = backtraceDiff(linesA, linesB, dp);
+
+        let added = 0, deleted = 0, modified = 0;
+        for (const item of diffSeq) {
+            if (item.type === 'added') added++;
+            else if (item.type === 'deleted') deleted++;
+            else if (item.type === 'modified') modified++;
+        }
+
+        return {
+            diff: diffSeq,
+            stats: {
+                totalA: linesA.length,
+                totalB: linesB.length,
+                totalLines: diffSeq.length,
+                added,
+                deleted,
+                modified
+            }
+        };
+    }
+
+    // ================= UI =================
+
+    let lastDiffResult = null;
+    let lastStats = null;
+
+    /** 更新行数显示 */
+    function updateCounts() {
+        const ta = document.getElementById('textA');
+        const tb = document.getElementById('textB');
+        const ca = ta.value === '' ? 0 : ta.value.split('\n').length;
+        const cb = tb.value === '' ? 0 : tb.value.split('\n').length;
+        document.getElementById('count-a').textContent = ca + ' 行';
+        document.getElementById('count-b').textContent = cb + ' 行';
+    }
+
+    document.getElementById('textA').addEventListener('input', updateCounts);
+    document.getElementById('textB').addEventListener('input', updateCounts);
+
+    /** 渲染一行 */
+    function createDiffLine(item, side) {
+        const div = document.createElement('div');
+        div.className = 'diff-line';
+
+        let typeClass = item.type;
+        if (item.type === 'modified') {
+            typeClass = side === 'A' ? 'modified-a' : 'modified-b';
+        }
+
+        div.classList.add(typeClass);
+
+        const numSpan = document.createElement('span');
+        numSpan.className = 'line-num';
+
+        const prefixSpan = document.createElement('span');
+        prefixSpan.className = 'line-prefix';
+
+        const contentSpan = document.createElement('span');
+        contentSpan.className = 'line-content';
+
+        if (side === 'A') {
+            if (item.indexA !== null) {
+                numSpan.textContent = item.indexA + 1;
+            } else {
+                numSpan.textContent = '';
+            }
+
+            if (item.type === 'unchanged') {
+                prefixSpan.textContent = ' ';
+                contentSpan.textContent = item.lineA;
+            } else if (item.type === 'deleted') {
+                prefixSpan.textContent = '−';
+                contentSpan.textContent = item.lineA || '';
+            } else if (item.type === 'added') {
+                prefixSpan.textContent = ' ';
+                numSpan.textContent = '';
+                contentSpan.textContent = '';
+            } else if (item.type === 'modified') {
+                prefixSpan.textContent = '∼';
+                contentSpan.textContent = item.lineA || '';
+            }
+        } else {
+            // side B
+            if (item.indexB !== null) {
+                numSpan.textContent = item.indexB + 1;
+            } else {
+                numSpan.textContent = '';
+            }
+
+            if (item.type === 'unchanged') {
+                prefixSpan.textContent = ' ';
+                contentSpan.textContent = item.lineB;
+            } else if (item.type === 'added') {
+                prefixSpan.textContent = '+';
+                contentSpan.textContent = item.lineB || '';
+            } else if (item.type === 'deleted') {
+                prefixSpan.textContent = ' ';
+                numSpan.textContent = '';
+                contentSpan.textContent = '';
+            } else if (item.type === 'modified') {
+                prefixSpan.textContent = '∼';
+                contentSpan.textContent = item.lineB || '';
+            }
+        }
+
+        div.appendChild(numSpan);
+        div.appendChild(prefixSpan);
+        div.appendChild(contentSpan);
+        return div;
+    }
+
+    /** 运行对比 */
+    function runDiff() {
+        const textA = document.getElementById('textA').value;
+        const textB = document.getElementById('textB').value;
+
+        const result = diffTexts(textA, textB);
+        lastDiffResult = result.diff;
+        lastStats = result.stats;
+
+        // 显示结果区
+        const resultDiv = document.getElementById('diffResult');
+        resultDiv.classList.add('visible');
+
+        // 更新统计
+        document.getElementById('statTotal').textContent = result.stats.totalLines;
+        document.getElementById('statAdded').textContent = result.stats.added;
+        document.getElementById('statDeleted').textContent = result.stats.deleted;
+        document.getElementById('statModified').textContent = result.stats.modified;
+
+        // 渲染 A 面板
+        const panelA = document.getElementById('panelA');
+        panelA.innerHTML = '';
+        for (const item of result.diff) {
+            panelA.appendChild(createDiffLine(item, 'A'));
+        }
+        if (result.diff.length === 0) {
+            panelA.innerHTML = '<div class="diff-empty"><i class="fas fa-check-circle" style="color:#4ade80;"></i> 两文本完全相同</div>';
+        }
+
+        // 渲染 B 面板
+        const panelB = document.getElementById('panelB');
+        panelB.innerHTML = '';
+        for (const item of result.diff) {
+            panelB.appendChild(createDiffLine(item, 'B'));
+        }
+        if (result.diff.length === 0) {
+            panelB.innerHTML = '<div class="diff-empty"><i class="fas fa-check-circle" style="color:#4ade80;"></i> 两文本完全相同</div>';
+        }
+
+        // 启用合并按钮（如果有差异且不是完全相同）
+        const mergeBtn = document.getElementById('mergeBtn');
+        mergeBtn.disabled = (result.stats.added === 0 && result.stats.deleted === 0 && result.stats.modified === 0);
+
+        showToast('对比完成');
+    }
+
+    /** 从左侧复制到右侧（合并） */
+    function mergeLeftToRight() {
+        const textA = document.getElementById('textA').value;
+        document.getElementById('textB').value = textA;
+        updateCounts();
+        showToast('已从左侧复制到右侧');
+        // 重新运行对比
+        runDiff();
+    }
+
+    /** 复制面板内容 */
+    function copyPanel(side) {
+        if (!lastDiffResult || lastDiffResult.length === 0) {
+            showToast('没有可复制的内容');
+            return;
+        }
+        const lines = [];
+        for (const item of lastDiffResult) {
+            if (side === 'A') {
+                if (item.type === 'deleted' || item.type === 'unchanged' || item.type === 'modified') {
+                    lines.push(item.lineA || '');
+                }
+            } else {
+                if (item.type === 'added' || item.type === 'unchanged' || item.type === 'modified') {
+                    lines.push(item.lineB || '');
+                }
+            }
+        }
+        const text = lines.join('\n');
+        copyText(text);
+    }
+
+    /** 预设示例 */
+    function loadExample() {
+        document.getElementById('textA').value =
+            'function greet(name) {\n' +
+            '    console.log("Hello, " + name);\n' +
+            '    return true;\n' +
+            '}\n' +
+            '\n' +
+            'let user = "Alice";\n' +
+            'greet(user);\n' +
+            '\n' +
+            '// TODO: add error handling\n' +
+            'for (let i = 0; i < 10; i++) {\n' +
+            '    console.log(i);\n' +
+            '}';
+
+        document.getElementById('textB').value =
+            'function greet(name) {\n' +
+            '    console.log("Hi, " + name);\n' +
+            '    return true;\n' +
+            '}\n' +
+            '\n' +
+            'const user = "Bob";\n' +
+            'greet(user);\n' +
+            'console.log("Done!");\n' +
+            '\n' +
+            '// FIXME: add error handling\n' +
+            'for (let i = 0; i < 5; i++) {\n' +
+            '    console.log(i);\n' +
+            '}\n' +
+            '// end';
+
+        updateCounts();
+        showToast('已加载示例');
+        runDiff();
+    }
+
+    /** 清空 */
+    function clearAll() {
+        document.getElementById('textA').value = '';
+        document.getElementById('textB').value = '';
+        updateCounts();
+        const resultDiv = document.getElementById('diffResult');
+        resultDiv.classList.remove('visible');
+        document.getElementById('panelA').innerHTML = '<div class="diff-empty"><i class="fas fa-hourglass-half"></i> 点击「比较」查看差异</div>';
+        document.getElementById('panelB').innerHTML = '<div class="diff-empty"><i class="fas fa-hourglass-half"></i> 点击「比较」查看差异</div>';
+        document.getElementById('mergeBtn').disabled = true;
+        lastDiffResult = null;
+        lastStats = null;
+        showToast('已清空');
+    }
+
+    /** 交换 AB */
+    function swapText() {
+        const ta = document.getElementById('textA').value;
+        const tb = document.getElementById('textB').value;
+        document.getElementById('textA').value = tb;
+        document.getElementById('textB').value = ta;
+        updateCounts();
+        showToast('已交换文本 AB');
+        runDiff();
+    }
+
+    // ================= 键盘快捷键 =================
+
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            runDiff();
+        }
+    });
+
+    // ================= 初始化 =================
+    updateCounts();
+    </script>
+</body>
+</html>

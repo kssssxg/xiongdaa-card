@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>折扣计算器 - xiongdaa 工具集</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* 折扣计算器专属样式 */
+        .discount-wrap {
+            width: 100%;
+            max-width: 600px;
+            padding: 30px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .discount-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .discount-header h1 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        /* 模式选择标签 */
+        .mode-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 4px;
+        }
+
+        .mode-tab {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 11px;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-align: center;
+        }
+
+        .mode-tab.active {
+            background: rgba(165,180,252,0.2);
+            color: var(--theme-accent);
+        }
+
+        .mode-tab:hover:not(.active) {
+            background: rgba(255,255,255,0.08);
+        }
+
+        /* 输入区域 */
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .input-group label i {
+            margin-right: 5px;
+            width: 16px;
+            text-align: center;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-row input {
+            flex: 1;
+        }
+
+        .input-row .unit {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* 快捷按钮 */
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .preset-btn {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.82rem;
+            text-align: center;
+        }
+
+        .preset-btn:hover {
+            background: rgba(165,180,252,0.2);
+            border-color: var(--theme-accent);
+            transform: translateY(-1px);
+        }
+
+        .preset-btn:active {
+            transform: scale(0.96);
+        }
+
+        .preset-btn .preset-icon {
+            display: block;
+            font-size: 1rem;
+            margin-bottom: 3px;
+        }
+
+        .preset-btn .preset-label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        /* 计算按钮 */
+        .calc-action-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .calc-action-row .tool-btn {
+            flex: 1;
+            text-align: center;
+        }
+
+        /* 结果区域 */
+        .result-area {
+            background: rgba(0,0,0,0.25);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255,255,255,0.06);
+            display: none;
+        }
+
+        .result-area.show {
+            display: block;
+            animation: slideUpFade 0.4s ease forwards;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .result-item {
+            text-align: center;
+            padding: 12px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.04);
+        }
+
+        .result-item .result-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .result-item .result-value.accent {
+            color: var(--theme-accent);
+        }
+
+        .result-item .result-value.saved {
+            color: #34d399;
+        }
+
+        .result-item .result-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .result-item.full {
+            grid-column: span 2;
+        }
+
+        /* 进度条 */
+        .progress-wrap {
+            margin-top: 14px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #34d399, #a5b4fc);
+            transition: width 0.6s ease;
+            width: 0%;
+        }
+
+        /* 买N送M 特殊输入 */
+        .bnm-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .bnm-row input {
+            width: 70px;
+            text-align: center;
+        }
+
+        .bnm-row .bnm-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* 买N送M 模式隐藏 */
+        .mode-panel {
+            display: none;
+        }
+
+        .mode-panel.active {
+            display: block;
+        }
+
+        /* 历史记录 */
+        .history-wrap {
+            margin-top: 10px;
+            max-height: 260px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.15) transparent;
+        }
+
+        .history-wrap::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .history-wrap::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.15);
+            border-radius: 4px;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .history-header h3 {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .history-header h3 i {
+            margin-right: 6px;
+        }
+
+        .history-clear-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .history-clear-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #f87171;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 10px 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--theme-accent);
+        }
+
+        .history-item .hist-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item .hist-desc {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .history-item .hist-result {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--theme-accent);
+        }
+
+        .history-item .hist-details {
+            display: flex;
+            gap: 12px;
+            margin-top: 4px;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+
+        .history-empty {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            padding: 20px 0;
+        }
+
+        .history-empty i {
+            display: block;
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            opacity: 0.4;
+        }
+
+        /* 响应式 */
+        @media (max-width: 480px) {
+            .discount-wrap {
+                padding: 18px;
+            }
+
+            .result-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            .result-item .result-value {
+                font-size: 1.2rem;
+            }
+
+            .preset-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 背景视频 -->
+    <video id="bg-video" muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <!-- 遮罩层 -->
+    <div class="overlay"></div>
+
+    <!-- Toast -->
+    <div id="toast"><span id="toast-msg"></span></div>
+
+    <!-- 返回按钮 -->
+    <a href="../index.html" class="back-home-btn" title="返回主页">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <!-- 折扣计算器卡片 -->
+    <div class="glass-card discount-wrap">
+
+        <div class="discount-header">
+            <h1><i class="fas fa-tags"></i> 折扣计算器</h1>
+        </div>
+
+        <!-- 模式切换 -->
+        <div class="mode-tabs" id="modeTabs">
+            <button class="mode-tab active" data-mode="percent">
+                <i class="fas fa-percent"></i> 百分比折扣
+            </button>
+            <button class="mode-tab" data-mode="fixed">
+                <i class="fas fa-money-bill-wave"></i> 固定金额
+            </button>
+            <button class="mode-tab" data-mode="bnm">
+                <i class="fas fa-gift"></i> 买N送M
+            </button>
+        </div>
+
+        <!-- ===== 百分比/固定金额模式 ===== -->
+        <div class="mode-panel active" id="panelPercentFixed">
+            <div class="input-group">
+                <label><i class="fas fa-tag"></i> 原价</label>
+                <div class="input-row">
+                    <input type="number" id="originalPrice" placeholder="输入原价" step="0.01" min="0">
+                    <span class="unit">元</span>
+                </div>
+            </div>
+
+            <div class="input-group" id="percentInputGroup">
+                <label><i class="fas fa-percent"></i> 折扣</label>
+                <div class="input-row">
+                    <input type="text" id="discountInput" placeholder="如 8折、20%、7.5折">
+                    <span class="unit" id="discountUnit">折</span>
+                </div>
+                <div style="margin-top:6px;font-size:0.72rem;color:var(--text-muted);">
+                    💡 支持格式：<code>8折</code> <code>7.5折</code> <code>20%</code> <code>0.8</code>
+                </div>
+            </div>
+
+            <div class="input-group" id="fixedInputGroup" style="display:none;">
+                <label><i class="fas fa-minus-circle"></i> 减价金额</label>
+                <div class="input-row">
+                    <input type="number" id="fixedAmount" placeholder="输入减价金额" step="0.01" min="0">
+                    <span class="unit">元</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 买N送M模式 ===== -->
+        <div class="mode-panel" id="panelBnm">
+            <div class="input-group">
+                <label><i class="fas fa-tag"></i> 单价</label>
+                <div class="input-row">
+                    <input type="number" id="unitPrice" placeholder="输入单价" step="0.01" min="0">
+                    <span class="unit">元</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label><i class="fas fa-shopping-cart"></i> 买 N 件</label>
+                <div class="bnm-row">
+                    <input type="number" id="buyN" placeholder="N" min="1" step="1">
+                    <span class="bnm-label">件，送</span>
+                    <input type="number" id="freeM" placeholder="M" min="1" step="1">
+                    <span class="bnm-label">件</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label><i class="fas fa-cubes"></i> 想要购买件数</label>
+                <div class="input-row">
+                    <input type="number" id="wantQty" placeholder="输入想要的总件数" min="1" step="1">
+                    <span class="unit">件</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 预设快捷按钮 -->
+        <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:8px;">
+            <i class="fas fa-bolt"></i> 快捷预设
+        </div>
+        <div class="preset-grid" id="presetGrid">
+            <button class="preset-btn" data-preset="8折">
+                <span class="preset-icon">🎯 8折</span>
+                <span class="preset-label">省20%</span>
+            </button>
+            <button class="preset-btn" data-preset="7折">
+                <span class="preset-icon">🎯 7折</span>
+                <span class="preset-label">省30%</span>
+            </button>
+            <button class="preset-btn" data-preset="6折">
+                <span class="preset-icon">🎯 6折</span>
+                <span class="preset-label">省40%</span>
+            </button>
+            <button class="preset-btn" data-preset="5折">
+                <span class="preset-icon">🎯 5折</span>
+                <span class="preset-label">省50%</span>
+            </button>
+            <button class="preset-btn" data-preset="满100减20">
+                <span class="preset-icon">💰 满100-20</span>
+                <span class="preset-label">满减</span>
+            </button>
+            <button class="preset-btn" data-preset="满200减50">
+                <span class="preset-icon">💰 满200-50</span>
+                <span class="preset-label">满减</span>
+            </button>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="calc-action-row">
+            <button class="tool-btn primary" id="calcBtn"><i class="fas fa-calculator"></i> 计算</button>
+            <button class="tool-btn" id="resetBtn"><i class="fas fa-undo"></i> 重置</button>
+        </div>
+
+        <!-- 结果区域 -->
+        <div class="result-area" id="resultArea">
+            <div class="result-grid">
+                <div class="result-item">
+                    <div class="result-value accent" id="discountedPrice">0.00</div>
+                    <div class="result-label">折后价</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-value saved" id="moneySaved">0.00</div>
+                    <div class="result-label">省了多少钱</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-value" id="discountRate">0%</div>
+                    <div class="result-label">折扣率</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-value" id="savedPercent">0%</div>
+                    <div class="result-label">节省比例</div>
+                </div>
+                <div class="result-item full">
+                    <div class="progress-wrap">
+                        <div class="progress-header">
+                            <span>节省进度</span>
+                            <span id="progressLabel">0%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="progressFill"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 历史记录 -->
+        <div class="history-wrap">
+            <div class="history-header">
+                <h3><i class="fas fa-history"></i> 历史记录</h3>
+                <button class="history-clear-btn" id="clearHistoryBtn" title="清空历史">
+                    <i class="fas fa-trash-alt"></i> 清空
+                </button>
+            </div>
+            <div class="history-list" id="historyList">
+                <div class="history-empty">
+                    <i class="fas fa-tags"></i>
+                    暂无计算记录
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 作者标注 -->
+    <div class="author-credit">
+        <p>✧ xiongdaa 工具集 · 折扣计算器 ✧</p>
+        <p><a href="https://xiongdaa.me" target="_blank">xiongdaa.me</a></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        // ==================== 折扣计算器 ====================
+        (function() {
+            'use strict';
+
+            // DOM 元素
+            const elModeTabs = document.querySelectorAll('.mode-tab');
+            const elPanelPercentFixed = document.getElementById('panelPercentFixed');
+            const elPanelBnm = document.getElementById('panelBnm');
+            const elOriginalPrice = document.getElementById('originalPrice');
+            const elDiscountInput = document.getElementById('discountInput');
+            const elDiscountUnit = document.getElementById('discountUnit');
+            const elPercentInputGroup = document.getElementById('percentInputGroup');
+            const elFixedInputGroup = document.getElementById('fixedInputGroup');
+            const elFixedAmount = document.getElementById('fixedAmount');
+            const elUnitPrice = document.getElementById('unitPrice');
+            const elBuyN = document.getElementById('buyN');
+            const elFreeM = document.getElementById('freeM');
+            const elWantQty = document.getElementById('wantQty');
+            const elCalcBtn = document.getElementById('calcBtn');
+            const elResetBtn = document.getElementById('resetBtn');
+            const elResultArea = document.getElementById('resultArea');
+            const elDiscountedPrice = document.getElementById('discountedPrice');
+            const elMoneySaved = document.getElementById('moneySaved');
+            const elDiscountRate = document.getElementById('discountRate');
+            const elSavedPercent = document.getElementById('savedPercent');
+            const elProgressFill = document.getElementById('progressFill');
+            const elProgressLabel = document.getElementById('progressLabel');
+            const elHistoryList = document.getElementById('historyList');
+            const elClearHistoryBtn = document.getElementById('clearHistoryBtn');
+            const elPresetGrid = document.getElementById('presetGrid');
+
+            const HISTORY_KEY = 'xiongda_discount_history';
+            let currentMode = 'percent'; // 'percent' | 'fixed' | 'bnm'
+
+            // ---------- 工具函数 ----------
+            function formatMoney(val) {
+                return Number(val).toFixed(2);
+            }
+
+            function parseDiscountInput(input) {
+                if (!input || input.trim() === '') return null;
+                let s = input.trim();
+
+                // 8折 / 7.5折 / 85折
+                const zheMatch = s.match(/^([\d.]+)\s*折$/);
+                if (zheMatch) {
+                    let val = parseFloat(zheMatch[1]);
+                    if (val > 10) val = val / 10; // 85折 → 8.5折
+                    return val / 10; // 8折 → 0.8
+                }
+
+                // 20% / 85%
+                const percentMatch = s.match(/^([\d.]+)\s*%$/);
+                if (percentMatch) {
+                    return parseFloat(percentMatch[1]) / 100;
+                }
+
+                // 纯数字 0.8 / 0.85 / 8（当作折）
+                const num = parseFloat(s);
+                if (!isNaN(num)) {
+                    if (num > 1 && num <= 10) {
+                        return num / 10; // 8 → 0.8
+                    }
+                    if (num >= 0 && num <= 1) {
+                        return num;
+                    }
+                }
+
+                return null;
+            }
+
+            // ---------- 模式切换 ----------
+            function switchMode(mode) {
+                currentMode = mode;
+
+                elModeTabs.forEach(tab => {
+                    tab.classList.toggle('active', tab.dataset.mode === mode);
+                });
+
+                elPanelPercentFixed.classList.toggle('active', mode === 'percent' || mode === 'fixed');
+                elPanelBnm.classList.toggle('active', mode === 'bnm');
+
+                if (mode === 'percent') {
+                    elPercentInputGroup.style.display = 'block';
+                    elFixedInputGroup.style.display = 'none';
+                    elDiscountUnit.textContent = '折';
+                } else if (mode === 'fixed') {
+                    elPercentInputGroup.style.display = 'none';
+                    elFixedInputGroup.style.display = 'block';
+                    elDiscountUnit.textContent = '元';
+                }
+            }
+
+            elModeTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    switchMode(this.dataset.mode);
+                });
+            });
+
+            // ---------- 预设按钮 ----------
+            elPresetGrid.addEventListener('click', function(e) {
+                const btn = e.target.closest('.preset-btn');
+                if (!btn) return;
+                const preset = btn.dataset.preset;
+
+                if (preset === '8折' || preset === '7折' || preset === '6折' || preset === '5折') {
+                    switchMode('percent');
+                    elDiscountInput.value = preset;
+                    elOriginalPrice.focus();
+                } else if (preset === '满100减20') {
+                    switchMode('fixed');
+                    elOriginalPrice.value = '100';
+                    elFixedAmount.value = '20';
+                    elOriginalPrice.focus();
+                } else if (preset === '满200减50') {
+                    switchMode('fixed');
+                    elOriginalPrice.value = '200';
+                    elFixedAmount.value = '50';
+                    elOriginalPrice.focus();
+                }
+            });
+
+            // ---------- 计算 ----------
+            function calculate() {
+                let originalPrice, discountedPrice, moneySaved, discountRateDecimal, desc;
+
+                if (currentMode === 'percent') {
+                    const price = parseFloat(elOriginalPrice.value);
+                    const discountRaw = elDiscountInput.value;
+
+                    if (isNaN(price) || price <= 0) {
+                        showToast('请输入有效原价');
+                        return;
+                    }
+
+                    const discountFactor = parseDiscountInput(discountRaw);
+                    if (discountFactor === null || discountFactor < 0 || discountFactor > 1) {
+                        showToast('请输入有效折扣（如 8折、20%、0.8）');
+                        return;
+                    }
+
+                    originalPrice = price;
+                    discountedPrice = price * discountFactor;
+                    moneySaved = price - discountedPrice;
+                    discountRateDecimal = discountFactor;
+
+                    desc = `原价 ¥${formatMoney(price)}，${discountRaw}`;
+
+                } else if (currentMode === 'fixed') {
+                    const price = parseFloat(elOriginalPrice.value);
+                    const fixed = parseFloat(elFixedAmount.value);
+
+                    if (isNaN(price) || price <= 0) {
+                        showToast('请输入有效原价');
+                        return;
+                    }
+                    if (isNaN(fixed) || fixed < 0) {
+                        showToast('请输入有效减价金额');
+                        return;
+                    }
+
+                    originalPrice = price;
+                    moneySaved = Math.min(fixed, price);
+                    discountedPrice = price - moneySaved;
+                    discountRateDecimal = discountedPrice / price;
+
+                    desc = `原价 ¥${formatMoney(price)}，满减 ¥${formatMoney(fixed)}`;
+
+                } else if (currentMode === 'bnm') {
+                    const unitPrice = parseFloat(elUnitPrice.value);
+                    const buyN = parseInt(elBuyN.value);
+                    const freeM = parseInt(elFreeM.value);
+                    const wantQty = parseInt(elWantQty.value);
+
+                    if (isNaN(unitPrice) || unitPrice <= 0) {
+                        showToast('请输入有效单价');
+                        return;
+                    }
+                    if (isNaN(buyN) || buyN < 1) {
+                        showToast('请输入有效的 N (买N件)');
+                        return;
+                    }
+                    if (isNaN(freeM) || freeM < 1) {
+                        showToast('请输入有效的 M (送M件)');
+                        return;
+                    }
+                    if (isNaN(wantQty) || wantQty < 1) {
+                        showToast('请输入想要购买件数');
+                        return;
+                    }
+
+                    // 买N送M：每买 N 件送 M 件，实际得到 N+M 件支付 N 件钱
+                    const groupSize = buyN + freeM;
+                    const fullGroups = Math.floor(wantQty / groupSize);
+                    const remainder = wantQty % groupSize;
+
+                    // 满组：付 N 件钱得 N+M 件
+                    const paidInGroups = fullGroups * buyN;
+                    // 余数：如果余数 <= freeM，送的部分已覆盖（不需多付）
+                    // 如果余数 > freeM，需要额外付 (remainder - freeM) 件钱
+                    const extraPaid = remainder > freeM ? (remainder - freeM) : 0;
+                    const totalPaidQty = paidInGroups + extraPaid;
+
+                    originalPrice = unitPrice * wantQty;
+                    discountedPrice = unitPrice * totalPaidQty;
+                    moneySaved = originalPrice - discountedPrice;
+                    discountRateDecimal = discountedPrice / originalPrice;
+
+                    desc = `单价 ¥${formatMoney(unitPrice)}，买${buyN}送${freeM}，买${wantQty}件`;
+                }
+
+                // 更新结果
+                elDiscountedPrice.textContent = '¥' + formatMoney(discountedPrice);
+                elMoneySaved.textContent = '¥' + formatMoney(moneySaved);
+                elDiscountRate.textContent = (discountRateDecimal * 10).toFixed(1) + '折';
+                const savedPct = (moneySaved / originalPrice) * 100;
+                elSavedPercent.textContent = savedPct.toFixed(1) + '%';
+
+                const progressPct = Math.min(savedPct, 100);
+                elProgressFill.style.width = progressPct + '%';
+                elProgressLabel.textContent = progressPct.toFixed(1) + '%';
+
+                elResultArea.classList.add('show');
+
+                // 保存历史
+                saveHistory({
+                    desc: desc,
+                    originalPrice: formatMoney(originalPrice),
+                    discountedPrice: formatMoney(discountedPrice),
+                    moneySaved: formatMoney(moneySaved),
+                    discountRate: (discountRateDecimal * 10).toFixed(1) + '折',
+                    savedPercent: savedPct.toFixed(1) + '%',
+                    time: new Date().toLocaleString('zh-CN')
+                });
+
+                renderHistory();
+            }
+
+            elCalcBtn.addEventListener('click', calculate);
+
+            // Enter 键触发计算
+            document.querySelectorAll('input').forEach(input => {
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') calculate();
+                });
+            });
+
+            // ---------- 重置 ----------
+            elResetBtn.addEventListener('click', function() {
+                elOriginalPrice.value = '';
+                elDiscountInput.value = '';
+                elFixedAmount.value = '';
+                elUnitPrice.value = '';
+                elBuyN.value = '';
+                elFreeM.value = '';
+                elWantQty.value = '';
+                elResultArea.classList.remove('show');
+                elProgressFill.style.width = '0%';
+                elProgressLabel.textContent = '0%';
+            });
+
+            // ---------- 历史记录 ----------
+            function getHistory() {
+                try {
+                    const data = localStorage.getItem(HISTORY_KEY);
+                    return data ? JSON.parse(data) : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function saveHistory(record) {
+                const history = getHistory();
+                history.unshift(record);
+                if (history.length > 50) history.length = 50;
+                try {
+                    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+                } catch (e) {}
+            }
+
+            function renderHistory() {
+                const history = getHistory();
+                if (history.length === 0) {
+                    elHistoryList.innerHTML = `
+                        <div class="history-empty">
+                            <i class="fas fa-tags"></i>
+                            暂无计算记录
+                        </div>
+                    `;
+                    return;
+                }
+
+                elHistoryList.innerHTML = history.map((item, index) => `
+                    <div class="history-item" data-index="${index}">
+                        <div class="hist-top">
+                            <span class="hist-desc">${item.desc}</span>
+                            <span class="hist-result">${item.discountedPrice}</span>
+                        </div>
+                        <div class="hist-details">
+                            <span>原价 ¥${item.originalPrice}</span>
+                            <span>省 ¥${item.moneySaved}</span>
+                            <span>${item.discountRate}</span>
+                            <span>省 ${item.savedPercent}</span>
+                            <span>${item.time}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            elClearHistoryBtn.addEventListener('click', function() {
+                try {
+                    localStorage.removeItem(HISTORY_KEY);
+                } catch (e) {}
+                renderHistory();
+                showToast('历史已清空');
+            });
+
+            // 点击历史项重新计算
+            elHistoryList.addEventListener('click', function(e) {
+                const item = e.target.closest('.history-item');
+                if (!item) return;
+                const index = parseInt(item.dataset.index);
+                const history = getHistory();
+                if (history[index]) {
+                    showToast('查看历史记录：¥' + history[index].discountedPrice);
+                }
+            });
+
+            // 初始化
+            renderHistory();
+
+        })();
+    </script>
+
+</body>
+</html>

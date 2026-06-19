@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="CSP" content="upgrade-insecure-requests">
+    <title>时间戳转换 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* 毫秒切换开关 */
+        .ms-toggle-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+        }
+        .ms-toggle-wrap label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .ms-toggle-wrap input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 38px;
+            height: 20px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            transition: background 0.3s;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .ms-toggle-wrap input[type="checkbox"]::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        .ms-toggle-wrap input[type="checkbox"]:checked {
+            background: var(--theme-accent);
+        }
+        .ms-toggle-wrap input[type="checkbox"]:checked::after {
+            transform: translateX(18px);
+        }
+        .ms-toggle-wrap .ms-label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+        .ms-toggle-wrap .ms-label.active {
+            color: var(--theme-accent);
+            font-weight: 600;
+        }
+
+        /* 转换结果附加信息（UTC + 相对时间） */
+        .ts-result-extra {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 16px;
+            margin-top: 6px;
+            font-size: 0.78rem;
+        }
+        .ts-result-extra .utc-time {
+            color: rgba(255,255,255,0.5);
+        }
+        .ts-result-extra .relative-time {
+            color: rgba(165,180,252,0.7);
+        }
+
+        /* 预设按钮区 */
+        .preset-btns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 12px 0 5px 0;
+        }
+        .preset-btns .preset-btn {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.75);
+            padding: 5px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+        .preset-btns .preset-btn:hover {
+            background: rgba(165,180,252,0.15);
+            border-color: var(--theme-accent);
+            color: #fff;
+        }
+
+        /* 实时时钟区域美化 */
+        .realtime-clock-area {
+            text-align: center;
+            margin-top: 14px;
+            padding: 16px;
+            background: rgba(0,0,0,0.15);
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .realtime-clock-area .clock-ts-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .realtime-clock-area .clock-ts-row .clock-ts-value {
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--theme-accent);
+            letter-spacing: 1px;
+        }
+        .realtime-clock-area .clock-ts-row .clock-ts-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            opacity: 0.6;
+        }
+        .realtime-clock-area .clock-time-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+        .realtime-clock-area .clock-time-row .clock-date {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .realtime-clock-area .clock-time-row .clock-time-main {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            letter-spacing: 1px;
+        }
+        .realtime-clock-area .clock-time-row .clock-ms {
+            font-size: 1.1rem;
+            font-weight: 400;
+            color: rgba(255,255,255,0.5);
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            min-width: 2.8em;
+            text-align: left;
+        }
+        .realtime-clock-area .clock-time-row .clock-weekday {
+            font-size: 0.85rem;
+            color: var(--theme-accent);
+            opacity: 0.8;
+        }
+        .realtime-clock-area .clock-copy-btn {
+            margin-top: 10px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-muted);
+            padding: 6px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+        .realtime-clock-area .clock-copy-btn:hover {
+            background: rgba(165,180,252,0.15);
+            border-color: var(--theme-accent);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="index.html" class="back-home-btn" title="返回工具首页"><i class="fas fa-arrow-left"></i></a>
+
+    <div id="toast"><i class="fas fa-info-circle" style="color: #a5b4fc;"></i><span id="toast-msg">提示信息</span></div>
+
+    <div class="glass-card tool-card">
+        <h1><i class="fas fa-clock"></i> 时间戳转换</h1>
+        <div class="tool-subtitle">Unix 时间戳与日期时间互转</div>
+
+        <!-- 时间戳 → 日期 -->
+        <div class="tool-label"><i class="fas fa-arrow-right"></i> 时间戳 → 日期时间</div>
+        <div class="tool-row" style="align-items:center;">
+            <input type="number" id="tsInput" placeholder="输入 Unix 时间戳（秒）" value="1747785600" style="flex:1;min-width:0;">
+            <div class="ms-toggle-wrap">
+                <label>
+                    <input type="checkbox" id="msToggle" onchange="onMsToggleChange()">
+                    <span class="ms-label" id="msLabelS">秒</span>
+                    <span style="color:var(--text-muted);font-size:0.75rem;">/</span>
+                    <span class="ms-label" id="msLabelMs">毫秒</span>
+                </label>
+            </div>
+            <button class="tool-btn" onclick="fillCurrentTs()" title="填入当前时间戳"><i class="fas fa-bolt"></i></button>
+            <button class="tool-btn primary" onclick="tsToDate()"><i class="fas fa-sync-alt"></i> 转换</button>
+        </div>
+        <div class="tool-output" id="tsDateOutput" onclick="copyOutputText(this)">
+            点击转换查看结果
+            <span class="copy-hint">📋 点击复制</span>
+        </div>
+        <div class="ts-result-extra" id="tsResultExtra"></div>
+
+        <!-- 日期 → 时间戳 -->
+        <div class="tool-label" style="margin-top:25px;"><i class="fas fa-arrow-left"></i> 日期时间 → 时间戳</div>
+        <div class="tool-row">
+            <input type="datetime-local" id="dtInput" style="flex:1;min-width:0;">
+            <button class="tool-btn primary" onclick="dateToTs()"><i class="fas fa-sync-alt"></i> 转换</button>
+        </div>
+        <div class="tool-output" id="dtTsOutput" onclick="copyOutputText(this)">
+            点击转换查看结果
+            <span class="copy-hint">📋 点击复制</span>
+        </div>
+
+        <!-- 预设按钮区 -->
+        <div class="preset-btns">
+            <button class="preset-btn" onclick="fillPreset('today0')">📅 今天0点</button>
+            <button class="preset-btn" onclick="fillPreset('thisMonday')">📆 本周一</button>
+            <button class="preset-btn" onclick="fillPreset('thisMonth1')">🗓️ 本月1号</button>
+            <button class="preset-btn" onclick="fillPreset('nextYear')">📌 明年今天</button>
+        </div>
+
+        <!-- 当前实时 -->
+        <div class="tool-label" style="margin-top:20px;"><i class="fas fa-bolt"></i> 当前实时</div>
+        <div class="realtime-clock-area">
+            <div class="clock-ts-row">
+                <span class="clock-ts-label">UNIX 时间戳</span>
+                <span class="clock-ts-value" id="currentTsDisplay" onclick="copyText(this.textContent)">加载中...</span>
+            </div>
+            <div class="clock-time-row">
+                <span class="clock-date" id="clockDate"></span>
+                <span class="clock-time-main" id="clockTimeMain">--</span>
+                <span class="clock-ms" id="clockMs">.000</span>
+                <span class="clock-weekday" id="clockWeekday"></span>
+            </div>
+            <button class="clock-copy-btn" onclick="copyCurrentTs()"><i class="fas fa-copy"></i> 复制时间戳（秒）</button>
+        </div>
+    </div>
+
+    <div class="author-credit">
+        <p>© 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        // ---- 毫秒切换 ----
+        let useMs = false;
+
+        function onMsToggleChange() {
+            useMs = document.getElementById('msToggle').checked;
+            const labelS = document.getElementById('msLabelS');
+            const labelMs = document.getElementById('msLabelMs');
+            labelS.classList.toggle('active', !useMs);
+            labelMs.classList.toggle('active', useMs);
+            document.getElementById('tsInput').placeholder = useMs ? '输入 Unix 时间戳（毫秒）' : '输入 Unix 时间戳（秒）';
+            // 如果输入框有值，重新转换
+            if (document.getElementById('tsInput').value.trim() !== '') {
+                tsToDate();
+            }
+        }
+
+        function getTsMultiplier() {
+            return useMs ? 1 : 1000;
+        }
+
+        // ---- 相对时间 ----
+        function formatRelativeTime(date) {
+            const now = new Date();
+            const diffMs = now.getTime() - date.getTime();
+            const diffSec = Math.floor(diffMs / 1000);
+            const absDiff = Math.abs(diffSec);
+
+            if (absDiff < 5) return '刚刚';
+            if (absDiff < 60) return absDiff + '秒前';
+            if (absDiff < 3600) return Math.floor(absDiff / 60) + '分钟前';
+            if (absDiff < 86400) return Math.floor(absDiff / 3600) + '小时前';
+            if (absDiff < 2592000) return Math.floor(absDiff / 86400) + '天前';
+            if (absDiff < 31536000) return Math.floor(absDiff / 2592000) + '个月前';
+            return Math.floor(absDiff / 31536000) + '年前';
+        }
+
+        // ---- 时间戳 → 日期 ----
+        function tsToDate() {
+            const raw = document.getElementById('tsInput').value.trim();
+            if (!raw) { showToast('请输入时间戳'); return; }
+            const ts = parseInt(raw);
+            if (isNaN(ts)) { showToast('请输入有效的时间戳'); return; }
+            const multiplier = getTsMultiplier();
+            const d = new Date(ts * multiplier);
+            if (d.getTime() === 0 || isNaN(d.getTime())) { showToast('无效的时间戳'); return; }
+            const parts = [
+                d.getFullYear(), '-',
+                String(d.getMonth()+1).padStart(2,'0'), '-',
+                String(d.getDate()).padStart(2,'0'), ' ',
+                String(d.getHours()).padStart(2,'0'), ':',
+                String(d.getMinutes()).padStart(2,'0'), ':',
+                String(d.getSeconds()).padStart(2,'0')
+            ];
+            const result = parts.join('');
+            document.getElementById('tsDateOutput').innerHTML = result + ' <span class="copy-hint">📋 点击复制</span>';
+
+            // UTC 时间
+            const utcStr = d.toUTCString().replace('GMT', 'UTC');
+
+            // 相对时间
+            const relStr = formatRelativeTime(d);
+
+            // 附加信息
+            document.getElementById('tsResultExtra').innerHTML =
+                '<span class="utc-time"><i class="far fa-clock"></i> ' + utcStr + '</span>' +
+                '<span class="relative-time"><i class="fas fa-hourglass-half"></i> ' + relStr + '</span>';
+
+            printLog('时间戳转换', (useMs ? ts + 'ms' : ts + 's') + ' → ' + result);
+        }
+
+        // ---- 日期 → 时间戳 ----
+        function dateToTs() {
+            const val = document.getElementById('dtInput').value;
+            if (!val) { showToast('请选择日期时间'); return; }
+            const d = new Date(val);
+            const ts = Math.floor(d.getTime() / 1000);
+            document.getElementById('dtTsOutput').innerHTML = ts + ' <span class="copy-hint">📋 点击复制</span>';
+            printLog('日期转换', val + ' → ' + ts);
+        }
+
+        // ---- 填入当前时间戳 ----
+        function fillCurrentTs() {
+            const now = Date.now();
+            const displayVal = useMs ? now : Math.floor(now / 1000);
+            document.getElementById('tsInput').value = displayVal;
+            tsToDate();
+            showToast('已填入当前时间戳');
+        }
+
+        // ---- 预设按钮 ----
+        function fillPreset(type) {
+            const now = new Date();
+            let targetDate;
+
+            switch (type) {
+                case 'today0': {
+                    // 今天0点
+                    targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+                    break;
+                }
+                case 'thisMonday': {
+                    // 本周一 0点
+                    const day = now.getDay(); // 0=周日, 1=周一, ...
+                    const diff = day === 0 ? 6 : day - 1; // 距离上周一的天数
+                    const monday = new Date(now);
+                    monday.setDate(now.getDate() - diff);
+                    targetDate = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate(), 0, 0, 0, 0);
+                    break;
+                }
+                case 'thisMonth1': {
+                    // 本月1号 0点
+                    targetDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+                    break;
+                }
+                case 'nextYear': {
+                    // 明年今天
+                    targetDate = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate(), 0, 0, 0, 0);
+                    break;
+                }
+                default: return;
+            }
+
+            const ts = useMs ? targetDate.getTime() : Math.floor(targetDate.getTime() / 1000);
+            document.getElementById('tsInput').value = ts;
+            tsToDate();
+        }
+
+        // ---- 实时时钟（毫秒级刷新） ----
+        let clockAnimId = null;
+
+        function updateRealtimeClock() {
+            const now = new Date();
+            const ts = Math.floor(now.getTime() / 1000);
+            const ms = now.getMilliseconds();
+
+            document.getElementById('currentTsDisplay').textContent = ts;
+            document.getElementById('clockTimeMain').textContent =
+                String(now.getHours()).padStart(2,'0') + ':' +
+                String(now.getMinutes()).padStart(2,'0') + ':' +
+                String(now.getSeconds()).padStart(2,'0');
+            document.getElementById('clockMs').textContent = '.' + String(ms).padStart(3,'0');
+
+            const dateStr = now.getFullYear() + '年' +
+                String(now.getMonth()+1).padStart(2,'0') + '月' +
+                String(now.getDate()).padStart(2,'0') + '日';
+            document.getElementById('clockDate').textContent = dateStr;
+
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            document.getElementById('clockWeekday').textContent = '周' + weekdays[now.getDay()];
+
+            clockAnimId = requestAnimationFrame(updateRealtimeClock);
+        }
+
+        function copyCurrentTs() {
+            const ts = document.getElementById('currentTsDisplay').textContent;
+            copyText(ts);
+        }
+
+        // ---- 复制输出框内容 ----
+        function copyOutputText(el) {
+            // 获取纯文本，忽略复制提示
+            let text = '';
+            for (const node of el.childNodes) {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    text += node.textContent;
+                }
+            }
+            text = text.trim();
+            if (text) copyText(text);
+        }
+
+        // ---- 初始化 ----
+        document.addEventListener('DOMContentLoaded', function() {
+            // 默认示例转换
+            tsToDate();
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth()+1).padStart(2,'0');
+            const d = String(now.getDate()).padStart(2,'0');
+            const h = String(now.getHours()).padStart(2,'0');
+            const mi = String(now.getMinutes()).padStart(2,'0');
+            document.getElementById('dtInput').value = y + '-' + m + '-' + d + 'T' + h + ':' + mi;
+            dateToTs();
+
+            // 启动毫秒级时钟
+            updateRealtimeClock();
+        });
+
+        // 点击特效
+        document.addEventListener('click', createClickEffect);
+        document.addEventListener('touchstart', function(e) {
+            const touch = e.touches[0];
+            createClickEffect({ clientX: touch.clientX, clientY: touch.clientY });
+        }, { passive: true });
+    </script>
+</body>
+</html>

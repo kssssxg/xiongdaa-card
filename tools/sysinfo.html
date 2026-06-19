@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统信息检测 - xiongdaa</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* ============= 页面特定样式 ============= */
+        .page-container {
+            width: 100%;
+            max-width: 900px;
+            position: relative;
+            z-index: 10;
+            padding: 20px 0;
+        }
+
+        .page-title {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .page-title h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .page-title p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* 信息卡片网格 */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .info-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px) saturate(150%);
+            -webkit-backdrop-filter: blur(24px) saturate(150%);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: var(--glass-shadow);
+            animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            transition: all 0.3s ease;
+        }
+        .info-card:hover {
+            border-color: var(--theme-accent);
+            transform: translateY(-2px);
+        }
+        .info-card.stagger-1 { animation-delay: 0.05s; }
+        .info-card.stagger-2 { animation-delay: 0.10s; }
+        .info-card.stagger-3 { animation-delay: 0.15s; }
+        .info-card.stagger-4 { animation-delay: 0.20s; }
+        .info-card.stagger-5 { animation-delay: 0.25s; }
+        .info-card.stagger-6 { animation-delay: 0.30s; }
+        .info-card.stagger-7 { animation-delay: 0.35s; }
+        .info-card.stagger-8 { animation-delay: 0.40s; }
+
+        .info-card .card-icon {
+            font-size: 1.8rem;
+            color: var(--theme-accent);
+            margin-bottom: 10px;
+        }
+        .info-card .card-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .info-card .card-value {
+            font-size: 1.3rem;
+            font-weight: 600;
+            word-break: break-all;
+        }
+        .info-card .card-value.small {
+            font-size: 0.85rem;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+        .info-card .card-value.mono {
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.75rem;
+            line-height: 1.6;
+        }
+
+        /* 卡片内子行 */
+        .card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .card-row:last-child { border-bottom: none; }
+        .card-row .row-label { font-size: 0.8rem; color: var(--text-muted); }
+        .card-row .row-value { font-size: 0.85rem; font-weight: 500; }
+
+        /* 断点标记 */
+        .breakpoint-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            background: rgba(165, 180, 252, 0.2);
+            border: 1px solid rgba(165, 180, 252, 0.3);
+            color: var(--theme-accent);
+            margin: 2px;
+        }
+        .breakpoint-tag.active {
+            background: rgba(52, 211, 153, 0.25);
+            border-color: #34d399;
+            color: #34d399;
+        }
+
+        /* 状态指示器 */
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .status-dot.online { background: #34d399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.6); }
+        .status-dot.offline { background: #f87171; box-shadow: 0 0 8px rgba(248, 113, 113, 0.6); }
+
+        /* 地理位置按钮 */
+        .geo-btn {
+            background: rgba(165, 180, 252, 0.15);
+            border: 1px solid rgba(165, 180, 252, 0.3);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+            margin-top: 8px;
+            width: 100%;
+        }
+        .geo-btn:hover {
+            background: rgba(165, 180, 252, 0.25);
+            border-color: var(--theme-accent);
+        }
+        .geo-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .geo-result {
+            margin-top: 8px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* 全宽卡片 */
+        .info-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* 响应式 */
+        @media (max-width: 640px) {
+            .info-grid {
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                gap: 12px;
+            }
+            .info-card { padding: 16px; }
+            .info-card .card-value { font-size: 1.1rem; }
+            .page-title h1 { font-size: 1.4rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 遮罩 -->
+    <div class="overlay"></div>
+
+    <!-- 视频背景 -->
+    <video id="bg-video" muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <!-- Toast -->
+    <div id="toast"><span id="toast-msg"></span></div>
+
+    <!-- 返回按钮 -->
+    <a href="../index.html" class="back-home-btn" title="返回主页">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <!-- 页面容器 -->
+    <div class="page-container">
+        <div class="page-title">
+            <h1><i class="fas fa-desktop"></i> 系统信息检测</h1>
+            <p>屏幕检测 · User-Agent 解析 · 浏览器信息</p>
+        </div>
+
+        <!-- ========== 屏幕/视口信息 ========== -->
+        <h2 style="font-size:1.1rem;font-weight:600;margin-bottom:16px;color:var(--text-muted);animation:slideUpFade 0.8s forwards;">
+            <i class="fas fa-expand"></i> 屏幕 &amp; 视口
+        </h2>
+        <div class="info-grid">
+            <!-- 屏幕宽高 -->
+            <div class="info-card stagger-1">
+                <div class="card-icon"><i class="fas fa-arrows-alt"></i></div>
+                <div class="card-label">屏幕分辨率</div>
+                <div class="card-value" id="screen-res">—</div>
+            </div>
+            <!-- 视口宽高 -->
+            <div class="info-card stagger-2">
+                <div class="card-icon"><i class="fas fa-window-maximize"></i></div>
+                <div class="card-label">视口尺寸</div>
+                <div class="card-value" id="viewport-size">—</div>
+            </div>
+            <!-- 设备像素比 -->
+            <div class="info-card stagger-3">
+                <div class="card-icon"><i class="fas fa-eye"></i></div>
+                <div class="card-label">设备像素比 (DPR)</div>
+                <div class="card-value" id="dpr">—</div>
+            </div>
+            <!-- 色彩深度 -->
+            <div class="info-card stagger-4">
+                <div class="card-icon"><i class="fas fa-palette"></i></div>
+                <div class="card-label">色彩深度</div>
+                <div class="card-value" id="color-depth">—</div>
+            </div>
+        </div>
+
+        <!-- 响应式断点提示 + 实时尺寸 -->
+        <div class="info-grid">
+            <div class="info-card stagger-5 full-width">
+                <div class="card-icon"><i class="fas fa-ruler-combined"></i></div>
+                <div class="card-label">响应式断点 &amp; 实时尺寸</div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;" id="breakpoint-tags">
+                    <span class="breakpoint-tag" data-bp="xs">XS &lt;480px</span>
+                    <span class="breakpoint-tag" data-bp="sm">SM 480–768</span>
+                    <span class="breakpoint-tag" data-bp="md">MD 768–1024</span>
+                    <span class="breakpoint-tag" data-bp="lg">LG 1024–1280</span>
+                    <span class="breakpoint-tag" data-bp="xl">XL 1280–1536</span>
+                    <span class="breakpoint-tag" data-bp="2xl">2XL &gt;1536</span>
+                </div>
+                <div class="card-row">
+                    <span class="row-label">当前视口宽度</span>
+                    <span class="row-value" id="live-width">—</span>
+                </div>
+                <div class="card-row">
+                    <span class="row-label">当前视口高度</span>
+                    <span class="row-value" id="live-height">—</span>
+                </div>
+                <div class="card-row">
+                    <span class="row-label">当前断点</span>
+                    <span class="row-value" id="live-breakpoint">—</span>
+                </div>
+                <div class="card-row" style="border:none;">
+                    <span class="row-label">设备像素比</span>
+                    <span class="row-value" id="live-dpr">—</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 浏览器信息 ========== -->
+        <h2 style="font-size:1.1rem;font-weight:600;margin:24px 0 16px;color:var(--text-muted);animation:slideUpFade 0.8s forwards;">
+            <i class="fas fa-globe"></i> 浏览器信息
+        </h2>
+        <div class="info-grid">
+            <!-- User-Agent -->
+            <div class="info-card stagger-6 full-width">
+                <div class="card-icon"><i class="fas fa-code"></i></div>
+                <div class="card-label">User-Agent</div>
+                <div class="card-value mono small" id="ua-string" style="cursor:pointer;" title="点击复制">—</div>
+            </div>
+            <!-- 浏览器名称/版本 -->
+            <div class="info-card stagger-6">
+                <div class="card-icon"><i class="fab fa-chrome"></i></div>
+                <div class="card-label">浏览器</div>
+                <div class="card-value" id="browser-name">—</div>
+            </div>
+            <!-- 操作系统 -->
+            <div class="info-card stagger-7">
+                <div class="card-icon"><i class="fas fa-laptop"></i></div>
+                <div class="card-label">操作系统</div>
+                <div class="card-value" id="os-name">—</div>
+            </div>
+            <!-- 设备类型 -->
+            <div class="info-card stagger-7">
+                <div class="card-icon"><i class="fas fa-mobile-alt"></i></div>
+                <div class="card-label">设备类型</div>
+                <div class="card-value" id="device-type">—</div>
+            </div>
+            <!-- 触屏 + 语言 + Cookie -->
+            <div class="info-card stagger-8 full-width">
+                <div class="card-icon"><i class="fas fa-sliders-h"></i></div>
+                <div class="card-label">其他信息</div>
+                <div class="card-row">
+                    <span class="row-label"><i class="fas fa-hand-pointer"></i> 触屏支持</span>
+                    <span class="row-value" id="touch-support">—</span>
+                </div>
+                <div class="card-row">
+                    <span class="row-label"><i class="fas fa-language"></i> 语言设置</span>
+                    <span class="row-value" id="language">—</span>
+                </div>
+                <div class="card-row" style="border:none;">
+                    <span class="row-label"><i class="fas fa-cookie"></i> Cookie 启用</span>
+                    <span class="row-value" id="cookie-enabled">—</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 其他信息 ========== -->
+        <h2 style="font-size:1.1rem;font-weight:600;margin:24px 0 16px;color:var(--text-muted);animation:slideUpFade 0.8s forwards;">
+            <i class="fas fa-ellipsis-h"></i> 其他信息
+        </h2>
+        <div class="info-grid">
+            <!-- 当前时间 -->
+            <div class="info-card stagger-1">
+                <div class="card-icon"><i class="fas fa-clock"></i></div>
+                <div class="card-label">当前时间</div>
+                <div class="card-value" id="current-time" style="font-family:'Cascadia Code','Fira Code',monospace;">—</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;" id="current-date"></div>
+            </div>
+            <!-- 在线状态 -->
+            <div class="info-card stagger-2">
+                <div class="card-icon"><i class="fas fa-wifi"></i></div>
+                <div class="card-label">网络状态</div>
+                <div class="card-value" id="online-status">
+                    <span class="status-dot" id="status-dot"></span>
+                    <span id="status-text">检测中...</span>
+                </div>
+            </div>
+            <!-- 地理位置 -->
+            <div class="info-card stagger-3 full-width">
+                <div class="card-icon"><i class="fas fa-map-marker-alt"></i></div>
+                <div class="card-label">地理位置</div>
+                <button class="geo-btn" id="geo-btn" onclick="getGeolocation()">
+                    <i class="fas fa-crosshairs"></i> 获取位置信息
+                </button>
+                <div class="geo-result" id="geo-result">
+                    <span style="color:var(--text-muted);font-size:0.75rem;">点击按钮获取您的位置（需授权）</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 作者标注 -->
+    <div class="author-credit" style="z-index:10;">
+        <p><a href="https://github.com/xiongdaa" target="_blank">@xiongdaa</a> · 系统信息检测工具</p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        // ==================== 工具函数 ====================
+
+        // 解析浏览器信息
+        function parseBrowser(ua) {
+            let browserName = '未知';
+            let browserVersion = '';
+            let osName = '未知';
+            let osVersion = '';
+            let deviceType = '桌面';
+
+            // 浏览器检测
+            if (ua.includes('Edg/') || ua.includes('Edge/')) {
+                browserName = 'Microsoft Edge';
+                const m = ua.match(/Edg\/([\d.]+)/);
+                if (m) browserVersion = m[1];
+            } else if (ua.includes('OPR/') || ua.includes('Opera/')) {
+                browserName = 'Opera';
+                const m = ua.match(/(?:OPR|Opera)\/([\d.]+)/);
+                if (m) browserVersion = m[1];
+            } else if (ua.includes('Chrome/') && !ua.includes('Edg/') && !ua.includes('OPR/')) {
+                browserName = 'Google Chrome';
+                const m = ua.match(/Chrome\/([\d.]+)/);
+                if (m) browserVersion = m[1];
+            } else if (ua.includes('Firefox/')) {
+                browserName = 'Mozilla Firefox';
+                const m = ua.match(/Firefox\/([\d.]+)/);
+                if (m) browserVersion = m[1];
+            } else if (ua.includes('Safari/') && !ua.includes('Chrome/')) {
+                browserName = 'Apple Safari';
+                const m = ua.match(/Version\/([\d.]+)/);
+                if (m) browserVersion = m[1];
+            } else if (ua.includes('MicroMessenger/')) {
+                browserName = '微信内置浏览器';
+                const m = ua.match(/MicroMessenger\/([\d.]+)/);
+                if (m) browserVersion = m[1];
+            }
+
+            // OS 检测
+            if (ua.includes('Windows NT')) {
+                osName = 'Windows';
+                const m = ua.match(/Windows NT ([\d.]+)/);
+                if (m) {
+                    const v = m[1];
+                    const map = { '10.0': '10/11', '6.3': '8.1', '6.2': '8', '6.1': '7', '6.0': 'Vista', '5.2': 'XP x64', '5.1': 'XP' };
+                    osVersion = map[v] || v;
+                }
+            } else if (ua.includes('Mac OS X')) {
+                osName = 'macOS';
+                const m = ua.match(/Mac OS X ([\d_.]+)/);
+                if (m) osVersion = m[1].replace(/_/g, '.');
+            } else if (ua.includes('Linux') && ua.includes('Android')) {
+                osName = 'Android';
+                const m = ua.match(/Android ([\d.]+)/);
+                if (m) osVersion = m[1];
+            } else if (ua.includes('iPhone') || ua.includes('iPad') || ua.includes('iPod')) {
+                osName = 'iOS';
+                const m = ua.match(/OS ([\d_]+) like Mac/);
+                if (m) osVersion = m[1].replace(/_/g, '.');
+            } else if (ua.includes('Linux')) {
+                osName = 'Linux';
+            } else if (ua.includes('CrOS')) {
+                osName = 'ChromeOS';
+            }
+
+            // 设备类型检测
+            const isTablet = /(tablet|ipad|playbook|silk)|(android(?!.*mobile))/i.test(ua);
+            const isMobile = /Mobi|Android|iPhone|iPod|Opera Mini|IEMobile|WPDesktop|BlackBerry|webOS/i.test(ua);
+            if (isTablet) {
+                deviceType = '平板';
+            } else if (isMobile) {
+                deviceType = '移动端';
+            } else {
+                deviceType = '桌面端';
+            }
+
+            return { browserName, browserVersion, osName, osVersion, deviceType };
+        }
+
+        // 更新屏幕/视口信息
+        function updateScreenInfo() {
+            const w = window;
+            const s = screen;
+
+            // 屏幕分辨率
+            document.getElementById('screen-res').innerText = s.width + ' × ' + s.height;
+
+            // 视口尺寸
+            document.getElementById('viewport-size').innerText = w.innerWidth + ' × ' + w.innerHeight;
+
+            // DPR
+            document.getElementById('dpr').innerText = w.devicePixelRatio.toFixed(2) + 'x';
+
+            // 色彩深度
+            document.getElementById('color-depth').innerText = s.colorDepth + ' bit';
+
+            // 实时尺寸
+            document.getElementById('live-width').innerText = w.innerWidth + 'px';
+            document.getElementById('live-height').innerText = w.innerHeight + 'px';
+            document.getElementById('live-dpr').innerText = w.devicePixelRatio.toFixed(2) + 'x';
+
+            // 断点
+            const width = w.innerWidth;
+            let activeBP = 'xs';
+            if (width >= 1536) activeBP = '2xl';
+            else if (width >= 1280) activeBP = 'xl';
+            else if (width >= 1024) activeBP = 'lg';
+            else if (width >= 768) activeBP = 'md';
+            else if (width >= 480) activeBP = 'sm';
+            else activeBP = 'xs';
+
+            document.querySelectorAll('.breakpoint-tag').forEach(el => {
+                el.classList.toggle('active', el.dataset.bp === activeBP);
+            });
+
+            const bpLabels = {
+                'xs': 'XS（<480px）',
+                'sm': 'SM（480–768px）',
+                'md': 'MD（768–1024px）',
+                'lg': 'LG（1024–1280px）',
+                'xl': 'XL（1280–1536px）',
+                '2xl': '2XL（>1536px）'
+            };
+            document.getElementById('live-breakpoint').innerText = bpLabels[activeBP] || activeBP;
+        }
+
+        // 填充浏览器信息
+        function fillBrowserInfo() {
+            const ua = navigator.userAgent;
+            const info = parseBrowser(ua);
+
+            document.getElementById('ua-string').innerText = ua;
+
+            let browserDisplay = info.browserName;
+            if (info.browserVersion) browserDisplay += ' v' + info.browserVersion;
+            document.getElementById('browser-name').innerText = browserDisplay;
+
+            let osDisplay = info.osName;
+            if (info.osVersion) osDisplay += ' ' + info.osVersion;
+            document.getElementById('os-name').innerText = osDisplay;
+
+            document.getElementById('device-type').innerText = info.deviceType;
+
+            // 设备类型图标
+            const iconMap = { '桌面端': 'fa-desktop', '移动端': 'fa-mobile-alt', '平板': 'fa-tablet-alt' };
+            const iconClass = iconMap[info.deviceType] || 'fa-question';
+            document.querySelector('.info-card.stagger-7 .card-icon i').className = 'fas ' + iconClass;
+
+            // 浏览器图标
+            const browserIconMap = {
+                'Google Chrome': 'fa-chrome',
+                'Mozilla Firefox': 'fa-firefox',
+                'Apple Safari': 'fa-safari',
+                'Microsoft Edge': 'fa-edge',
+                'Opera': 'fa-opera',
+                '微信内置浏览器': 'fa-weixin'
+            };
+            const browserIcon = browserIconMap[info.browserName] || 'fa-globe';
+            document.querySelector('.info-card.stagger-6 .card-icon i').className = 'fab ' + browserIcon;
+
+            // 触屏
+            document.getElementById('touch-support').innerHTML = 'ontouchstart' in window
+                ? '<span style="color:#34d399;"><i class="fas fa-check-circle"></i> 支持</span>'
+                : '<span style="color:#f87171;"><i class="fas fa-times-circle"></i> 不支持</span>';
+
+            // 语言
+            document.getElementById('language').innerText = navigator.language || navigator.userLanguage || '未知';
+
+            // Cookie
+            document.getElementById('cookie-enabled').innerHTML = navigator.cookieEnabled
+                ? '<span style="color:#34d399;"><i class="fas fa-check-circle"></i> 已启用</span>'
+                : '<span style="color:#f87171;"><i class="fas fa-times-circle"></i> 未启用</span>';
+        }
+
+        // 更新在线状态
+        function updateOnlineStatus() {
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            const online = navigator.onLine;
+            dot.className = 'status-dot ' + (online ? 'online' : 'offline');
+            text.innerText = online ? '在线' : '离线';
+        }
+
+        // 时钟更新
+        function updateLocalTime() {
+            const now = new Date();
+            document.getElementById('current-time').innerText = now.toLocaleTimeString('zh-CN', { hour12: false });
+            document.getElementById('current-date').innerText = now.toLocaleDateString('zh-CN', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        // 地理位置
+        function getGeolocation() {
+            const btn = document.getElementById('geo-btn');
+            const result = document.getElementById('geo-result');
+
+            if (!navigator.geolocation) {
+                result.innerHTML = '<span style="color:#f87171;"><i class="fas fa-times-circle"></i> 您的浏览器不支持地理位置功能</span>';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 获取中...';
+
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    const lat = pos.coords.latitude.toFixed(6);
+                    const lng = pos.coords.longitude.toFixed(6);
+                    const accuracy = pos.coords.accuracy ? pos.coords.accuracy.toFixed(0) + 'm' : '未知';
+                    result.innerHTML = `
+                        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px;">
+                            <span><span style="color:var(--text-muted);">纬度:</span> <strong>${lat}</strong></span>
+                            <span><span style="color:var(--text-muted);">经度:</span> <strong>${lng}</strong></span>
+                            <span><span style="color:var(--text-muted);">精度:</span> ${accuracy}</span>
+                        </div>
+                        <div style="margin-top:6px;">
+                            <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" style="color:var(--theme-accent);font-size:0.75rem;text-decoration:none;">
+                                <i class="fas fa-external-link-alt"></i> 在 Google Maps 中查看
+                            </a>
+                        </div>
+                    `;
+                    btn.innerHTML = '<i class="fas fa-crosshairs"></i> 重新获取位置';
+                    btn.disabled = false;
+                },
+                function(err) {
+                    let msg = '获取位置失败';
+                    switch (err.code) {
+                        case err.PERMISSION_DENIED:
+                            msg = '用户拒绝了定位请求，请在浏览器设置中允许访问位置信息';
+                            break;
+                        case err.POSITION_UNAVAILABLE:
+                            msg = '位置信息不可用';
+                            break;
+                        case err.TIMEOUT:
+                            msg = '获取位置超时，请重试';
+                            break;
+                        default:
+                            msg = '未知错误: ' + err.message;
+                    }
+                    result.innerHTML = '<span style="color:#f87171;"><i class="fas fa-exclamation-triangle"></i> ' + msg + '</span>';
+                    btn.innerHTML = '<i class="fas fa-crosshairs"></i> 获取位置信息';
+                    btn.disabled = false;
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 300000
+                }
+            );
+        }
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始数据填充
+            updateScreenInfo();
+            fillBrowserInfo();
+            updateOnlineStatus();
+            updateLocalTime();
+
+            // 实时时钟
+            setInterval(updateLocalTime, 1000);
+
+            // 实时窗口变化监听
+            window.addEventListener('resize', updateScreenInfo);
+
+            // 在线/离线事件
+            window.addEventListener('online', updateOnlineStatus);
+            window.addEventListener('offline', updateOnlineStatus);
+
+            // User-Agent 点击复制
+            document.getElementById('ua-string').addEventListener('click', function() {
+                if (typeof copyText === 'function') {
+                    copyText(this.innerText);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

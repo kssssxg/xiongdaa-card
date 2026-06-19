@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安全工具 · 密码生成器 &amp; UUID 生成器</title>
+    <link rel="stylesheet" href="common.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ---- 页面额外布局 ---- */
+        body {
+            background-image: url('https://img.8845.top/acg');
+            padding-top: 30px;
+            padding-bottom: 30px;
+        }
+
+        .page-wrapper {
+            width: 100%;
+            max-width: 780px;
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .glass-card {
+            padding: 32px 36px;
+        }
+        .glass-card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .glass-card h2 i {
+            color: var(--theme-accent);
+            font-size: 1.15rem;
+        }
+
+        /* ---- 密码生成器 ---- */
+        .pw-length-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        .pw-length-row input[type="range"] {
+            flex: 1;
+            accent-color: var(--theme-accent);
+            height: 6px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.15);
+            -webkit-appearance: none;
+            appearance: none;
+            outline: none;
+        }
+        .pw-length-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--theme-accent);
+            cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        .pw-length-row input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--theme-accent);
+            cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        .pw-length-row input[type="number"] {
+            width: 60px;
+            text-align: center;
+            padding: 8px 6px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        .pw-length-row input[type="number"]:focus {
+            border-color: var(--theme-accent);
+        }
+        .pw-length-row input[type="number"]::-webkit-inner-spin-button {
+            opacity: 0.5;
+        }
+
+        .pw-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 20px;
+            margin-bottom: 10px;
+        }
+        .pw-options label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.88rem;
+            color: var(--text-main);
+            cursor: pointer;
+            padding: 4px 0;
+        }
+        .pw-options input[type="checkbox"] {
+            accent-color: var(--theme-accent);
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .pw-extra-options {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+        .pw-extra-options label {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+        .pw-extra-options input[type="checkbox"] {
+            accent-color: var(--theme-accent);
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+        }
+
+        .pw-toolbar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .pw-toolbar .tool-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .pw-batch-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+        .pw-batch-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .pw-batch-group input[type="number"] {
+            width: 52px;
+            padding: 6px 4px;
+            text-align: center;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            outline: none;
+        }
+        .pw-batch-group input[type="number"]:focus {
+            border-color: var(--theme-accent);
+        }
+
+        /* 密码结果显示区域 */
+        .pw-result-area {
+            margin-top: 6px;
+        }
+        .pw-result-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            margin-bottom: 6px;
+            transition: border-color 0.2s;
+            cursor: pointer;
+        }
+        .pw-result-item:hover {
+            border-color: var(--theme-accent);
+        }
+        .pw-result-item .pw-text {
+            flex: 1;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9rem;
+            word-break: break-all;
+            color: var(--text-main);
+        }
+        .pw-result-item .pw-strength {
+            font-size: 0.7rem;
+            padding: 3px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .pw-strength.weak {
+            background: rgba(239,68,68,0.25);
+            color: #f87171;
+            border: 1px solid rgba(239,68,68,0.3);
+        }
+        .pw-strength.medium {
+            background: rgba(250,204,21,0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(250,204,21,0.3);
+        }
+        .pw-strength.strong {
+            background: rgba(52,211,153,0.2);
+            color: #34d399;
+            border: 1px solid rgba(52,211,153,0.3);
+        }
+        .pw-strength.very-strong {
+            background: rgba(165,180,252,0.2);
+            color: #a5b4fc;
+            border: 1px solid rgba(165,180,252,0.3);
+        }
+        .pw-result-item .pw-copy-icon {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+        .pw-result-item:hover .pw-copy-icon {
+            opacity: 1;
+        }
+
+        .pw-empty-msg {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* ---- UUID 生成器 ---- */
+        .uuid-format-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .uuid-format-row label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            cursor: pointer;
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .uuid-format-row label:hover {
+            background: rgba(255,255,255,0.12);
+        }
+        .uuid-format-row input[type="radio"] {
+            accent-color: var(--theme-accent);
+            cursor: pointer;
+        }
+        .uuid-format-row label:has(input:checked) {
+            background: rgba(165,180,252,0.15);
+            border-color: var(--theme-accent);
+        }
+
+        .uuid-toolbar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .uuid-toolbar .tool-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .uuid-batch-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+        .uuid-batch-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .uuid-batch-group input[type="number"] {
+            width: 52px;
+            padding: 6px 4px;
+            text-align: center;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            outline: none;
+        }
+        .uuid-batch-group input[type="number"]:focus {
+            border-color: var(--theme-accent);
+        }
+
+        .uuid-result-area {
+            margin-top: 4px;
+        }
+        .uuid-result-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            margin-bottom: 6px;
+            transition: border-color 0.2s;
+            cursor: pointer;
+        }
+        .uuid-result-item:hover {
+            border-color: var(--theme-accent);
+        }
+        .uuid-result-item .uuid-text {
+            flex: 1;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9rem;
+            word-break: break-all;
+            color: var(--text-main);
+        }
+        .uuid-result-item .uuid-copy-icon {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+        .uuid-result-item:hover .uuid-copy-icon {
+            opacity: 1;
+        }
+
+        .uuid-empty-msg {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* ---- 响应式 ---- */
+        @media (max-width: 640px) {
+            .glass-card { padding: 20px 18px; }
+            .pw-options { grid-template-columns: 1fr; }
+            .pw-batch-group { margin-left: 0; }
+            .uuid-batch-group { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 视频背景（common.js 需要） -->
+    <video id="bg-video" muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <!-- 背景遮罩 -->
+    <div class="overlay"></div>
+
+    <!-- Toast -->
+    <div id="toast"><i class="fas fa-check-circle" style="color:#34d399;"></i><span id="toast-msg">已复制到剪贴板</span></div>
+
+    <!-- 返回按钮 -->
+    <a href="../index.html" class="back-home-btn" title="返回主页">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <div class="page-wrapper">
+
+        <!-- ========== 密码生成器 ========== -->
+        <div class="glass-card">
+            <h2><i class="fas fa-lock"></i> 强密码生成器</h2>
+
+            <!-- 长度 -->
+            <div class="pw-length-row">
+                <span class="tool-label" style="margin:0; white-space:nowrap;">密码长度</span>
+                <input type="range" id="pw-length-range" min="4" max="64" value="16">
+                <input type="number" id="pw-length-num" min="4" max="64" value="16">
+            </div>
+
+            <!-- 字符集 -->
+            <div class="pw-options">
+                <label><input type="checkbox" id="pw-upper" checked> 大写字母 (A-Z)</label>
+                <label><input type="checkbox" id="pw-lower" checked> 小写字母 (a-z)</label>
+                <label><input type="checkbox" id="pw-digits" checked> 数字 (0-9)</label>
+                <label><input type="checkbox" id="pw-symbols"> 特殊符号 (!@#$%^&amp;*)</label>
+            </div>
+
+            <!-- 额外选项 -->
+            <div class="pw-extra-options">
+                <label><input type="checkbox" id="pw-exclude-similar"> 排除相似字符 (1lI 0O)</label>
+                <label><input type="checkbox" id="pw-exclude-dupes"> 排除重复字符</label>
+            </div>
+
+            <!-- 工具栏 -->
+            <div class="pw-toolbar">
+                <button class="tool-btn primary" id="pw-generate-btn">
+                    <i class="fas fa-bolt"></i> 生成密码
+                </button>
+                <button class="tool-btn" id="pw-copy-all-btn">
+                    <i class="fas fa-copy"></i> 复制全部
+                </button>
+                <button class="tool-btn" id="pw-clear-btn">
+                    <i class="fas fa-eraser"></i> 清除
+                </button>
+                <div class="pw-batch-group">
+                    <label>批量</label>
+                    <input type="number" id="pw-batch-count" min="1" max="10" value="1">
+                </div>
+            </div>
+
+            <!-- 结果 -->
+            <div class="pw-result-area" id="pw-result-area">
+                <div class="pw-empty-msg"><i class="fas fa-arrow-up"></i> 点击「生成密码」开始</div>
+            </div>
+        </div>
+
+        <!-- ========== UUID 生成器 ========== -->
+        <div class="glass-card">
+            <h2><i class="fas fa-fingerprint"></i> UUID / GUID 生成器</h2>
+
+            <!-- 格式 -->
+            <div class="uuid-format-row">
+                <label><input type="radio" name="uuid-format" value="standard" checked> 标准 (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)</label>
+                <label><input type="radio" name="uuid-format" value="nodash"> 无横线</label>
+                <label><input type="radio" name="uuid-format" value="upper"> 大写</label>
+                <label><input type="radio" name="uuid-format" value="upper-nodash"> 无横线大写</label>
+            </div>
+
+            <!-- 工具栏 -->
+            <div class="uuid-toolbar">
+                <button class="tool-btn primary" id="uuid-generate-btn">
+                    <i class="fas fa-bolt"></i> 生成 UUID
+                </button>
+                <button class="tool-btn" id="uuid-copy-all-btn">
+                    <i class="fas fa-copy"></i> 复制全部
+                </button>
+                <button class="tool-btn" id="uuid-clear-btn">
+                    <i class="fas fa-eraser"></i> 清除
+                </button>
+                <div class="uuid-batch-group">
+                    <label>批量</label>
+                    <input type="number" id="uuid-batch-count" min="1" max="10" value="1">
+                </div>
+            </div>
+
+            <!-- 结果 -->
+            <div class="uuid-result-area" id="uuid-result-area">
+                <div class="uuid-empty-msg"><i class="fas fa-arrow-up"></i> 点击「生成 UUID」开始</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 作者标注 -->
+    <div class="author-credit" style="position:relative; z-index:10;">
+        <p><i class="fas fa-shield-halved"></i> 安全工具 · 密码 &amp; UUID 生成器</p>
+        <p><a href="../index.html">返回主页</a></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+    /* =================================================================
+     * 密码生成器
+     * ================================================================= */
+
+    // 联动滑动条 & 数字输入
+    const pwRange = document.getElementById('pw-length-range');
+    const pwNum   = document.getElementById('pw-length-num');
+
+    pwRange.addEventListener('input', () => { pwNum.value = pwRange.value; });
+    pwNum.addEventListener('input', () => {
+        let v = parseInt(pwNum.value, 10);
+        if (isNaN(v) || v < 4) v = 4;
+        if (v > 64) v = 64;
+        pwNum.value = v;
+        pwRange.value = v;
+    });
+
+    // 字符池
+    const CHAR_UPPER   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const CHAR_LOWER   = 'abcdefghijklmnopqrstuvwxyz';
+    const CHAR_DIGITS  = '0123456789';
+    const CHAR_SYMBOLS = '!@#$%^&*()_+-=[]{}|;:,.<>?~';
+    const SIMILAR_UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';  // 排除 I O
+    const SIMILAR_LOWER = 'abcdefghijklmnopqrstuvwxyz';    // 排除 l
+    const SIMILAR_DIGIT = '023456789';                      // 排除 0 1
+    const EXCLUDED_SIMILAR_UPPER = 'ABCDEFGHJKLMNPQRSTUVWXYZ';  // 去掉 I, O
+    const EXCLUDED_SIMILAR_LOWER = 'abcdefghijkmnopqrstuvwxyz';  // 去掉 l
+    const EXCLUDED_SIMILAR_DIGIT = '23456789';                    // 去掉 0, 1
+
+    function getCharPool() {
+        const upperChecked  = document.getElementById('pw-upper').checked;
+        const lowerChecked  = document.getElementById('pw-lower').checked;
+        const digitsChecked = document.getElementById('pw-digits').checked;
+        const symsChecked   = document.getElementById('pw-symbols').checked;
+        const excludeSim    = document.getElementById('pw-exclude-similar').checked;
+
+        let pool = '';
+        if (upperChecked) pool += excludeSim ? EXCLUDED_SIMILAR_UPPER : CHAR_UPPER;
+        if (lowerChecked) pool += excludeSim ? EXCLUDED_SIMILAR_LOWER : CHAR_LOWER;
+        if (digitsChecked) pool += excludeSim ? EXCLUDED_SIMILAR_DIGIT : CHAR_DIGITS;
+        if (symsChecked) pool += CHAR_SYMBOLS;
+        return pool;
+    }
+
+    function getRequiredSets() {
+        const sets = [];
+        const excludeSim = document.getElementById('pw-exclude-similar').checked;
+        if (document.getElementById('pw-upper').checked) sets.push(excludeSim ? EXCLUDED_SIMILAR_UPPER : CHAR_UPPER);
+        if (document.getElementById('pw-lower').checked) sets.push(excludeSim ? EXCLUDED_SIMILAR_LOWER : CHAR_LOWER);
+        if (document.getElementById('pw-digits').checked) sets.push(excludeSim ? EXCLUDED_SIMILAR_DIGIT : CHAR_DIGITS);
+        if (document.getElementById('pw-symbols').checked) sets.push(CHAR_SYMBOLS);
+        return sets;
+    }
+
+    function getRandomChar(str) {
+        return str[Math.floor(Math.random() * str.length)];
+    }
+
+    function generateOnePassword() {
+        const length = parseInt(pwNum.value, 10) || 16;
+        const pool = getCharPool();
+        const sets = getRequiredSets();
+        const excludeDupes = document.getElementById('pw-exclude-dupes').checked;
+
+        if (!pool) return '';
+        // 排除重复时，可用字符不能少于所需长度
+        if (excludeDupes && pool.length < length) return '';
+
+        const result = [];
+        const used = new Set();
+
+        // 确保每个勾选的字符集至少出现一次
+        for (const set of sets) {
+            let ch;
+            if (excludeDupes) {
+                const available = set.split('').filter(c => !used.has(c));
+                if (available.length === 0) return ''; // 无法满足
+                ch = getRandomChar(available.join(''));
+            } else {
+                ch = getRandomChar(set);
+            }
+            result.push(ch);
+            if (excludeDupes) used.add(ch);
+        }
+
+        // 填充剩余长度
+        const remaining = length - result.length;
+        for (let i = 0; i < remaining; i++) {
+            let ch;
+            if (excludeDupes) {
+                const available = pool.split('').filter(c => !used.has(c));
+                if (available.length === 0) return ''; // 无法继续
+                ch = getRandomChar(available.join(''));
+            } else {
+                ch = getRandomChar(pool);
+            }
+            result.push(ch);
+            if (excludeDupes) used.add(ch);
+        }
+
+        // 打乱
+        for (let i = result.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [result[i], result[j]] = [result[j], result[i]];
+        }
+
+        return result.join('');
+    }
+
+    function evaluateStrength(pw) {
+        if (!pw) return { label: '弱', className: 'weak', score: 0 };
+        let score = 0;
+        const len = pw.length;
+        // 长度评分
+        if (len >= 8) score += 25;
+        if (len >= 12) score += 15;
+        if (len >= 16) score += 10;
+        if (len >= 24) score += 10;
+        if (len >= 32) score += 10;
+        // 字符多样性
+        let types = 0;
+        if (/[A-Z]/.test(pw)) types++;
+        if (/[a-z]/.test(pw)) types++;
+        if (/[0-9]/.test(pw)) types++;
+        if (/[^A-Za-z0-9]/.test(pw)) types++;
+        score += types * 10;
+        // 惩罚纯数字或纯字母
+        if (/^[0-9]+$/.test(pw)) score -= 20;
+        if (/^[a-zA-Z]+$/.test(pw)) score -= 15;
+
+        if (score >= 75) return { label: '很强', className: 'very-strong', score };
+        if (score >= 55) return { label: '强',   className: 'strong',       score };
+        if (score >= 30) return { label: '中',   className: 'medium',      score };
+        return { label: '弱', className: 'weak', score };
+    }
+
+    function getStrengthIcon(className) {
+        if (className === 'very-strong') return '<i class="fas fa-shield-halved"></i>';
+        if (className === 'strong')       return '<i class="fas fa-shield"></i>';
+        if (className === 'medium')       return '<i class="fas fa-exclamation-triangle"></i>';
+        return '<i class="fas fa-circle-exclamation"></i>';
+    }
+
+    function renderPwResults(pwList) {
+        const area = document.getElementById('pw-result-area');
+        if (!pwList || pwList.length === 0) {
+            area.innerHTML = '<div class="pw-empty-msg"><i class="fas fa-arrow-up"></i> 点击「生成密码」开始</div>';
+            return;
+        }
+        area.innerHTML = pwList.map(pw => {
+            const strength = evaluateStrength(pw);
+            return `<div class="pw-result-item" onclick="copyText('${pw.replace(/'/g, "\\'")}')">
+                <span class="pw-text">${pw}</span>
+                <span class="pw-strength ${strength.className}">${getStrengthIcon(strength.className)} ${strength.label}</span>
+                <span class="pw-copy-icon"><i class="fas fa-copy"></i></span>
+            </div>`;
+        }).join('');
+    }
+
+    function generatePasswords() {
+        const batch = parseInt(document.getElementById('pw-batch-count').value, 10) || 1;
+        const results = [];
+        for (let i = 0; i < batch; i++) {
+            const pw = generateOnePassword();
+            if (pw) results.push(pw);
+        }
+        renderPwResults(results);
+        if (results.length > 0) {
+            showToast(`已生成 ${results.length} 个密码`);
+        } else {
+            showToast('无法生成密码：请检查字符集设置');
+        }
+    }
+
+    function copyAllPasswords() {
+        const items = document.querySelectorAll('#pw-result-area .pw-text');
+        if (items.length === 0) { showToast('没有密码可复制'); return; }
+        const text = Array.from(items).map(el => el.textContent).join('\n');
+        copyText(text);
+    }
+
+    document.getElementById('pw-generate-btn').addEventListener('click', generatePasswords);
+    document.getElementById('pw-copy-all-btn').addEventListener('click', copyAllPasswords);
+    document.getElementById('pw-clear-btn').addEventListener('click', () => {
+        renderPwResults([]);
+    });
+
+    /* =================================================================
+     * UUID 生成器
+     * ================================================================= */
+
+    function uuidV4() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    function formatUUID(uuid, format) {
+        switch (format) {
+            case 'nodash':
+                return uuid.replace(/-/g, '');
+            case 'upper':
+                return uuid.toUpperCase();
+            case 'upper-nodash':
+                return uuid.replace(/-/g, '').toUpperCase();
+            default:
+                return uuid;
+        }
+    }
+
+    function getUUIDFormat() {
+        const sel = document.querySelector('input[name="uuid-format"]:checked');
+        return sel ? sel.value : 'standard';
+    }
+
+    function generateUUIDs() {
+        const batch = parseInt(document.getElementById('uuid-batch-count').value, 10) || 1;
+        const format = getUUIDFormat();
+        const results = [];
+
+        for (let i = 0; i < batch; i++) {
+            const raw = uuidV4();
+            results.push(formatUUID(raw, format));
+        }
+
+        renderUUIDResults(results);
+        showToast(`已生成 ${results.length} 个 UUID`);
+    }
+
+    function renderUUIDResults(list) {
+        const area = document.getElementById('uuid-result-area');
+        if (!list || list.length === 0) {
+            area.innerHTML = '<div class="uuid-empty-msg"><i class="fas fa-arrow-up"></i> 点击「生成 UUID」开始</div>';
+            return;
+        }
+        area.innerHTML = list.map(uuid => {
+            const escaped = uuid.replace(/'/g, "\\'");
+            return `<div class="uuid-result-item" onclick="copyText('${escaped}')">
+                <span class="uuid-text">${uuid}</span>
+                <span class="uuid-copy-icon"><i class="fas fa-copy"></i></span>
+            </div>`;
+        }).join('');
+    }
+
+    function copyAllUUIDs() {
+        const items = document.querySelectorAll('#uuid-result-area .uuid-text');
+        if (items.length === 0) { showToast('没有 UUID 可复制'); return; }
+        const text = Array.from(items).map(el => el.textContent).join('\n');
+        copyText(text);
+    }
+
+    document.getElementById('uuid-generate-btn').addEventListener('click', generateUUIDs);
+    document.getElementById('uuid-copy-all-btn').addEventListener('click', copyAllUUIDs);
+    document.getElementById('uuid-clear-btn').addEventListener('click', () => {
+        renderUUIDResults([]);
+    });
+
+    /* =================================================================
+     * 初始化：生成一组默认密码 + UUID
+     * ================================================================= */
+    document.addEventListener('DOMContentLoaded', function() {
+        // 生成一次默认
+        const firstPw = generateOnePassword();
+        if (firstPw) renderPwResults([firstPw]);
+
+        const firstUUID = uuidV4();
+        renderUUIDResults([firstUUID]);
+    });
+    </script>
+</body>
+</html>

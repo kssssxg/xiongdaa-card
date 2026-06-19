@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>娱乐三合一 - 掷骰子·抛硬币·随机数</title>
+<link rel="stylesheet" href="common.css">
+<style>
+/* ===== Tab 导航 ===== */
+.tab-nav {
+  display: flex; gap: 6px; margin-bottom: 28px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 16px; padding: 4px;
+}
+.tab-btn {
+  flex: 1; padding: 10px 8px; border: none; border-radius: 12px;
+  background: transparent; color: var(--text-muted); font-size: 0.85rem;
+  cursor: pointer; transition: all 0.3s; font-weight: 500;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.tab-btn i { font-size: 1rem; }
+.tab-btn:hover { color: var(--text-main); background: rgba(255,255,255,0.06); }
+.tab-btn.active {
+  background: rgba(165,180,252,0.2); color: var(--theme-accent);
+}
+.tab-panel { display: none; animation: fadeIn 0.35s ease; }
+.tab-panel.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ===== 骰子区域 ===== */
+.dice-controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; }
+.dice-controls label { font-size: 0.85rem; color: var(--text-muted); }
+.dice-controls select, .dice-controls input {
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  color: #fff; padding: 8px 12px; border-radius: 10px; outline: none; font-size: 0.9rem;
+  transition: all 0.3s;
+}
+.dice-controls select:focus, .dice-controls input:focus { border-color: var(--theme-accent); }
+.dice-controls select { cursor: pointer; min-width: 65px; }
+.dice-controls select option { background: #1e1e2a; color: #fff; }
+
+.dice-roll-btn {
+  background: linear-gradient(135deg, rgba(165,180,252,0.3), rgba(129,140,248,0.3));
+  border: 1px solid var(--theme-accent); color: #fff; padding: 10px 28px;
+  border-radius: 12px; cursor: pointer; font-size: 0.95rem; font-weight: 600;
+  transition: all 0.3s; display: flex; align-items: center; gap: 8px;
+}
+.dice-roll-btn:hover { background: linear-gradient(135deg, rgba(165,180,252,0.45), rgba(129,140,248,0.45)); transform: translateY(-1px); }
+.dice-roll-btn:active { transform: scale(0.97); }
+.dice-roll-btn i { font-size: 1.1rem; }
+
+/* 骰子展示区域 */
+.dice-display {
+  display: flex; flex-wrap: wrap; gap: 18px; justify-content: center;
+  min-height: 120px; padding: 20px 0; margin-bottom: 10px;
+}
+
+.dice-face {
+  width: 80px; height: 80px; perspective: 600px; cursor: default;
+}
+.dice-inner {
+  position: relative; width: 100%; height: 100%;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.dice-inner.rolling {
+  animation: diceTumble 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.dice-inner.show-result {
+  transform: rotateX(720deg) rotateY(360deg);
+}
+.dice-front, .dice-back {
+  position: absolute; width: 100%; height: 100%;
+  border-radius: 16px; display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; font-weight: 700; backface-visibility: hidden;
+}
+.dice-front {
+  background: linear-gradient(145deg, rgba(165,180,252,0.25), rgba(129,140,248,0.15));
+  border: 2px solid rgba(165,180,252,0.4); color: #fff;
+  box-shadow: 0 8px 32px rgba(165,180,252,0.15);
+}
+.dice-back {
+  background: linear-gradient(145deg, rgba(251,191,36,0.25), rgba(245,158,11,0.15));
+  border: 2px solid rgba(251,191,36,0.4); color: #fbbf24;
+  transform: rotateX(180deg);
+  box-shadow: 0 8px 32px rgba(251,191,36,0.15);
+}
+
+@keyframes diceTumble {
+  0% { transform: rotateX(0) rotateY(0); }
+  25% { transform: rotateX(180deg) rotateY(90deg); }
+  50% { transform: rotateX(360deg) rotateY(180deg); }
+  75% { transform: rotateX(540deg) rotateY(270deg); }
+  100% { transform: rotateX(720deg) rotateY(0); }
+}
+
+.dice-result-list {
+  background: rgba(0,0,0,0.2); border-radius: 12px; padding: 14px 18px;
+  margin-bottom: 14px; min-height: 50px;
+}
+.dice-result-list .result-title {
+  font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;
+}
+.dice-result-list .result-item {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 10px; margin: 3px;
+  background: rgba(165,180,252,0.15); border: 1px solid rgba(165,180,252,0.25);
+  font-size: 1.1rem; font-weight: 600; color: var(--theme-accent);
+}
+
+.dice-summary {
+  display: flex; gap: 16px; font-size: 0.85rem; color: var(--text-muted);
+  margin-bottom: 14px; flex-wrap: wrap;
+}
+.dice-summary span { background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 8px; }
+
+/* 骰子历史 */
+.dice-history { margin-top: 10px; }
+.dice-history h3 {
+  font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.dice-history h3 button {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  font-size: 0.75rem; margin-left: auto; transition: color 0.2s;
+}
+.dice-history h3 button:hover { color: #f87171; }
+.history-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 10px; border-radius: 8px; font-size: 0.82rem;
+  color: var(--text-muted); transition: background 0.2s;
+}
+.history-item:hover { background: rgba(255,255,255,0.04); }
+.history-item .h-values { display: flex; gap: 4px; flex-wrap: wrap; }
+.history-item .h-values span {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 6px;
+  background: rgba(165,180,252,0.1); font-size: 0.8rem; font-weight: 600; color: var(--theme-accent);
+}
+.history-item .h-info { color: rgba(255,255,255,0.4); font-size: 0.75rem; }
+
+/* ===== 抛硬币 ===== */
+.coin-area {
+  display: flex; flex-direction: column; align-items: center; padding: 15px 0;
+}
+.coin-container {
+  width: 150px; height: 150px; perspective: 600px; cursor: pointer; margin-bottom: 20px;
+}
+.coin {
+  position: relative; width: 100%; height: 100%;
+  transition: transform 1s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.coin.flipping {
+  animation: coinFlip 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.coin.show-heads { transform: rotateY(0); }
+.coin.show-tails { transform: rotateY(180deg); }
+.coin-face {
+  position: absolute; width: 100%; height: 100%; border-radius: 50%;
+  backface-visibility: hidden; display: flex; align-items: center; justify-content: center;
+  font-size: 3.5rem; border: 3px solid rgba(255,255,255,0.2);
+}
+.coin-heads {
+  background: radial-gradient(circle at 35% 35%, #ffd700, #b8860b);
+  color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 0 40px rgba(255,215,0,0.2);
+}
+.coin-tails {
+  background: radial-gradient(circle at 35% 35%, #c0c0c0, #808080);
+  color: #fff; transform: rotateY(180deg);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 0 40px rgba(192,192,192,0.2);
+}
+.coin-shadow {
+  width: 130px; height: 30px; margin-top: -10px;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.3) 0%, transparent 70%);
+  border-radius: 50%; transition: all 0.5s;
+}
+.coin.flipping ~ .coin-shadow { transform: scale(0.7); opacity: 0.5; }
+
+@keyframes coinFlip {
+  0% { transform: rotateY(0); }
+  20% { transform: rotateY(720deg); }
+  40% { transform: rotateY(1440deg); }
+  60% { transform: rotateY(2160deg); }
+  80% { transform: rotateY(2520deg); }
+  100% { transform: rotateY(2880deg); }
+}
+
+.coin-flip-btn {
+  background: linear-gradient(135deg, rgba(255,215,0,0.25), rgba(218,165,32,0.25));
+  border: 1px solid rgba(255,215,0,0.4); color: #fff; padding: 12px 36px;
+  border-radius: 12px; cursor: pointer; font-size: 1rem; font-weight: 600;
+  transition: all 0.3s; margin-bottom: 16px;
+}
+.coin-flip-btn:hover { background: linear-gradient(135deg, rgba(255,215,0,0.35), rgba(218,165,32,0.35)); transform: translateY(-1px); }
+.coin-flip-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.coin-stats {
+  display: flex; gap: 30px; justify-content: center; margin-bottom: 8px;
+}
+.coin-stat {
+  text-align: center;
+}
+.coin-stat .stat-num {
+  font-size: 1.6rem; font-weight: 700;
+}
+.coin-stat .stat-num.heads-num { color: #ffd700; }
+.coin-stat .stat-num.tails-num { color: #c0c0c0; }
+.coin-stat .stat-label { font-size: 0.8rem; color: var(--text-muted); }
+.coin-reset-btn {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-muted); padding: 6px 18px; border-radius: 8px;
+  cursor: pointer; font-size: 0.8rem; transition: all 0.2s;
+}
+.coin-reset-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-main); }
+
+/* ===== 随机数生成器 ===== */
+.rng-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.rng-controls .full-width { grid-column: 1 / -1; }
+.rng-controls label { font-size: 0.82rem; color: var(--text-muted); display: block; margin-bottom: 4px; }
+.rng-controls input, .rng-controls select {
+  width: 100%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  color: #fff; padding: 8px 12px; border-radius: 10px; outline: none; font-size: 0.9rem;
+  transition: all 0.3s;
+}
+.rng-controls input:focus { border-color: var(--theme-accent); }
+.rng-toggles { display: flex; gap: 20px; align-items: center; margin-bottom: 14px; }
+.rng-toggles label { font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.rng-toggles input[type="checkbox"] {
+  width: 18px; height: 18px; accent-color: var(--theme-accent); cursor: pointer;
+}
+.rng-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.rng-output-area {
+  background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px; padding: 14px 18px; min-height: 60px;
+  display: flex; flex-wrap: wrap; gap: 6px; cursor: pointer;
+  transition: all 0.2s; position: relative;
+}
+.rng-output-area:hover { border-color: var(--theme-accent); }
+.rng-output-area .rng-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 6px 14px; border-radius: 8px;
+  background: rgba(165,180,252,0.12); border: 1px solid rgba(165,180,252,0.2);
+  font-size: 1rem; font-weight: 600; color: var(--theme-accent);
+}
+.rng-output-area .copy-hint {
+  position: absolute; bottom: 8px; right: 12px; font-size: 0.7rem; color: var(--text-muted);
+  opacity: 0; transition: opacity 0.2s;
+}
+.rng-output-area:hover .copy-hint { opacity: 1; }
+
+/* ===== 响应式 ===== */
+@media (max-width: 500px) {
+  .rng-controls { grid-template-columns: 1fr; }
+  .dice-controls { flex-direction: column; align-items: stretch; }
+  .dice-face { width: 60px; height: 60px; }
+  .dice-front, .dice-back { font-size: 1.5rem; }
+  .coin-container { width: 120px; height: 120px; }
+  .coin-face { font-size: 2.8rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="overlay"></div>
+<video id="bg-video" muted loop playsinline></video>
+
+<!-- Toast -->
+<div id="toast"><i class="fas fa-check-circle"></i><span id="toast-msg"></span></div>
+
+<!-- 返回主页 -->
+<a href="../index.html" class="back-home-btn" title="返回主页"><i class="fas fa-arrow-left"></i></a>
+
+<!-- 主卡片 -->
+<div class="glass-card tool-card">
+  <h1><i class="fas fa-dice-d6"></i> 娱乐三合一</h1>
+  <p class="tool-subtitle">掷骰子 · 抛硬币 · 随机数生成器</p>
+
+  <!-- Tab 导航 -->
+  <div class="tab-nav">
+    <button class="tab-btn active" data-tab="dice"><i class="fas fa-dice"></i> 掷骰子</button>
+    <button class="tab-btn" data-tab="coin"><i class="fas fa-coins"></i> 抛硬币</button>
+    <button class="tab-btn" data-tab="rng"><i class="fas fa-random"></i> 随机数</button>
+  </div>
+
+  <!-- ===== 掷骰子面板 ===== -->
+  <div class="tab-panel active" id="tab-dice">
+    <div class="dice-controls">
+      <label>面数</label>
+      <select id="dice-sides">
+        <option value="4">D4</option>
+        <option value="6" selected>D6</option>
+        <option value="8">D8</option>
+        <option value="10">D10</option>
+        <option value="12">D12</option>
+        <option value="20">D20</option>
+        <option value="100">D100</option>
+      </select>
+      <label>个数</label>
+      <input type="number" id="dice-count" value="1" min="1" max="10">
+      <button class="dice-roll-btn" id="dice-roll-btn"><i class="fas fa-hand-fist"></i> 掷出</button>
+    </div>
+
+    <div class="dice-display" id="dice-display">
+      <div class="dice-face"><div class="dice-inner show-result"><div class="dice-front">?</div><div class="dice-back">?</div></div></div>
+    </div>
+
+    <div class="dice-result-list" id="dice-result-list">
+      <div class="result-title">📋 本次结果</div>
+      <div id="dice-current-results"><span style="color:var(--text-muted);font-size:0.85rem;">点击掷出开始</span></div>
+    </div>
+
+    <div class="dice-summary" id="dice-summary"></div>
+
+    <div class="dice-history" id="dice-history">
+      <h3><i class="fas fa-history"></i> 历史记录 <button id="dice-clear-history" title="清空历史"><i class="fas fa-trash-can"></i> 清空</button></h3>
+      <div id="dice-history-list"></div>
+    </div>
+  </div>
+
+  <!-- ===== 抛硬币面板 ===== -->
+  <div class="tab-panel" id="tab-coin">
+    <div class="coin-area">
+      <div class="coin-container" id="coin-container">
+        <div class="coin show-heads" id="coin">
+          <div class="coin-face coin-heads"><i class="fas fa-crown"></i></div>
+          <div class="coin-face coin-tails"><i class="fas fa-star"></i></div>
+        </div>
+        <div class="coin-shadow"></div>
+      </div>
+
+      <button class="coin-flip-btn" id="coin-flip-btn"><i class="fas fa-coins"></i> 抛硬币</button>
+
+      <div class="coin-stats">
+        <div class="coin-stat">
+          <div class="stat-num heads-num" id="heads-count">0</div>
+          <div class="stat-label"><i class="fas fa-crown"></i> 正面</div>
+        </div>
+        <div class="coin-stat">
+          <div class="stat-num tails-num" id="tails-count">0</div>
+          <div class="stat-label"><i class="fas fa-star"></i> 反面</div>
+        </div>
+        <div class="coin-stat">
+          <div class="stat-num" id="total-flips" style="color:var(--text-main);">0</div>
+          <div class="stat-label">总次数</div>
+        </div>
+      </div>
+
+      <button class="coin-reset-btn" id="coin-reset-btn"><i class="fas fa-rotate-left"></i> 重置统计</button>
+    </div>
+  </div>
+
+  <!-- ===== 随机数生成器面板 ===== -->
+  <div class="tab-panel" id="tab-rng">
+    <div class="rng-controls">
+      <div>
+        <label>最小值</label>
+        <input type="number" id="rng-min" value="1">
+      </div>
+      <div>
+        <label>最大值</label>
+        <input type="number" id="rng-max" value="100">
+      </div>
+      <div class="full-width">
+        <label>生成个数</label>
+        <input type="number" id="rng-count" value="5" min="1" max="20">
+      </div>
+    </div>
+
+    <div class="rng-toggles">
+      <label><input type="checkbox" id="rng-allow-duplicate" checked> 允许重复</label>
+    </div>
+
+    <div class="rng-actions">
+      <button class="tool-btn primary" id="rng-generate-btn"><i class="fas fa-dice"></i> 生成</button>
+      <button class="tool-btn" id="rng-sort-btn"><i class="fas fa-arrow-up-wide-short"></i> 排序</button>
+      <button class="tool-btn" id="rng-copy-btn"><i class="fas fa-copy"></i> 复制</button>
+    </div>
+
+    <div class="rng-output-area" id="rng-output" title="点击复制结果">
+      <span class="copy-hint">📋 点击复制</span>
+      <span id="rng-result-placeholder" style="color:var(--text-muted);font-size:0.85rem;">点击「生成」获取随机数</span>
+    </div>
+  </div>
+
+  <!-- 页脚时钟 -- 公用框架 -->
+  <div style="text-align:center;margin-top:24px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);">
+    <div style="font-size:1.2rem;font-weight:500;" id="clock-time"></div>
+    <div style="font-size:0.75rem;color:var(--text-muted);" id="clock-date"></div>
+  </div>
+</div>
+
+<div class="author-credit">
+  <p><i class="fas fa-heart" style="color:#f472b6;"></i> xiongdaa 娱乐工具集</p>
+</div>
+
+<script src="common.js"></script>
+<script>
+// ===== Tab 切换 =====
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ===== 掷骰子 =====
+const diceState = {
+  history: JSON.parse(localStorage.getItem('dice_history') || '[]'),
+  isRolling: false
+};
+
+function saveDiceHistory() {
+  try { localStorage.setItem('dice_history', JSON.stringify(diceState.history)); } catch (e) {}
+}
+
+function renderDiceHistory() {
+  const container = document.getElementById('dice-history-list');
+  if (diceState.history.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;padding:8px 0;">暂无记录</div>';
+    return;
+  }
+  container.innerHTML = diceState.history.slice().reverse().map((h, idx) => {
+    const valuesStr = h.values.map(v => `<span>${v}</span>`).join('');
+    const label = `${h.sides}面骰 ×${h.values.length}`;
+    const total = h.values.reduce((a, b) => a + b, 0);
+    return `<div class="history-item">
+      <div class="h-values">${valuesStr}</div>
+      <div class="h-info">${label} · 总和 ${total}</div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('dice-clear-history').addEventListener('click', () => {
+  diceState.history = [];
+  saveDiceHistory();
+  renderDiceHistory();
+});
+
+function rollDice() {
+  if (diceState.isRolling) return;
+  const sides = parseInt(document.getElementById('dice-sides').value);
+  const count = Math.min(10, Math.max(1, parseInt(document.getElementById('dice-count').value) || 1));
+  diceState.isRolling = true;
+
+  const btn = document.getElementById('dice-roll-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 掷出中...';
+
+  const display = document.getElementById('dice-display');
+  display.innerHTML = '';
+  const diceFaces = [];
+
+  for (let i = 0; i < count; i++) {
+    const value = Math.floor(Math.random() * sides) + 1;
+    diceFaces.push(value);
+    const face = document.createElement('div');
+    face.className = 'dice-face';
+    face.innerHTML = `<div class="dice-inner rolling" data-index="${i}"><div class="dice-front">?</div><div class="dice-back">${value}</div></div>`;
+    display.appendChild(face);
+  }
+
+  // 动画结束后显示结果
+  setTimeout(() => {
+    display.querySelectorAll('.dice-inner').forEach((el, idx) => {
+      el.classList.remove('rolling');
+      el.classList.add('show-result');
+      el.querySelector('.dice-front').textContent = diceFaces[idx];
+    });
+
+    // 显示结果列表
+    const resultContainer = document.getElementById('dice-current-results');
+    resultContainer.innerHTML = diceFaces.map(v => `<span class="result-item">${v}</span>`).join('');
+
+    // 汇总信息
+    const total = diceFaces.reduce((a, b) => a + b, 0);
+    const avg = (total / diceFaces.length).toFixed(1);
+    document.getElementById('dice-summary').innerHTML = `
+      <span><i class="fas fa-calculator"></i> 总和: <strong>${total}</strong></span>
+      <span><i class="fas fa-divide"></i> 平均: <strong>${avg}</strong></span>
+      <span><i class="fas fa-dice-d6"></i> ${sides}面骰 × ${diceFaces.length}</span>
+    `;
+
+    // 保存历史
+    diceState.history.push({ sides, values: diceFaces, time: Date.now() });
+    if (diceState.history.length > 50) diceState.history.shift();
+    saveDiceHistory();
+    renderDiceHistory();
+
+    diceState.isRolling = false;
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-hand-fist"></i> 掷出';
+  }, 1000);
+}
+
+document.getElementById('dice-roll-btn').addEventListener('click', rollDice);
+
+// 回车掷骰
+document.getElementById('dice-count').addEventListener('keydown', e => { if (e.key === 'Enter') rollDice(); });
+
+// 加载骰子历史
+renderDiceHistory();
+
+// ===== 抛硬币 =====
+const coinState = {
+  heads: 0,
+  tails: 0,
+  total: 0,
+  isFlipping: false
+};
+
+// 从 localStorage 恢复
+try {
+  const saved = JSON.parse(localStorage.getItem('coin_stats'));
+  if (saved) { coinState.heads = saved.heads || 0; coinState.tails = saved.tails || 0; coinState.total = saved.total || 0; }
+} catch (e) {}
+
+function updateCoinStats() {
+  document.getElementById('heads-count').textContent = coinState.heads;
+  document.getElementById('tails-count').textContent = coinState.tails;
+  document.getElementById('total-flips').textContent = coinState.total;
+  try { localStorage.setItem('coin_stats', JSON.stringify(coinState)); } catch (e) {}
+}
+updateCoinStats();
+
+function flipCoin() {
+  if (coinState.isFlipping) return;
+  coinState.isFlipping = true;
+
+  const coin = document.getElementById('coin');
+  const btn = document.getElementById('coin-flip-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 抛掷中...';
+
+  // 随机结果
+  const result = Math.random() < 0.5 ? 'heads' : 'tails';
+
+  // 重置动画
+  coin.classList.remove('show-heads', 'show-tails', 'flipping');
+  // 触发重排
+  void coin.offsetWidth;
+  coin.classList.add('flipping');
+
+  setTimeout(() => {
+    coin.classList.remove('flipping');
+    coin.classList.add(result === 'heads' ? 'show-heads' : 'show-tails');
+
+    if (result === 'heads') coinState.heads++;
+    else coinState.tails++;
+    coinState.total++;
+    updateCoinStats();
+
+    coinState.isFlipping = false;
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-coins"></i> 抛硬币';
+  }, 1500);
+}
+
+document.getElementById('coin-flip-btn').addEventListener('click', flipCoin);
+document.getElementById('coin-container').addEventListener('click', flipCoin);
+
+document.getElementById('coin-reset-btn').addEventListener('click', () => {
+  coinState.heads = 0;
+  coinState.tails = 0;
+  coinState.total = 0;
+  updateCoinStats();
+  document.getElementById('coin').className = 'coin show-heads';
+  showToast('统计已重置');
+});
+
+// ===== 随机数生成器 =====
+let currentRngNumbers = [];
+
+function generateRng() {
+  const min = parseInt(document.getElementById('rng-min').value);
+  const max = parseInt(document.getElementById('rng-max').value);
+  let count = Math.min(20, Math.max(1, parseInt(document.getElementById('rng-count').value) || 1));
+  const allowDuplicate = document.getElementById('rng-allow-duplicate').checked;
+
+  if (isNaN(min) || isNaN(max) || min > max) {
+    showToast('请设置有效的最小值和最大值');
+    return;
+  }
+
+  const range = max - min + 1;
+
+  if (!allowDuplicate && count > range) {
+    count = range;
+    document.getElementById('rng-count').value = range;
+    showToast(`不重复模式已自动调整为 ${range} 个`);
+  }
+
+  const numbers = [];
+  if (allowDuplicate) {
+    for (let i = 0; i < count; i++) {
+      numbers.push(Math.floor(Math.random() * range) + min);
+    }
+  } else {
+    const pool = [];
+    for (let i = min; i <= max; i++) pool.push(i);
+    // Fisher-Yates 洗牌
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    for (let i = 0; i < count; i++) numbers.push(pool[i]);
+  }
+
+  currentRngNumbers = numbers;
+  renderRngOutput();
+}
+
+function renderRngOutput() {
+  const output = document.getElementById('rng-output');
+  const placeholder = document.getElementById('rng-result-placeholder');
+  if (currentRngNumbers.length === 0) {
+    output.innerHTML = '<span class="copy-hint">📋 点击复制</span><span id="rng-result-placeholder" style="color:var(--text-muted);font-size:0.85rem;">点击「生成」获取随机数</span>';
+    return;
+  }
+  output.innerHTML = '<span class="copy-hint">📋 点击复制</span>' +
+    currentRngNumbers.map(n => `<span class="rng-num">${n}</span>`).join('');
+}
+
+function sortRng() {
+  if (currentRngNumbers.length === 0) { showToast('请先生成随机数'); return; }
+  currentRngNumbers.sort((a, b) => a - b);
+  renderRngOutput();
+  showToast('已排序');
+}
+
+function copyRng() {
+  if (currentRngNumbers.length === 0) { showToast('请先生成随机数'); return; }
+  copyText(currentRngNumbers.join(', '));
+}
+
+document.getElementById('rng-generate-btn').addEventListener('click', generateRng);
+document.getElementById('rng-sort-btn').addEventListener('click', sortRng);
+document.getElementById('rng-copy-btn').addEventListener('click', copyRng);
+
+// 点击输出区域复制
+document.getElementById('rng-output').addEventListener('click', function() {
+  if (currentRngNumbers.length > 0) {
+    copyText(currentRngNumbers.join(', '));
+  }
+});
+
+// 回车生成
+document.querySelectorAll('#rng-min, #rng-max, #rng-count').forEach(el => {
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') generateRng(); });
+});
+
+// ===== 初始化 Toast（兼容 common.js）=====
+// common.js 的 showToast 已可用
+console.log('🎲 娱乐三合一已加载');
+</script>
+</body>
+</html>

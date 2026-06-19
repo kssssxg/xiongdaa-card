@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="CSP" content="upgrade-insecure-requests">
+    <title>正则表达式测试器 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        .regex-card { max-width: 800px; }
+
+        .flags-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 10px 0; }
+        .flag-label {
+            display: flex; align-items: center; gap: 4px;
+            background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+            padding: 5px 12px; border-radius: 8px; cursor: pointer;
+            font-size: 0.85rem; transition: all 0.2s; user-select: none;
+        }
+        .flag-label:hover { background: rgba(255,255,255,0.12); }
+        .flag-label.active { background: rgba(165,180,252,0.2); border-color: var(--theme-accent); }
+        .flag-label input { display: none; }
+        .flag-label code { font-family: 'Cascadia Code', 'Fira Code', monospace; font-weight: 700; }
+
+        .regex-input-wrap {
+            display: flex; gap: 0; align-items: stretch;
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 12px; overflow: hidden; transition: all 0.3s;
+        }
+        .regex-input-wrap:focus-within { border-color: var(--theme-accent); background: rgba(255,255,255,0.12); }
+        .regex-input-wrap .slash {
+            display: flex; align-items: center; padding: 0 14px;
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            color: var(--text-muted); font-size: 1.1rem;
+            background: rgba(255,255,255,0.05);
+        }
+        .regex-input-wrap input#regexPattern {
+            flex: 1; background: transparent; border: none; outline: none;
+            color: #fff; padding: 12px 0; font-size: 1rem;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+        }
+        .regex-input-wrap .slash-end {
+            display: flex; align-items: center; padding: 0 14px;
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            color: var(--text-muted); font-size: 1.1rem;
+            background: rgba(255,255,255,0.05);
+            min-width: 36px; text-align: center;
+        }
+
+        #testText {
+            width: 100%; min-height: 150px;
+            background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.12);
+            color: #fff; padding: 14px 16px; border-radius: 12px;
+            font-size: 0.95rem; resize: vertical; outline: none;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            line-height: 1.6; transition: all 0.3s;
+        }
+        #testText:focus { border-color: var(--theme-accent); background: rgba(0,0,0,0.35); }
+
+        .highlight-container {
+            width: 100%; min-height: 100px;
+            background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px; padding: 14px 16px;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; word-break: break-all;
+            color: rgba(255,255,255,0.85); margin-top: 10px;
+        }
+        .highlight-container .regex-match {
+            background: rgba(165,180,252,0.35);
+            border-radius: 3px; padding: 1px 2px;
+            border-bottom: 2px solid rgba(165,180,252,0.7);
+        }
+        .highlight-container .regex-match:hover {
+            background: rgba(165,180,252,0.5);
+        }
+
+        .match-list {
+            margin-top: 10px; max-height: 300px; overflow-y: auto;
+            background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px; padding: 8px;
+        }
+        .match-list::-webkit-scrollbar { width: 4px; }
+        .match-list::-webkit-scrollbar-track { background: transparent; }
+        .match-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+        .match-item {
+            display: flex; gap: 10px; align-items: center;
+            padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.06);
+            font-size: 0.85rem; transition: background 0.2s;
+            cursor: pointer;
+        }
+        .match-item:last-child { border-bottom: none; }
+        .match-item:hover { background: rgba(255,255,255,0.05); }
+        .match-item .match-index {
+            min-width: 28px; font-weight: 700; color: var(--theme-accent);
+            font-size: 0.8rem; text-align: center;
+        }
+        .match-item .match-content {
+            flex: 1; font-family: 'Cascadia Code', 'Fira Code', monospace;
+            color: #fff; word-break: break-all;
+        }
+        .match-item .match-meta {
+            display: flex; gap: 10px; font-size: 0.75rem; color: var(--text-muted);
+            white-space: nowrap;
+        }
+        .match-item .match-meta span { background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 6px; }
+
+        .no-match { text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.9rem; }
+
+        .preset-grid {
+            display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;
+        }
+        .preset-btn {
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+            color: #fff; padding: 7px 16px; border-radius: 10px; cursor: pointer;
+            font-size: 0.82rem; transition: all 0.2s;
+        }
+        .preset-btn:hover {
+            background: rgba(165,180,252,0.15); border-color: var(--theme-accent);
+            transform: translateY(-1px);
+        }
+        .preset-btn i { margin-right: 4px; font-size: 0.75rem; }
+
+        .stats-bar {
+            display: flex; gap: 15px; align-items: center; flex-wrap: wrap;
+            padding: 10px 14px; background: rgba(0,0,0,0.15);
+            border: 1px solid rgba(255,255,255,0.06); border-radius: 10px;
+            margin-top: 10px; font-size: 0.85rem;
+        }
+        .stats-bar .stat-item {
+            display: flex; align-items: center; gap: 6px;
+            color: var(--text-muted);
+        }
+        .stats-bar .stat-item .stat-num {
+            color: var(--theme-accent); font-weight: 700; font-size: 1rem;
+        }
+
+        .error-badge {
+            background: rgba(255,71,87,0.15); border: 1px solid rgba(255,71,87,0.3);
+            color: #ff4757; padding: 8px 14px; border-radius: 10px;
+            font-size: 0.85rem; margin-top: 8px; display: none;
+        }
+
+        @media (max-width: 600px) {
+            .regex-input-wrap { flex-wrap: wrap; }
+            .regex-input-wrap .slash, .regex-input-wrap .slash-end { padding: 0 10px; }
+            .match-item { flex-direction: column; align-items: flex-start; gap: 4px; }
+            .match-item .match-meta { white-space: normal; }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="index.html" class="back-home-btn" title="返回工具首页"><i class="fas fa-arrow-left"></i></a>
+
+    <div id="toast"><i class="fas fa-info-circle" style="color: #a5b4fc;"></i><span id="toast-msg">提示信息</span></div>
+
+    <div class="glass-card tool-card regex-card">
+        <h1><i class="fas fa-code"></i> 正则表达式测试器</h1>
+        <div class="tool-subtitle">实时匹配 · 高亮预览 · 测试验证</div>
+
+        <!-- 正则表达式输入 -->
+        <div class="tool-label"><i class="fas fa-pencil-alt"></i> 正则表达式</div>
+        <div class="regex-input-wrap">
+            <div class="slash">/</div>
+            <input type="text" id="regexPattern" placeholder="输入正则表达式..." spellcheck="false" autocomplete="off" oninput="runRegex()">
+            <div class="slash-end" id="flagsDisplay">/g</div>
+        </div>
+
+        <!-- Flags 选择 -->
+        <div class="flags-row">
+            <label class="flag-label active" data-flag="g">
+                <input type="checkbox" checked onchange="toggleFlag(this)">
+                <code>g</code> 全局
+            </label>
+            <label class="flag-label" data-flag="i">
+                <input type="checkbox" onchange="toggleFlag(this)">
+                <code>i</code> 忽略大小写
+            </label>
+            <label class="flag-label" data-flag="m">
+                <input type="checkbox" onchange="toggleFlag(this)">
+                <code>m</code> 多行
+            </label>
+            <label class="flag-label" data-flag="s">
+                <input type="checkbox" onchange="toggleFlag(this)">
+                <code>s</code> 点号匹配所有
+            </label>
+            <button class="tool-btn" onclick="clearAll()" style="margin-left:auto;padding:5px 14px;font-size:0.8rem;"><i class="fas fa-eraser"></i> 清空</button>
+        </div>
+
+        <!-- 常用正则规则库 -->
+        <div class="tool-label" style="margin-top:18px;"><i class="fas fa-bookmark"></i> 常用规则预设</div>
+        <div class="preset-grid">
+            <button class="preset-btn" onclick="applyPreset('email')"><i class="fas fa-envelope"></i> 邮箱</button>
+            <button class="preset-btn" onclick="applyPreset('phone')"><i class="fas fa-mobile-alt"></i> 手机号</button>
+            <button class="preset-btn" onclick="applyPreset('url')"><i class="fas fa-link"></i> URL</button>
+            <button class="preset-btn" onclick="applyPreset('ip')"><i class="fas fa-network-wired"></i> IP地址</button>
+            <button class="preset-btn" onclick="applyPreset('date')"><i class="fas fa-calendar-alt"></i> 日期</button>
+            <button class="preset-btn" onclick="applyPreset('chinese')"><i class="fas fa-language"></i> 中文</button>
+            <button class="preset-btn" onclick="applyPreset('english')"><i class="fas fa-font"></i> 英文</button>
+            <button class="preset-btn" onclick="applyPreset('digit')"><i class="fas fa-hashtag"></i> 数字</button>
+        </div>
+
+        <!-- 测试文本 -->
+        <div class="tool-label" style="margin-top:18px;"><i class="fas fa-file-alt"></i> 测试文本</div>
+        <textarea id="testText" placeholder="在此输入要匹配的测试文本..." oninput="runRegex()">hello@example.com 联系我: 13800138000
+访问 https://www.example.com/path?q=test
+服务器 IP: 192.168.1.1 日期 2024-06-20
+中文内容包含English单词和12345数字</textarea>
+
+        <!-- 统计 -->
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-item"><i class="fas fa-check-circle"></i> 匹配: <span class="stat-num" id="matchCount">0</span> 个</div>
+            <div class="stat-item"><i class="fas fa-object-group"></i> 正则状态: <span id="regexStatus" style="color:var(--text-muted);">等待输入</span></div>
+        </div>
+
+        <div class="error-badge" id="errorBadge"><i class="fas fa-exclamation-triangle"></i> <span id="errorText"></span></div>
+
+        <!-- 高亮预览 -->
+        <div class="tool-label"><i class="fas fa-highlighter"></i> 匹配高亮</div>
+        <div class="highlight-container" id="highlightOutput">输入正则和文本开始匹配...</div>
+
+        <!-- 匹配结果列表 -->
+        <div class="tool-label"><i class="fas fa-list"></i> 匹配详情 <span style="font-size:0.75rem;color:var(--text-muted);">（点击结果项可复制）</span></div>
+        <div class="match-list" id="matchList">
+            <div class="no-match">暂无匹配结果</div>
+        </div>
+
+        <!-- 测试示例按钮 -->
+        <div class="tool-label" style="margin-top:18px;"><i class="fas fa-lightbulb"></i> 测试示例</div>
+        <div class="tool-actions">
+            <button class="tool-btn" onclick="loadSample('email')"><i class="fas fa-envelope"></i> 邮箱测试</button>
+            <button class="tool-btn" onclick="loadSample('mixed')"><i class="fas fa-random"></i> 混合测试</button>
+            <button class="tool-btn" onclick="loadSample('code')"><i class="fas fa-terminal"></i> 代码测试</button>
+        </div>
+    </div>
+
+    <div class="author-credit">
+        <p>&copy; 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        // ==================== 预设规则库 ====================
+        const PRESETS = {
+            email: {
+                pattern: '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}',
+                desc: '邮箱地址'
+            },
+            phone: {
+                pattern: '1[3-9]\\d{9}',
+                desc: '中国大陆手机号'
+            },
+            url: {
+                pattern: 'https?://[\\w\\-._~:/?#[\\]@!$&\'()*+,;=]+',
+                desc: 'URL 链接'
+            },
+            ip: {
+                pattern: '(?:(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.){3}(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)',
+                desc: 'IPv4 地址'
+            },
+            date: {
+                pattern: '\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}',
+                desc: '日期 (YYYY-MM-DD)'
+            },
+            chinese: {
+                pattern: '[\\u4e00-\\u9fff]+',
+                desc: '中文字符'
+            },
+            english: {
+                pattern: '[a-zA-Z]+',
+                desc: '英文字母'
+            },
+            digit: {
+                pattern: '\\d+',
+                desc: '数字'
+            }
+        };
+
+        // ==================== Flags 管理 ====================
+        function toggleFlag(checkbox) {
+            const label = checkbox.closest('.flag-label');
+            label.classList.toggle('active', checkbox.checked);
+            updateFlagsDisplay();
+            runRegex();
+        }
+
+        function getActiveFlags() {
+            const flags = [];
+            document.querySelectorAll('.flag-label.active').forEach(label => {
+                flags.push(label.dataset.flag);
+            });
+            return flags.join('');
+        }
+
+        function updateFlagsDisplay() {
+            const flags = getActiveFlags();
+            document.getElementById('flagsDisplay').textContent = '/' + (flags || '');
+            return flags;
+        }
+
+        // ==================== 核心匹配逻辑 ====================
+        let currentRegex = null;
+        let lastMatches = [];
+
+        function runRegex() {
+            const pattern = document.getElementById('regexPattern').value.trim();
+            const text = document.getElementById('testText').value;
+            const flags = getActiveFlags();
+            updateFlagsDisplay();
+
+            const errorBadge = document.getElementById('errorBadge');
+            const errorText = document.getElementById('errorText');
+            const regexStatus = document.getElementById('regexStatus');
+
+            // 清空上次结果
+            currentRegex = null;
+            lastMatches = [];
+
+            if (!pattern) {
+                document.getElementById('highlightOutput').innerHTML = '<span style="color:var(--text-muted);">输入正则和文本开始匹配...</span>';
+                document.getElementById('matchList').innerHTML = '<div class="no-match">暂无匹配结果</div>';
+                document.getElementById('matchCount').textContent = '0';
+                regexStatus.textContent = '等待输入';
+                regexStatus.style.color = 'var(--text-muted)';
+                errorBadge.style.display = 'none';
+                return;
+            }
+
+            if (!text) {
+                document.getElementById('highlightOutput').innerHTML = '<span style="color:var(--text-muted);">请在测试文本区域输入内容</span>';
+                document.getElementById('matchList').innerHTML = '<div class="no-match">暂无匹配结果</div>';
+                document.getElementById('matchCount').textContent = '0';
+                regexStatus.textContent = '等待文本';
+                regexStatus.style.color = 'var(--text-muted)';
+                errorBadge.style.display = 'none';
+                return;
+            }
+
+            let regex;
+            try {
+                regex = new RegExp(pattern, flags);
+                currentRegex = regex;
+            } catch (e) {
+                errorBadge.style.display = 'block';
+                errorText.textContent = e.message;
+                document.getElementById('highlightOutput').innerHTML = escapeHtml(text);
+                document.getElementById('matchList').innerHTML = '<div class="no-match">正则语法错误</div>';
+                document.getElementById('matchCount').textContent = '0';
+                regexStatus.textContent = '✗ 语法错误';
+                regexStatus.style.color = '#ff4757';
+                return;
+            }
+
+            errorBadge.style.display = 'none';
+            regexStatus.textContent = '✓ 有效';
+            regexStatus.style.color = '#4ade80';
+
+            // 执行匹配
+            const matches = [];
+            let match;
+            // 如果没有 g 标志，手动循环避免死循环
+            const execFlags = flags.includes('g') ? flags : flags + 'g';
+            const execRegex = new RegExp(regex.source, execFlags);
+            while ((match = execRegex.exec(text)) !== null) {
+                matches.push({
+                    content: match[0],
+                    index: match.index,
+                    length: match[0].length
+                });
+                if (!execFlags.includes('g')) break;
+                // 避免空匹配死循环
+                if (match.index === execRegex.lastIndex) execRegex.lastIndex++;
+            }
+
+            lastMatches = matches;
+
+            // 更新统计
+            document.getElementById('matchCount').textContent = matches.length;
+
+            // 渲染高亮
+            renderHighlight(text, matches);
+
+            // 渲染匹配列表
+            renderMatchList(matches);
+        }
+
+        // ==================== 高亮渲染 ====================
+        function renderHighlight(text, matches) {
+            const container = document.getElementById('highlightOutput');
+            if (matches.length === 0) {
+                container.innerHTML = escapeHtml(text);
+                return;
+            }
+
+            // 使用偏移数组，从后往前插入高亮标签，避免位置偏移
+            const pieces = [];
+            let lastEnd = 0;
+
+            for (const m of matches) {
+                if (m.index > lastEnd) {
+                    pieces.push(escapeHtml(text.slice(lastEnd, m.index)));
+                }
+                pieces.push('<span class="regex-match">' + escapeHtml(text.slice(m.index, m.index + m.length)) + '</span>');
+                lastEnd = m.index + m.length;
+            }
+            if (lastEnd < text.length) {
+                pieces.push(escapeHtml(text.slice(lastEnd)));
+            }
+
+            container.innerHTML = pieces.join('');
+        }
+
+        // ==================== 匹配列表渲染 ====================
+        function renderMatchList(matches) {
+            const container = document.getElementById('matchList');
+            if (matches.length === 0) {
+                container.innerHTML = '<div class="no-match">没有匹配到任何内容</div>';
+                return;
+            }
+
+            let html = '';
+            matches.forEach((m, i) => {
+                const displayContent = m.content.length > 60 ? m.content.slice(0, 57) + '...' : m.content;
+                html += '<div class="match-item" onclick="copyMatchItem(' + i + ')" title="点击复制此匹配项">';
+                html += '<div class="match-index">#' + (i + 1) + '</div>';
+                html += '<div class="match-content">' + escapeHtml(displayContent) + '</div>';
+                html += '<div class="match-meta">';
+                html += '<span><i class="fas fa-map-pin"></i> ' + m.index + '</span>';
+                html += '<span><i class="fas fa-arrows-alt-h"></i> ' + m.length + '</span>';
+                html += '</div></div>';
+            });
+            container.innerHTML = html;
+        }
+
+        // ==================== 预设应用 ====================
+        function applyPreset(name) {
+            const preset = PRESETS[name];
+            if (!preset) return;
+            document.getElementById('regexPattern').value = preset.pattern;
+            // 确保 g flag 选中
+            const gCheckbox = document.querySelector('.flag-label[data-flag="g"] input');
+            if (gCheckbox) {
+                gCheckbox.checked = true;
+                gCheckbox.closest('.flag-label').classList.add('active');
+            }
+            updateFlagsDisplay();
+            runRegex();
+            showToast('已填入: ' + preset.desc);
+        }
+
+        // ==================== 示例文本加载 ====================
+        function loadSample(name) {
+            const samples = {
+                email: '我的邮箱是 user@example.com 和 admin@test.org.cn\n也可以联系 support@company.co.uk\n无效邮箱: not-a-email@',
+                mixed: '联系我: 13800138000 或 15912345678\n官网: https://www.example.com\n备用: http://192.168.1.1:8080\n日期: 2024-06-20, 2024/12/25, 2024.01.01\nIP: 192.168.1.1, 10.0.0.255, 255.255.255.0',
+                code: 'const name = "张三";\nlet age = 25;\nconst email = "zhangsan@test.com";\n// 日期处理 2024-06-20\nconst url = "https://api.example.com/v1/users?page=1";\nconsole.log("Hello World!");'
+            };
+            const text = samples[name];
+            if (text) {
+                document.getElementById('testText').value = text;
+                runRegex();
+                showToast('已加载: ' + (name === 'email' ? '邮箱测试' : name === 'mixed' ? '混合测试' : '代码测试'));
+            }
+        }
+
+        // ==================== 工具函数 ====================
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function copyMatchItem(index) {
+            if (index >= 0 && index < lastMatches.length) {
+                const text = lastMatches[index].content;
+                copyText(text);
+            }
+        }
+
+        function clearAll() {
+            document.getElementById('regexPattern').value = '';
+            // 重置 flags 到只有 g
+            document.querySelectorAll('.flag-label').forEach(label => {
+                const cb = label.querySelector('input');
+                if (label.dataset.flag === 'g') {
+                    cb.checked = true;
+                    label.classList.add('active');
+                } else {
+                    cb.checked = false;
+                    label.classList.remove('active');
+                }
+            });
+            updateFlagsDisplay();
+            runRegex();
+        }
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            updateFlagsDisplay();
+            // 延迟执行确保页面完全加载
+            setTimeout(runRegex, 100);
+        });
+    </script>
+</body>
+</html>

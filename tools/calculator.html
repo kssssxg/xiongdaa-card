@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>标准计算器 - xiongdaa 工具集</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* 计算器主体样式 */
+        .calculator-wrap {
+            width: 100%;
+            max-width: 400px;
+            padding: 25px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .calc-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .calc-header h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .calc-display {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 16px;
+            padding: 18px 20px;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: flex-end;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+        }
+
+        .calc-expression {
+            width: 100%;
+            text-align: right;
+            font-size: 1rem;
+            color: var(--text-muted);
+            min-height: 24px;
+            word-break: break-all;
+            overflow-wrap: break-word;
+            direction: rtl;
+            text-align: left;
+            transition: font-size 0.1s;
+        }
+
+        .calc-result {
+            width: 100%;
+            text-align: right;
+            font-size: 2.4rem;
+            font-weight: 300;
+            color: #fff;
+            min-height: 48px;
+            word-break: break-all;
+            overflow-wrap: break-word;
+            transition: font-size 0.1s;
+            margin-top: 4px;
+        }
+
+        .calc-result.small {
+            font-size: 1.8rem;
+        }
+
+        .calc-result.error {
+            color: #f87171;
+        }
+
+        /* 按钮网格 */
+        .calc-buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .calc-btn {
+            aspect-ratio: 1.3 / 1;
+            border: none;
+            border-radius: 14px;
+            font-size: 1.4rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .calc-btn:active {
+            transform: scale(0.93);
+        }
+
+        /* 数字按钮 */
+        .calc-btn.num {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .calc-btn.num:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+        .calc-btn.num:active {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        /* 运算符按钮 */
+        .calc-btn.op {
+            background: rgba(165, 180, 252, 0.2);
+            color: #a5b4fc;
+            border: 1px solid rgba(165, 180, 252, 0.15);
+        }
+        .calc-btn.op:hover {
+            background: rgba(165, 180, 252, 0.3);
+        }
+        .calc-btn.op:active {
+            background: rgba(165, 180, 252, 0.4);
+        }
+
+        /* 功能按钮 (C, ⌫, %) */
+        .calc-btn.fn {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .calc-btn.fn:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+        .calc-btn.fn:active {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        /* 等于按钮 */
+        .calc-btn.eq {
+            background: rgba(165, 180, 252, 0.35);
+            color: #fff;
+            border: 1px solid rgba(165, 180, 252, 0.2);
+        }
+        .calc-btn.eq:hover {
+            background: rgba(165, 180, 252, 0.5);
+        }
+        .calc-btn.eq:active {
+            background: rgba(165, 180, 252, 0.6);
+        }
+
+        /* 零按钮占两格 */
+        .calc-btn.zero {
+            grid-column: span 2;
+            aspect-ratio: auto;
+        }
+
+        /* 正负号按钮 */
+        .calc-btn.sign {
+            font-size: 1.1rem;
+        }
+
+        /* 历史记录区域 */
+        .history-wrap {
+            margin-top: 18px;
+            max-height: 260px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.15) transparent;
+        }
+
+        .history-wrap::-webkit-scrollbar {
+            width: 4px;
+        }
+        .history-wrap::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.15);
+            border-radius: 4px;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .history-header h3 {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .history-header h3 i {
+            margin-right: 6px;
+        }
+
+        .history-clear-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .history-clear-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #f87171;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 10px 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--theme-accent);
+        }
+
+        .history-item .hist-expr {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            direction: rtl;
+            text-align: left;
+        }
+        .history-item .hist-result {
+            font-size: 1.1rem;
+            color: #fff;
+            font-weight: 500;
+        }
+        .history-item .hist-left {
+            flex: 1;
+            min-width: 0;
+        }
+        .history-item .hist-right {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #fff;
+            margin-left: 12px;
+            white-space: nowrap;
+        }
+
+        .history-empty {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            padding: 20px 0;
+        }
+        .history-empty i {
+            display: block;
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            opacity: 0.4;
+        }
+
+        /* 返回按钮用 back-home-btn class (common.css) */
+        /* 响应式 */
+        @media (max-width: 480px) {
+            .calculator-wrap {
+                padding: 16px;
+            }
+            .calc-display {
+                padding: 14px 16px;
+                min-height: 80px;
+            }
+            .calc-result {
+                font-size: 2rem;
+            }
+            .calc-btn {
+                font-size: 1.2rem;
+                border-radius: 12px;
+            }
+            .calc-buttons {
+                gap: 8px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .calc-btn {
+                font-size: 1rem;
+                border-radius: 10px;
+            }
+            .calc-buttons {
+                gap: 6px;
+            }
+            .calculator-wrap {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 背景视频 -->
+    <video id="bg-video" muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <!-- 遮罩层 -->
+    <div class="overlay"></div>
+
+    <!-- Toast -->
+    <div id="toast"><span id="toast-msg"></span></div>
+
+    <!-- 返回按钮 -->
+    <a href="../index.html" class="back-home-btn" title="返回主页">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <!-- 计算器卡片 -->
+    <div class="glass-card calculator-wrap">
+
+        <div class="calc-header">
+            <h1><i class="fas fa-calculator"></i> 标准计算器</h1>
+        </div>
+
+        <!-- 显示区域 -->
+        <div class="calc-display">
+            <div class="calc-expression" id="expression"></div>
+            <div class="calc-result" id="result">0</div>
+        </div>
+
+        <!-- 按钮网格 -->
+        <div class="calc-buttons">
+            <button class="calc-btn fn" data-action="clear">C</button>
+            <button class="calc-btn fn" data-action="backspace">⌫</button>
+            <button class="calc-btn fn" data-action="percent">%</button>
+            <button class="calc-btn op" data-action="divide">÷</button>
+
+            <button class="calc-btn num" data-action="7">7</button>
+            <button class="calc-btn num" data-action="8">8</button>
+            <button class="calc-btn num" data-action="9">9</button>
+            <button class="calc-btn op" data-action="multiply">×</button>
+
+            <button class="calc-btn num" data-action="4">4</button>
+            <button class="calc-btn num" data-action="5">5</button>
+            <button class="calc-btn num" data-action="6">6</button>
+            <button class="calc-btn op" data-action="subtract"><i class="fas fa-minus"></i></button>
+
+            <button class="calc-btn num" data-action="1">1</button>
+            <button class="calc-btn num" data-action="2">2</button>
+            <button class="calc-btn num" data-action="3">3</button>
+            <button class="calc-btn op" data-action="add"><i class="fas fa-plus"></i></button>
+
+            <button class="calc-btn fn sign" data-action="negate">±</button>
+            <button class="calc-btn num zero" data-action="0">0</button>
+            <button class="calc-btn num" data-action="decimal">.</button>
+            <button class="calc-btn eq" data-action="equals">=</button>
+        </div>
+
+        <!-- 历史记录 -->
+        <div class="history-wrap">
+            <div class="history-header">
+                <h3><i class="fas fa-history"></i> 历史记录</h3>
+                <button class="history-clear-btn" id="clearHistoryBtn" title="清空历史">
+                    <i class="fas fa-trash-alt"></i> 清空
+                </button>
+            </div>
+            <div class="history-list" id="historyList">
+                <div class="history-empty">
+                    <i class="fas fa-calculator"></i>
+                    暂无计算记录
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 作者标注 -->
+    <div class="author-credit">
+        <p>✧ xiongdaa 工具集 · 标准计算器 ✧</p>
+        <p><a href="https://xiongdaa.me" target="_blank">xiongdaa.me</a></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        // ==================== 标准计算器 ====================
+        (function() {
+            'use strict';
+
+            // DOM 元素
+            const elExpression = document.getElementById('expression');
+            const elResult = document.getElementById('result');
+            const elHistoryList = document.getElementById('historyList');
+            const historyKey = 'xiongda_calc_history';
+
+            // 状态
+            let currentInput = '0';
+            let previousInput = '';
+            let operator = null;
+            let waitingForOperand = false;
+            let justEvaluated = false;
+            let expressionDisplay = '';
+
+            // ---------- 工具函数 ----------
+            function formatNumber(num) {
+                if (num === Infinity || num === -Infinity || isNaN(num)) return 'Error';
+                const str = String(num);
+                // 对超大/超小数使用科学计数法
+                if (Math.abs(num) >= 1e15 || (Math.abs(num) < 1e-10 && num !== 0)) {
+                    return num.toExponential(6);
+                }
+                // 限制小数位防止浮点误差
+                const parts = str.split('.');
+                if (parts.length === 2 && parts[1].length > 12) {
+                    return Number(num).toFixed(10).replace(/\.?0+$/, '');
+                }
+                return str;
+            }
+
+            function isOperator(char) {
+                return ['+', '-', '×', '÷'].includes(char);
+            }
+
+            function getOperatorSymbol(op) {
+                const map = { 'add': '+', 'subtract': '-', 'multiply': '×', 'divide': '÷' };
+                return map[op] || op;
+            }
+
+            function getOperatorFn(op) {
+                const map = {
+                    'add': (a, b) => a + b,
+                    'subtract': (a, b) => a - b,
+                    'multiply': (a, b) => a * b,
+                    'divide': (a, b) => b === 0 ? NaN : a / b
+                };
+                return map[op] || null;
+            }
+
+            // ---------- 更新显示 ----------
+            function updateDisplay() {
+                let displayVal = currentInput;
+                // 如果当前输入为空或为 '0' 且刚算完，显示结果
+                if (currentInput === '' || currentInput === '-') {
+                    displayVal = currentInput || '0';
+                }
+
+                elResult.textContent = displayVal;
+                elResult.classList.toggle('small', displayVal.length > 10);
+
+                // 更新表达式显示
+                let expr = expressionDisplay;
+                if (waitingForOperand && operator) {
+                    expr = previousInput + ' ' + getOperatorSymbol(operator);
+                } else if (!waitingForOperand && operator && !justEvaluated) {
+                    expr = previousInput + ' ' + getOperatorSymbol(operator) + ' ' + currentInput;
+                }
+                elExpression.textContent = expr || '';
+            }
+
+            // ---------- 输入数字 ----------
+            function inputDigit(digit) {
+                if (justEvaluated) {
+                    // 刚算完，重新开始
+                    currentInput = digit;
+                    previousInput = '';
+                    operator = null;
+                    waitingForOperand = false;
+                    justEvaluated = false;
+                    expressionDisplay = '';
+                    updateDisplay();
+                    return;
+                }
+
+                if (waitingForOperand) {
+                    currentInput = digit;
+                    waitingForOperand = false;
+                } else {
+                    if (currentInput === '0' && digit !== '.') {
+                        currentInput = digit;
+                    } else {
+                        // 限制输入长度
+                        if (currentInput.replace('-', '').replace('.', '').length >= 15) return;
+                        currentInput += digit;
+                    }
+                }
+                updateDisplay();
+            }
+
+            // ---------- 小数点 ----------
+            function inputDecimal() {
+                if (justEvaluated) {
+                    currentInput = '0.';
+                    previousInput = '';
+                    operator = null;
+                    waitingForOperand = false;
+                    justEvaluated = false;
+                    expressionDisplay = '';
+                    updateDisplay();
+                    return;
+                }
+
+                if (waitingForOperand) {
+                    currentInput = '0.';
+                    waitingForOperand = false;
+                    return;
+                }
+
+                if (!currentInput.includes('.')) {
+                    currentInput += '.';
+                }
+                updateDisplay();
+            }
+
+            // ---------- 运算符 ----------
+            function handleOperator(op) {
+                const current = parseFloat(currentInput);
+                if (isNaN(current)) return;
+
+                if (operator && !waitingForOperand) {
+                    const prev = parseFloat(previousInput);
+                    if (isNaN(prev)) return;
+                    const fn = getOperatorFn(operator);
+                    if (!fn) return;
+                    const result = fn(prev, current);
+                    if (!isFinite(result) || isNaN(result)) {
+                        elResult.textContent = 'Error';
+                        elResult.classList.add('error');
+                        currentInput = '0';
+                        previousInput = '';
+                        operator = null;
+                        waitingForOperand = false;
+                        expressionDisplay = '';
+                        return;
+                    }
+                    const formatted = formatNumber(result);
+                    currentInput = formatted;
+                    previousInput = formatted;
+                } else {
+                    previousInput = currentInput;
+                }
+
+                operator = op;
+                waitingForOperand = true;
+                justEvaluated = false;
+                elResult.classList.remove('error');
+                updateDisplay();
+            }
+
+            // ---------- 等于 ----------
+            function calculate() {
+                if (!operator) {
+                    // 没有运算符，直接显示当前值
+                    justEvaluated = true;
+                    return;
+                }
+
+                const prev = parseFloat(previousInput);
+                const current = parseFloat(currentInput);
+                if (isNaN(prev) || isNaN(current)) return;
+
+                const fn = getOperatorFn(operator);
+                if (!fn) return;
+
+                const result = fn(prev, current);
+                elResult.classList.remove('error');
+
+                if (!isFinite(result) || isNaN(result)) {
+                    elResult.textContent = 'Error';
+                    elResult.classList.add('error');
+                    // 保存错误历史
+                    saveHistory(previousInput + ' ' + getOperatorSymbol(operator) + ' ' + currentInput, 'Error');
+                    currentInput = '0';
+                    previousInput = '';
+                    operator = null;
+                    waitingForOperand = false;
+                    justEvaluated = true;
+                    expressionDisplay = '';
+                    updateDisplay();
+                    return;
+                }
+
+                const formatted = formatNumber(result);
+                const expr = previousInput + ' ' + getOperatorSymbol(operator) + ' ' + currentInput;
+
+                // 保存到历史
+                saveHistory(expr, formatted);
+
+                // 更新状态
+                expressionDisplay = expr + ' =';
+                currentInput = formatted;
+                previousInput = '';
+                operator = null;
+                waitingForOperand = false;
+                justEvaluated = true;
+
+                updateDisplay();
+            }
+
+            // ---------- 清除 ----------
+            function clearAll() {
+                currentInput = '0';
+                previousInput = '';
+                operator = null;
+                waitingForOperand = false;
+                justEvaluated = false;
+                expressionDisplay = '';
+                elResult.classList.remove('error');
+                updateDisplay();
+            }
+
+            // ---------- 退格 ----------
+            function backspace() {
+                if (justEvaluated) {
+                    clearAll();
+                    return;
+                }
+                if (waitingForOperand) return;
+
+                if (currentInput.length <= 1 || (currentInput.length === 2 && currentInput.startsWith('-'))) {
+                    currentInput = '0';
+                } else {
+                    currentInput = currentInput.slice(0, -1);
+                }
+                updateDisplay();
+            }
+
+            // ---------- 正负号 ----------
+            function negate() {
+                if (justEvaluated) {
+                    if (currentInput !== '0' && currentInput !== 'Error') {
+                        currentInput = currentInput.startsWith('-') ? currentInput.slice(1) : '-' + currentInput;
+                    }
+                    updateDisplay();
+                    return;
+                }
+                if (waitingForOperand) return;
+                if (currentInput === '0') return;
+                currentInput = currentInput.startsWith('-') ? currentInput.slice(1) : '-' + currentInput;
+                updateDisplay();
+            }
+
+            // ---------- 百分比 ----------
+            function percent() {
+                const val = parseFloat(currentInput);
+                if (isNaN(val)) return;
+                if (justEvaluated) {
+                    // 对结果取百分比
+                    currentInput = formatNumber(val / 100);
+                    justEvaluated = false;
+                    expressionDisplay = '';
+                    updateDisplay();
+                    return;
+                }
+                currentInput = formatNumber(val / 100);
+                updateDisplay();
+            }
+
+            // ==================== 历史记录 ====================
+
+            function getHistory() {
+                try {
+                    const data = localStorage.getItem(historyKey);
+                    return data ? JSON.parse(data) : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function saveHistory(expr, result) {
+                let history = getHistory();
+                history.unshift({
+                    expr: expr,
+                    result: result,
+                    time: Date.now()
+                });
+                // 最多50条
+                if (history.length > 50) {
+                    history = history.slice(0, 50);
+                }
+                try {
+                    localStorage.setItem(historyKey, JSON.stringify(history));
+                } catch (e) {
+                    // localStorage 满
+                }
+                renderHistory();
+            }
+
+            function clearHistory() {
+                try {
+                    localStorage.removeItem(historyKey);
+                } catch (e) {}
+                renderHistory();
+                showToast('历史记录已清空');
+            }
+
+            function renderHistory() {
+                const history = getHistory();
+                if (history.length === 0) {
+                    elHistoryList.innerHTML = '<div class="history-empty"><i class="fas fa-calculator"></i>暂无计算记录</div>';
+                    return;
+                }
+
+                elHistoryList.innerHTML = history.map((item, index) => {
+                    const resultClass = item.result === 'Error' ? 'hist-result error' : 'hist-result';
+                    return `
+                        <div class="history-item" data-index="${index}" title="点击重新加载">
+                            <div class="hist-left">
+                                <div class="hist-expr">${escapeHtml(item.expr)}</div>
+                            </div>
+                            <div class="hist-right ${resultClass}">${escapeHtml(item.result)}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            function escapeHtml(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            function loadHistoryItem(index) {
+                const history = getHistory();
+                if (!history[index]) return;
+                const item = history[index];
+                if (item.result === 'Error') {
+                    currentInput = '0';
+                    previousInput = '';
+                    operator = null;
+                    waitingForOperand = false;
+                    justEvaluated = false;
+                    expressionDisplay = '';
+                    elResult.classList.remove('error');
+                    updateDisplay();
+                    showToast('无法加载错误结果');
+                    return;
+                }
+                // 将结果作为当前输入，并清空运算符状态
+                currentInput = item.result;
+                previousInput = '';
+                operator = null;
+                waitingForOperand = false;
+                justEvaluated = true;
+                expressionDisplay = item.expr + ' =';
+                elResult.classList.remove('error');
+                updateDisplay();
+                showToast('已加载历史结果');
+            }
+
+            // ==================== 事件绑定 ====================
+
+            // 按钮点击
+            document.querySelector('.calc-buttons').addEventListener('click', function(e) {
+                const btn = e.target.closest('.calc-btn');
+                if (!btn) return;
+
+                const action = btn.dataset.action;
+                if (!action) return;
+
+                // 数字
+                if (/^\d$/.test(action)) {
+                    inputDigit(action);
+                    return;
+                }
+
+                switch (action) {
+                    case 'decimal':
+                        inputDecimal();
+                        break;
+                    case 'add':
+                    case 'subtract':
+                    case 'multiply':
+                    case 'divide':
+                        handleOperator(action);
+                        break;
+                    case 'equals':
+                        calculate();
+                        break;
+                    case 'clear':
+                        clearAll();
+                        break;
+                    case 'backspace':
+                        backspace();
+                        break;
+                    case 'negate':
+                        negate();
+                        break;
+                    case 'percent':
+                        percent();
+                        break;
+                }
+            });
+
+            // 历史记录点击
+            elHistoryList.addEventListener('click', function(e) {
+                const item = e.target.closest('.history-item');
+                if (!item) return;
+                const index = parseInt(item.dataset.index, 10);
+                if (!isNaN(index)) {
+                    loadHistoryItem(index);
+                }
+            });
+
+            // 清空历史
+            document.getElementById('clearHistoryBtn').addEventListener('click', function() {
+                clearHistory();
+            });
+
+            // ==================== 键盘支持 ====================
+            document.addEventListener('keydown', function(e) {
+                const key = e.key;
+
+                // 数字键
+                if (/^\d$/.test(key)) {
+                    e.preventDefault();
+                    inputDigit(key);
+                    return;
+                }
+
+                switch (key) {
+                    case '.':
+                        e.preventDefault();
+                        inputDecimal();
+                        break;
+                    case '+':
+                        e.preventDefault();
+                        handleOperator('add');
+                        break;
+                    case '-':
+                        e.preventDefault();
+                        handleOperator('subtract');
+                        break;
+                    case '*':
+                        e.preventDefault();
+                        handleOperator('multiply');
+                        break;
+                    case '/':
+                        e.preventDefault();
+                        handleOperator('divide');
+                        break;
+                    case 'Enter':
+                    case '=':
+                        e.preventDefault();
+                        calculate();
+                        break;
+                    case 'Backspace':
+                        e.preventDefault();
+                        backspace();
+                        break;
+                    case 'Delete':
+                    case 'Escape':
+                        e.preventDefault();
+                        clearAll();
+                        break;
+                    case '%':
+                        e.preventDefault();
+                        percent();
+                        break;
+                }
+            });
+
+            // ==================== 初始化 ====================
+            renderHistory();
+            updateDisplay();
+
+            // 修复 iOS 视口高度
+            function fixVh() {
+                const vh = window.innerHeight * 0.01;
+                document.documentElement.style.setProperty('--vh', vh + 'px');
+            }
+            fixVh();
+            window.addEventListener('resize', fixVh);
+
+        })();
+    </script>
+
+</body>
+</html>

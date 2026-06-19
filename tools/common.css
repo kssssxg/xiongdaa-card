@@ -1,0 +1,272 @@
+/* ================= 共享毛玻璃样式 - xiongdaa 工具集 ================= */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
+:root {
+    --glass-bg: rgba(25, 25, 30, 0.45);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --glass-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    --text-main: #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.7);
+    --theme-accent: #a5b4fc;
+    --sidebar-width: 220px;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --glass-bg: rgba(25, 25, 30, 0.55);
+        --glass-border: rgba(255, 255, 255, 0.18);
+        --glass-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+    }
+}
+
+:root.night-mode {
+    --glass-bg: rgba(15, 15, 20, 0.65);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Noto Sans SC', 'PingFang SC', sans-serif; -webkit-tap-highlight-color: transparent; }
+
+body {
+    min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    background: center/cover fixed no-repeat;
+    background-size: cover; background-position: center; background-attachment: fixed; background-repeat: no-repeat;
+    color: var(--text-main); padding: 20px; overflow-x: hidden;
+    transition: background 0.5s ease;
+}
+
+.overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 100%);
+    z-index: 1;
+}
+
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border: 1px solid var(--glass-border); border-radius: 24px;
+    box-shadow: var(--glass-shadow); position: relative;
+    animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 视频背景 */
+#bg-video {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: -999; object-fit: cover; display: none; pointer-events: none;
+}
+#bg-video.active { display: block; }
+#bg-video[data-scale="contain"] { object-fit: contain; background: #000; }
+#bg-video[data-scale="original"] { object-fit: none; width: auto; height: auto; max-width: 100%; max-height: 100%; }
+#bg-video-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.3); z-index: -998; pointer-events: none;
+}
+
+/* Toast 提示 */
+#toast {
+    position: fixed; top: -60px; left: 50%; transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15); padding: 12px 24px; border-radius: 50px;
+    font-size: 0.9rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    transition: top 0.4s ease; z-index: 9999; display: flex; align-items: center; gap: 10px;
+}
+#toast.show { top: 30px; }
+
+/* 点击特效 */
+.click-effect {
+    position: fixed; pointer-events: none; z-index: 9999;
+    border-radius: 50%;
+    animation: clickRipple 0.6s ease-out forwards;
+}
+@keyframes clickRipple {
+    0% { width: 0; height: 0; opacity: 0.5; border: 2px solid var(--theme-accent); }
+    100% { width: 100px; height: 100px; opacity: 0; border: 2px solid transparent; }
+}
+.click-heart {
+    position: fixed; pointer-events: none; z-index: 9999;
+    font-size: 20px; color: #ff6b9d;
+    animation: heartFloat 1.2s ease-out forwards;
+}
+@keyframes heartFloat {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-80px) scale(0.5); }
+}
+.click-particle {
+    position: fixed; pointer-events: none; z-index: 9999;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--theme-accent);
+    animation: particleExplode 0.8s ease-out forwards;
+}
+@keyframes particleExplode {
+    0% { opacity: 1; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
+}
+
+/* 夜间模式按钮激活 */
+.control-btn.night-active i { color: #ffd700; }
+
+/* 底部作者标注 */
+.author-credit {
+    text-align: center; padding: 15px 30px; font-size: 0.75rem;
+    color: rgba(255,255,255,0.6);
+    margin-top: 30px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    box-shadow: var(--glass-shadow);
+    position: relative; z-index: 10;
+}
+.author-credit p { margin: 2px 0; }
+.author-credit a {
+    color: rgba(255,255,255,0.7); text-decoration: none;
+    transition: color 0.3s; cursor: pointer;
+}
+.author-credit a:hover { color: #a5b4fc; }
+
+/* 返回主页按钮 - 左上角 */
+.back-home-btn {
+    position: fixed; top: 20px; left: 20px; z-index: 100;
+    width: 45px; height: 45px; border-radius: 50%;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border); color: #fff;
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer; text-decoration: none;
+    transition: all 0.3s;
+}
+.back-home-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.1); }
+
+/* 工具卡片容器 */
+.tool-card {
+    padding: 40px; width: 100%; max-width: 700px; position: relative; z-index: 10;
+}
+.tool-card h1 {
+    font-size: 1.6rem; font-weight: 700; margin-bottom: 6px; text-align: center;
+}
+.tool-card .tool-subtitle {
+    text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 30px;
+}
+
+.tool-card textarea, .tool-card input[type="text"], .tool-card input[type="number"] {
+    width: 100%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    color: #fff; padding: 12px 16px; border-radius: 12px; outline: none;
+    font-size: 0.95rem; resize: vertical; transition: all 0.3s;
+}
+.tool-card textarea:focus, .tool-card input:focus {
+    border-color: var(--theme-accent); background: rgba(255,255,255,0.12);
+}
+.tool-card textarea { min-height: 100px; font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace; }
+.tool-card textarea::placeholder, .tool-card input::placeholder { color: rgba(255,255,255,0.35); }
+
+.tool-btn {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+    color: #fff; padding: 10px 20px; border-radius: 12px; cursor: pointer;
+    transition: all 0.2s; font-size: 0.9rem;
+}
+.tool-btn:hover { background: rgba(255,255,255,0.2); border-color: var(--theme-accent); }
+.tool-btn.primary { background: rgba(165,180,252,0.2); border-color: var(--theme-accent); }
+.tool-btn.primary:hover { background: rgba(165,180,252,0.3); }
+
+.tool-row { display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap; }
+.tool-label {
+    display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; margin-top: 15px;
+}
+.tool-label:first-child { margin-top: 0; }
+
+.tool-output {
+    width: 100%; min-height: 60px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 12px 16px; font-size: 0.9rem; color: var(--text-main);
+    word-break: break-all; font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    cursor: pointer; transition: all 0.2s; position: relative;
+}
+.tool-output:hover { border-color: var(--theme-accent); }
+.tool-output .copy-hint {
+    position: absolute; top: 8px; right: 12px; font-size: 0.7rem; color: var(--text-muted);
+    opacity: 0; transition: opacity 0.2s;
+}
+.tool-output:hover .copy-hint { opacity: 1; }
+
+.tool-actions { display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap; }
+
+@media (max-width: 768px) {
+    body { padding: 10px; }
+    .tool-card { padding: 25px; }
+}
+
+/* === 鼠标替换 - 同心圆光标 === */
+/* 隐藏默认鼠标 */
+* { cursor: none !important; }
+
+/* 同心圆光标容器 */
+#cursor-concentric {
+    position: fixed; pointer-events: none; z-index: 999999;
+    transform: translate(-50%, -50%);
+    display: flex; justify-content: center; align-items: center;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+#cursor-concentric.active { opacity: 1; }
+
+/* 外圈大圆 */
+#cursor-concentric .outer {
+    position: absolute;
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    border: 2.5px solid #a5b4fc;
+    box-shadow: 0 0 12px rgba(165,180,252,0.4), inset 0 0 8px rgba(165,180,252,0.1);
+    animation: cursorPulse 2s ease-in-out infinite;
+}
+@keyframes cursorPulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.08); opacity: 1; }
+}
+
+/* 内圈小圆 */
+#cursor-concentric .inner {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid rgba(165,180,252,0.7);
+    box-shadow: 0 0 8px rgba(165,180,252,0.3), inset 0 0 6px rgba(165,180,252,0.15);
+    animation: innerPulse 2s ease-in-out infinite;
+}
+@keyframes innerPulse {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.05); opacity: 0.9; }
+}
+
+/* 中心光点 */
+#cursor-concentric .dot {
+    position: absolute;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: #a5b4fc;
+    box-shadow: 0 0 10px rgba(165,180,252,0.6), 0 0 20px rgba(165,180,252,0.3);
+}
+
+/* 点击时的扩散波纹 */
+#cursor-concentric.click .outer {
+    animation: clickRipple 0.5s ease-out forwards !important;
+}
+@keyframes clickRipple {
+    0% { transform: scale(1); opacity: 0.8; border-width: 2.5px; }
+    100% { transform: scale(2.5); opacity: 0; border-width: 1px; }
+}
+
+/* 拖尾动画 - 扩散环 */
+@keyframes trailRing {
+    0% { opacity: 0.6; transform: translate(-50%, -50%) scale(0.3); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(2); }
+}
+
+/* 拖尾动画 - 小粒子 */
+@keyframes trailDot {
+    0% { opacity: 0.8; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--mx), var(--my)) scale(0); }
+}

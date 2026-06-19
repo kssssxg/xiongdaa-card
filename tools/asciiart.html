@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="CSP" content="upgrade-insecure-requests">
+    <title>图片转ASCII艺术 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* ===== 上传区域 ===== */
+        .upload-zone {
+            position: relative;
+            border: 2px dashed rgba(255,255,255,0.25);
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255,255,255,0.03);
+            margin-bottom: 18px;
+            overflow: hidden;
+        }
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--theme-accent);
+            background: rgba(165,180,252,0.08);
+        }
+        .upload-zone.has-image {
+            border-style: solid;
+            border-color: rgba(255,255,255,0.12);
+            padding: 10px;
+        }
+        .upload-zone .upload-icon {
+            font-size: 2.5rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .upload-zone .upload-text {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        .upload-zone .upload-hint {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.35);
+            margin-top: 6px;
+        }
+        .upload-zone .preview-img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 10px;
+            display: none;
+            object-fit: contain;
+        }
+        .upload-zone.has-image .preview-img {
+            display: inline-block;
+        }
+        .upload-zone.has-image .upload-icon,
+        .upload-zone.has-image .upload-text,
+        .upload-zone.has-image .upload-hint {
+            display: none;
+        }
+        #file-input {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* ===== 控件行 ===== */
+        .ascii-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+            margin: 15px 0;
+        }
+        .ascii-controls .ctrl-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1 1 120px;
+            min-width: 100px;
+        }
+        .ascii-controls .ctrl-group label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .ascii-controls .ctrl-group select {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--glass-border);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .ascii-controls .ctrl-group select:hover,
+        .ascii-controls .ctrl-group select:focus {
+            border-color: var(--theme-accent);
+            background: rgba(255,255,255,0.15);
+        }
+        .ascii-controls .ctrl-group select option {
+            background: #2a2a35;
+            color: #fff;
+        }
+
+        /* 开关式按钮 */
+        .toggle-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin: 8px 0;
+        }
+        .toggle-btn {
+            padding: 8px 16px;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.06);
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .toggle-btn:hover {
+            border-color: rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.1);
+        }
+        .toggle-btn.active {
+            border-color: var(--theme-accent);
+            background: rgba(165,180,252,0.2);
+            color: var(--text-main);
+        }
+
+        /* ===== ASCII 输出区域 ===== */
+        .ascii-output-wrap {
+            position: relative;
+            margin-top: 12px;
+            background: rgba(0,0,0,0.35);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 14px;
+            overflow-x: auto;
+            min-height: 120px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .ascii-output-wrap .placeholder {
+            color: var(--text-muted);
+            text-align: center;
+            padding: 30px 0;
+            font-size: 0.85rem;
+        }
+        .ascii-output-wrap pre {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.6rem;
+            line-height: 1.1;
+            letter-spacing: 0;
+            white-space: pre;
+            word-break: keep-all;
+            overflow-x: auto;
+            margin: 0;
+            color: #fff;
+        }
+        .ascii-output-wrap pre.ascii-color {
+            font-size: 0.65rem;
+        }
+        .ascii-output-wrap pre .ascii-char {
+            white-space: pre;
+        }
+
+        /* 缩放滑块（辅助调节字体大小） */
+        .zoom-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 6px 0;
+        }
+        .zoom-row label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+        .zoom-row input[type="range"] {
+            flex: 1;
+            max-width: 150px;
+            accent-color: var(--theme-accent);
+            background: transparent;
+            cursor: pointer;
+        }
+        .zoom-row .zoom-value {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            min-width: 30px;
+            text-align: center;
+        }
+
+        /* 操作按钮行 */
+        .ascii-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        /* 信息提示 */
+        .info-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding: 8px 14px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 10px;
+        }
+        .info-bar span {
+            white-space: nowrap;
+        }
+        .info-bar .info-val {
+            color: var(--text-main);
+        }
+
+        @media (max-width: 600px) {
+            .ascii-controls .ctrl-group {
+                flex: 1 1 80px;
+                min-width: 70px;
+            }
+            .ascii-output-wrap pre {
+                font-size: 0.45rem;
+            }
+            .ascii-output-wrap pre.ascii-color {
+                font-size: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="overlay"></div>
+<video id="bg-video" muted loop playsinline></video>
+<div id="bg-video-overlay"></div>
+
+<!-- 返回主页 -->
+<a href="../index.html" class="back-home-btn" title="返回主页">
+    <i class="fas fa-arrow-left"></i>
+</a>
+
+<!-- Toast -->
+<div id="toast"><i class="fas fa-info-circle"></i><span id="toast-msg"></span></div>
+
+<!-- 主卡片 -->
+<div class="glass-card tool-card">
+    <h1><i class="fas fa-image"></i> 图片转 ASCII 艺术</h1>
+    <p class="tool-subtitle">上传图片，自动生成字符画</p>
+
+    <!-- 上传区域 -->
+    <div class="upload-zone" id="upload-zone">
+        <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+        <div class="upload-text">点击或拖拽图片到此处</div>
+        <div class="upload-hint">支持 JPG / PNG / WebP / GIF</div>
+        <img class="preview-img" id="preview-img" alt="预览">
+        <input type="file" id="file-input" accept="image/*">
+    </div>
+
+    <!-- 控制选项 -->
+    <div class="ascii-controls">
+        <div class="ctrl-group">
+            <label>字符集</label>
+            <select id="charset-select">
+                <option value="simple">简约 @#S%&amp;*</option>
+                <option value="blocks" selected>标准 ░▒▓█</option>
+            </select>
+        </div>
+        <div class="ctrl-group">
+            <label>输出宽度（字符）</label>
+            <select id="width-select">
+                <option value="40">40</option>
+                <option value="60">60</option>
+                <option value="80" selected>80</option>
+                <option value="100">100</option>
+                <option value="120">120</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 开关选项 -->
+    <div class="toggle-row">
+        <button class="toggle-btn" id="color-toggle"><i class="fas fa-palette"></i> 彩色</button>
+        <button class="toggle-btn" id="invert-toggle"><i class="fas fa-adjust"></i> 反转色</button>
+    </div>
+
+    <!-- 字体缩放 -->
+    <div class="zoom-row">
+        <label><i class="fas fa-search-plus"></i> 缩放</label>
+        <input type="range" id="zoom-slider" min="0.35" max="1.2" step="0.05" value="0.6">
+        <span class="zoom-value" id="zoom-label">0.60</span>
+    </div>
+
+    <!-- ASCII 输出 -->
+    <div class="ascii-output-wrap" id="output-wrap">
+        <div class="placeholder" id="placeholder">
+            <i class="fas fa-upload" style="font-size:1.5rem;display:block;margin-bottom:8px;"></i>
+            上传图片后，ASCII 艺术将在此显示
+        </div>
+        <pre id="ascii-output" style="display:none;"></pre>
+    </div>
+
+    <!-- 信息栏 -->
+    <div class="info-bar" id="info-bar" style="display:none;">
+        <span>尺寸: <span class="info-val" id="info-dims">-</span></span>
+        <span>字符数: <span class="info-val" id="info-chars">-</span></span>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="ascii-actions">
+        <button class="tool-btn primary" id="copy-btn" disabled><i class="fas fa-copy"></i> 复制</button>
+        <button class="tool-btn" id="download-btn" disabled><i class="fas fa-download"></i> 下载 .txt</button>
+        <button class="tool-btn" id="download-html-btn" disabled><i class="fas fa-file-code"></i> 下载彩色HTML</button>
+    </div>
+</div>
+
+<a href="https://github.com/xiongdaa" class="author-credit" style="text-decoration:none;">
+    <p>❤ xiong da · ASCII Art Tool</p>
+</a>
+
+<script src="common.js"></script>
+<script>
+(function() {
+    'use strict';
+
+    // ===== DOM 引用 =====
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+    const previewImg = document.getElementById('preview-img');
+    const charsetSelect = document.getElementById('charset-select');
+    const widthSelect = document.getElementById('width-select');
+    const colorToggle = document.getElementById('color-toggle');
+    const invertToggle = document.getElementById('invert-toggle');
+    const zoomSlider = document.getElementById('zoom-slider');
+    const zoomLabel = document.getElementById('zoom-label');
+    const placeholder = document.getElementById('placeholder');
+    const asciiOutput = document.getElementById('ascii-output');
+    const outputWrap = document.getElementById('output-wrap');
+    const infoBar = document.getElementById('info-bar');
+    const infoDims = document.getElementById('info-dims');
+    const infoChars = document.getElementById('info-chars');
+    const copyBtn = document.getElementById('copy-btn');
+    const downloadBtn = document.getElementById('download-btn');
+    const downloadHtmlBtn = document.getElementById('download-html-btn');
+
+    // ===== 状态 =====
+    let sourceImage = null;       // HTMLImageElement
+    let currentAscii = '';        // plain text
+    let currentAsciiHTML = '';    // colored HTML
+    let isColorMode = false;
+    let isInverted = false;
+    let isProcessing = false;
+
+    // ===== 字符集定义 =====
+    const CHARSETS = {
+        simple: {
+            name: '简约',
+            chars: '@#S%&*+=-:. '
+        },
+        blocks: {
+            name: '标准',
+            chars: '█▓▒░ '
+        }
+    };
+
+    // ===== 获取当前字符集 =====
+    function getCharset() {
+        const key = charsetSelect.value;
+        return CHARSETS[key] || CHARSETS.blocks;
+    }
+
+    // ===== 获取亮度到字符的映射 =====
+    function getCharForBrightness(brightness, charset, inverted) {
+        // brightness: 0-255, 0=black
+        const chars = charset.chars;
+        const len = chars.length;
+        let idx;
+        if (inverted) {
+            // 反转：亮像素用暗字符
+            idx = Math.floor((brightness / 255) * (len - 1));
+        } else {
+            idx = Math.floor(((255 - brightness) / 255) * (len - 1));
+        }
+        idx = Math.max(0, Math.min(len - 1, idx));
+        return chars[idx];
+    }
+
+    // ===== 主转换函数 =====
+    function convertToAscii(img, width, charsetKey, colorMode, inverted) {
+        const charset = CHARSETS[charsetKey] || CHARSETS.blocks;
+
+        // 计算缩放比例
+        const aspectRatio = img.height / img.width;
+        // 字符的宽高比 ≈ 0.5 (monospace 字体中字符约宽高比 1:2)
+        const charAspect = 0.5;
+        let height = Math.round(width * aspectRatio * charAspect);
+        if (height < 1) height = 1;
+
+        // 用 canvas 读取像素
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+
+        let plainText = '';
+        let htmlParts = [];
+
+        for (let y = 0; y < height; y++) {
+            let rowPlain = '';
+            let rowHTML = [];
+            for (let x = 0; x < width; x++) {
+                const idx = (y * width + x) * 4;
+                const r = data[idx];
+                const g = data[idx + 1];
+                const b = data[idx + 2];
+                const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+
+                const ch = getCharForBrightness(brightness, charset, inverted);
+
+                if (colorMode) {
+                    rowHTML.push('<span class="ascii-char" style="color:rgb(' + r + ',' + g + ',' + b + ')">' + ch + '</span>');
+                }
+                rowPlain += ch;
+            }
+            plainText += rowPlain + '\n';
+            if (colorMode) {
+                htmlParts.push(rowHTML.join(''));
+                if (y < height - 1) htmlParts.push('\n');
+            }
+        }
+
+        let htmlText = colorMode ? htmlParts.join('') : plainText;
+
+        return {
+            plain: plainText,
+            html: htmlText,
+            width: width,
+            height: height,
+            totalChars: width * height
+        };
+    }
+
+    // ===== 渲染 ASCII =====
+    function renderAscii() {
+        if (!sourceImage || isProcessing) return;
+
+        isProcessing = true;
+
+        try {
+            const width = parseInt(widthSelect.value);
+            const charsetKey = charsetSelect.value;
+            const colorMode = isColorMode;
+            const inverted = isInverted;
+
+            const result = convertToAscii(sourceImage, width, charsetKey, colorMode, inverted);
+            currentAscii = result.plain;
+            currentAsciiHTML = result.html;
+
+            // 显示
+            placeholder.style.display = 'none';
+            asciiOutput.style.display = 'block';
+
+            if (colorMode) {
+                asciiOutput.className = 'ascii-color';
+                asciiOutput.innerHTML = currentAsciiHTML;
+            } else {
+                asciiOutput.className = '';
+                asciiOutput.textContent = currentAscii;
+            }
+
+            // 更新字号
+            applyZoom();
+
+            // 信息栏
+            infoBar.style.display = 'flex';
+            infoDims.textContent = result.width + '×' + result.height;
+            infoChars.textContent = result.totalChars.toLocaleString();
+
+            // 启用按钮
+            copyBtn.disabled = false;
+            downloadBtn.disabled = false;
+            downloadHtmlBtn.disabled = false;
+
+            // 如果有彩色结果，启用HTML下载按钮；否则禁用
+            if (colorMode) {
+                downloadHtmlBtn.disabled = false;
+            } else {
+                downloadHtmlBtn.disabled = true;
+            }
+        } catch (e) {
+            console.error('ASCII 转换失败:', e);
+            showToast('转换失败: ' + e.message);
+        } finally {
+            isProcessing = false;
+        }
+    }
+
+    // ===== 应用缩放 =====
+    function applyZoom() {
+        const val = parseFloat(zoomSlider.value);
+        asciiOutput.style.fontSize = val + 'em';
+        zoomLabel.textContent = val.toFixed(2);
+    }
+
+    // ===== 加载图片 =====
+    function loadImage(file) {
+        if (!file || !file.type.startsWith('image/')) {
+            showToast('请选择图片文件');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                sourceImage = img;
+                previewImg.src = e.target.result;
+                uploadZone.classList.add('has-image');
+                renderAscii();
+            };
+            img.onerror = function() {
+                showToast('图片加载失败');
+            };
+            img.src = e.target.result;
+        };
+        reader.onerror = function() {
+            showToast('文件读取失败');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // ===== 事件绑定 =====
+
+    // 文件选择
+    fileInput.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            loadImage(this.files[0]);
+        }
+    });
+
+    // 拖拽上传
+    uploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.add('dragover');
+    });
+    uploadZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('dragover');
+    });
+    uploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            loadImage(e.dataTransfer.files[0]);
+            // 同步到 file input
+            fileInput.files = e.dataTransfer.files;
+        }
+    });
+
+    // 点击上传区触发文件选择（使用内嵌input）
+    // 已经有点击触发
+
+    // 字符集切换
+    charsetSelect.addEventListener('change', function() {
+        if (sourceImage) renderAscii();
+    });
+
+    // 宽度切换
+    widthSelect.addEventListener('change', function() {
+        if (sourceImage) renderAscii();
+    });
+
+    // 彩色模式切换
+    colorToggle.addEventListener('click', function() {
+        isColorMode = !isColorMode;
+        this.classList.toggle('active', isColorMode);
+        if (isColorMode) this.innerHTML = '<i class="fas fa-palette"></i> 彩色';
+        else this.innerHTML = '<i class="fas fa-palette"></i> 彩色';
+        if (sourceImage) renderAscii();
+    });
+
+    // 反转色切换
+    invertToggle.addEventListener('click', function() {
+        isInverted = !isInverted;
+        this.classList.toggle('active', isInverted);
+        if (sourceImage) renderAscii();
+    });
+
+    // 缩放滑块
+    zoomSlider.addEventListener('input', function() {
+        applyZoom();
+    });
+
+    // ===== 复制 =====
+    copyBtn.addEventListener('click', function() {
+        const text = isColorMode ? asciiOutput.textContent : currentAscii;
+        if (!text) { showToast('没有内容可复制'); return; }
+        copyText(text);
+    });
+
+    // ===== 下载 .txt =====
+    downloadBtn.addEventListener('click', function() {
+        if (!currentAscii) { showToast('没有内容可下载'); return; }
+        const blob = new Blob([currentAscii], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'ascii_art.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('已下载 ascii_art.txt');
+    });
+
+    // ===== 下载彩色 HTML =====
+    downloadHtmlBtn.addEventListener('click', function() {
+        if (!currentAsciiHTML || !isColorMode) {
+            showToast('请在彩色模式下下载 HTML');
+            return;
+        }
+        const htmlContent = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ASCII Art</title>'
+            + '<style>body{background:#111;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;}'
+            + 'pre{font-family:Consolas,Courier New,monospace;font-size:10px;line-height:1.1;color:#fff;}</style></head>'
+            + '<body><pre>' + currentAsciiHTML + '</pre></body></html>';
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'ascii_art_color.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('已下载 ascii_art_color.html');
+    });
+
+    // ===== 初始化 =====
+    // 初始化彩色按钮状态
+    colorToggle.classList.remove('active');
+    invertToggle.classList.remove('active');
+
+    // 如果 common.js 存在 copyText 就用它，否则自己实现一个备选
+    if (typeof copyText !== 'function') {
+        window.copyText = function(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function() {
+                    if (typeof showToast === 'function') showToast('已复制到剪贴板');
+                }).catch(function() {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        };
+        window.fallbackCopy = function(text) {
+            const input = document.createElement('input');
+            input.value = text;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            if (typeof showToast === 'function') showToast('已复制到剪贴板');
+        };
+    }
+
+    console.log('ASCII Art Tool 已初始化');
+})();
+</script>
+</body>
+</html>

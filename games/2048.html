@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <title>2048 - xiong da</title>
+    <link rel="stylesheet" href="../tools/common.css">
+    <style>
+        /* ===== 2048 专属样式 ===== */
+        .game-card {
+            padding: 40px;
+            width: 100%;
+            max-width: 520px;
+            position: relative;
+            z-index: 10;
+            text-align: center;
+        }
+
+        .game-card h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .game-card .game-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        /* --- 分数栏 --- */
+        .score-bar {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .score-bar .score-item {
+            padding: 10px 22px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 12px;
+            min-width: 100px;
+        }
+        .score-bar .score-item .label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .score-bar .score-item .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--theme-accent);
+        }
+
+        /* --- 棋盘 4x4 --- */
+        .board-container {
+            position: relative;
+            max-width: 400px;
+            margin: 0 auto 20px;
+            padding: 8px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            aspect-ratio: 1;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.04);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #fff;
+            transition: all 0.12s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 数字样式 */
+        .cell.tile-0 { background: rgba(255,255,255,0.04); }
+        .cell.tile-2 { background: rgba(238,228,218,0.2); color: #f0e8d8; }
+        .cell.tile-4 { background: rgba(237,224,200,0.2); color: #f0e8d8; }
+        .cell.tile-8 { background: rgba(242,177,121,0.35); color: #fff; }
+        .cell.tile-16 { background: rgba(245,149,99,0.4); color: #fff; }
+        .cell.tile-32 { background: rgba(246,124,95,0.45); color: #fff; }
+        .cell.tile-64 { background: rgba(246,94,59,0.5); color: #fff; }
+        .cell.tile-128 { background: rgba(237,207,114,0.45); color: #fff; font-size: 1.5rem; }
+        .cell.tile-256 { background: rgba(237,207,114,0.55); color: #fff; font-size: 1.5rem; }
+        .cell.tile-512 { background: rgba(237,207,114,0.65); color: #fff; font-size: 1.5rem; }
+        .cell.tile-1024 { background: rgba(237,207,114,0.75); color: #fff; font-size: 1.1rem; }
+        .cell.tile-2048 { background: rgba(237,207,114,0.85); color: #fff; font-size: 1.1rem; }
+        .cell.tile-super { background: rgba(60,210,140,0.45); color: #fff; font-size: 1rem; }
+
+        /* 新增方块动画 */
+        .cell.tile-new {
+            animation: tileAppear 0.2s ease;
+        }
+        @keyframes tileAppear {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .cell.tile-merged {
+            animation: tileMerge 0.2s ease;
+        }
+        @keyframes tileMerge {
+            0% { transform: scale(1.1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* --- 游戏结束遮罩 --- */
+        .game-over-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(4px);
+            border-radius: 16px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+        }
+        .game-over-overlay.visible {
+            display: flex;
+        }
+        .game-over-overlay .msg {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .game-over-overlay .sub-msg {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 18px;
+        }
+
+        /* --- 按钮 --- */
+        .game-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .game-btn {
+            padding: 10px 24px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .game-btn:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: var(--theme-accent);
+        }
+
+        .game-btn.primary {
+            background: rgba(165,180,252,0.15);
+            border-color: var(--theme-accent);
+        }
+
+        .game-btn.primary:hover {
+            background: rgba(165,180,252,0.25);
+        }
+
+        /* --- 操作提示 --- */
+        .control-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+        }
+        .control-hint i {
+            margin: 0 3px;
+        }
+
+        /* --- 响应式 --- */
+        @media (max-width: 480px) {
+            .game-card { padding: 24px; }
+            .board-container { max-width: 320px; }
+            .cell { font-size: 1.4rem; }
+            .cell.tile-128,
+            .cell.tile-256,
+            .cell.tile-512 { font-size: 1.2rem; }
+            .cell.tile-1024,
+            .cell.tile-2048,
+            .cell.tile-super { font-size: 0.9rem; }
+            .score-bar .score-item { min-width: 80px; padding: 8px 14px; }
+            .score-bar .score-item .value { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="index.html" class="back-home-btn" title="返回游戏专区">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <div id="toast">
+        <i class="fas fa-info-circle" style="color: #a5b4fc;"></i>
+        <span id="toast-msg">提示信息</span>
+    </div>
+
+    <div class="glass-card game-card">
+        <h1><i class="fas fa-th"></i> 2048</h1>
+        <div class="game-subtitle">方向键合并数字，冲向 2048！</div>
+
+        <!-- 分数栏 -->
+        <div class="score-bar">
+            <div class="score-item">
+                <div class="label">🏆 分数</div>
+                <div class="value" id="score">0</div>
+            </div>
+            <div class="score-item">
+                <div class="label">⭐ 最高分</div>
+                <div class="value" id="best-score">0</div>
+            </div>
+        </div>
+
+        <!-- 操作提示 -->
+        <div class="control-hint">
+            <i class="fas fa-arrow-up"></i>
+            <i class="fas fa-arrow-down"></i>
+            <i class="fas fa-arrow-left"></i>
+            <i class="fas fa-arrow-right"></i>
+            键盘方向键控制
+        </div>
+
+        <!-- 棋盘容器（含结束遮罩） -->
+        <div class="board-container" id="board-container">
+            <div class="board" id="board">
+                <div class="cell" data-row="0" data-col="0"></div>
+                <div class="cell" data-row="0" data-col="1"></div>
+                <div class="cell" data-row="0" data-col="2"></div>
+                <div class="cell" data-row="0" data-col="3"></div>
+                <div class="cell" data-row="1" data-col="0"></div>
+                <div class="cell" data-row="1" data-col="1"></div>
+                <div class="cell" data-row="1" data-col="2"></div>
+                <div class="cell" data-row="1" data-col="3"></div>
+                <div class="cell" data-row="2" data-col="0"></div>
+                <div class="cell" data-row="2" data-col="1"></div>
+                <div class="cell" data-row="2" data-col="2"></div>
+                <div class="cell" data-row="2" data-col="3"></div>
+                <div class="cell" data-row="3" data-col="0"></div>
+                <div class="cell" data-row="3" data-col="1"></div>
+                <div class="cell" data-row="3" data-col="2"></div>
+                <div class="cell" data-row="3" data-col="3"></div>
+            </div>
+            <div class="game-over-overlay" id="game-over-overlay">
+                <div class="msg" id="game-over-msg">游戏结束！</div>
+                <div class="sub-msg" id="game-over-sub">最终得分：<span id="final-score">0</span></div>
+                <button class="game-btn primary" id="restart-overlay-btn"><i class="fas fa-redo"></i> 再来一局</button>
+            </div>
+        </div>
+
+        <!-- 按钮 -->
+        <div class="game-actions">
+            <button class="game-btn primary" id="restart-btn"><i class="fas fa-redo"></i> 重新开始</button>
+        </div>
+    </div>
+
+    <div class="author-credit">
+        <p>© 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="../tools/common.js"></script>
+    <script>
+        // ===== 2048 游戏逻辑 =====
+        (function() {
+            const board = document.getElementById('board');
+            const cells = Array.from(board.querySelectorAll('.cell'));
+            const scoreEl = document.getElementById('score');
+            const bestScoreEl = document.getElementById('best-score');
+            const restartBtn = document.getElementById('restart-btn');
+            const restartOverlayBtn = document.getElementById('restart-overlay-btn');
+            const gameOverOverlay = document.getElementById('game-over-overlay');
+            const gameOverMsg = document.getElementById('game-over-msg');
+            const finalScoreEl = document.getElementById('final-score');
+
+            const BEST_KEY = 'xiongda_2048_best';
+
+            // 游戏状态
+            let grid = Array(4).fill().map(() => Array(4).fill(0));
+            let score = 0;
+            let bestScore = 0;
+            let gameActive = true;
+
+            // 从 localStorage 加载最高分
+            function loadBest() {
+                try {
+                    const saved = localStorage.getItem(BEST_KEY);
+                    if (saved) bestScore = parseInt(saved, 10) || 0;
+                } catch (e) {}
+                bestScoreEl.textContent = bestScore;
+            }
+
+            function saveBest() {
+                try {
+                    localStorage.setItem(BEST_KEY, bestScore.toString());
+                } catch (e) {}
+            }
+
+            // 获取单元格 HTML 元素 (row, col)
+            function getCell(row, col) {
+                return cells[row * 4 + col];
+            }
+
+            // 渲染棋盘
+            function renderGrid(noAnim) {
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        const el = getCell(r, c);
+                        const val = grid[r][c];
+                        el.textContent = val || '';
+                        el.className = 'cell';
+                        if (val > 0) {
+                            const cls = val >= 4096 ? 'tile-super' : 'tile-' + val;
+                            el.classList.add(cls);
+                        } else {
+                            el.classList.add('tile-0');
+                        }
+                    }
+                }
+                scoreEl.textContent = score;
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestScoreEl.textContent = bestScore;
+                    saveBest();
+                }
+            }
+
+            // 在空白格子随机生成一个 2 或 4
+            function addRandomTile() {
+                const empty = [];
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        if (grid[r][c] === 0) empty.push({ r, c });
+                    }
+                }
+                if (empty.length === 0) return null;
+                const { r, c } = empty[Math.floor(Math.random() * empty.length)];
+                grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+                // 加动画标记
+                const el = getCell(r, c);
+                el.classList.add('tile-new');
+                return { r, c };
+            }
+
+            // 移动一行（向左），返回 { moved, scoreGained }
+            function slideRow(row) {
+                // 去掉 0
+                let arr = row.filter(v => v !== 0);
+                let gained = 0;
+                // 从左到右合并
+                for (let i = 0; i < arr.length - 1; i++) {
+                    if (arr[i] === arr[i + 1]) {
+                        arr[i] *= 2;
+                        gained += arr[i];
+                        arr.splice(i + 1, 1);
+                        // 标记合并（在合并后的位置上）
+                    }
+                }
+                // 补 0
+                while (arr.length < 4) arr.push(0);
+                return { arr, gained };
+            }
+
+            // 转置矩阵
+            function transpose(g) {
+                const newGrid = Array(4).fill().map(() => Array(4).fill(0));
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        newGrid[c][r] = g[r][c];
+                    }
+                }
+                return newGrid;
+            }
+
+            // 反转每一行
+            function reverseRows(g) {
+                return g.map(row => [...row].reverse());
+            }
+
+            // 核心移动函数
+            function move(direction) {
+                if (!gameActive) return false;
+
+                let newGrid;
+                let totalGained = 0;
+                let moved = false;
+
+                // 将操作统一为行处理
+                // 左：直接处理每行
+                // 右：反转每行 -> 左移 -> 反转回来
+                // 上：转置 -> 左移 -> 转置回来
+                // 下：转置 -> 反转每行 -> 左移 -> 反转回来 -> 转置回来
+                if (direction === 'left') {
+                    newGrid = grid.map(row => {
+                        const result = slideRow(row);
+                        totalGained += result.gained;
+                        return result.arr;
+                    });
+                } else if (direction === 'right') {
+                    newGrid = reverseRows(grid).map(row => {
+                        const result = slideRow(row);
+                        totalGained += result.gained;
+                        return result.arr;
+                    });
+                    newGrid = reverseRows(newGrid);
+                } else if (direction === 'up') {
+                    newGrid = transpose(grid).map(row => {
+                        const result = slideRow(row);
+                        totalGained += result.gained;
+                        return result.arr;
+                    });
+                    newGrid = transpose(newGrid);
+                } else if (direction === 'down') {
+                    newGrid = transpose(grid).map(row => {
+                        const result = slideRow([...row].reverse());
+                        totalGained += result.gained;
+                        return result.arr;
+                    });
+                    newGrid = newGrid.map(row => [...row].reverse());
+                    newGrid = transpose(newGrid);
+                }
+
+                // 检查是否有变化
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        if (grid[r][c] !== newGrid[r][c]) {
+                            moved = true;
+                            break;
+                        }
+                    }
+                    if (moved) break;
+                }
+
+                if (!moved) return false;
+
+                grid = newGrid;
+                score += totalGained;
+
+                // 渲染（先不加动画标记）
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        const el = getCell(r, c);
+                        el.classList.remove('tile-new', 'tile-merged');
+                    }
+                }
+
+                renderGrid();
+
+                // 生成新方块
+                addRandomTile();
+
+                // 检查游戏是否结束
+                if (isGameOver()) {
+                    gameActive = false;
+                    gameOverOverlay.classList.add('visible');
+                    finalScoreEl.textContent = score;
+                    if (checkWin()) {
+                        gameOverMsg.textContent = '🎉 你赢了！';
+                    } else {
+                        gameOverMsg.textContent = '😵 游戏结束！';
+                    }
+                }
+
+                return true;
+            }
+
+            // 检查是否还有可移动的格子
+            function isGameOver() {
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        if (grid[r][c] === 0) return false;
+                        if (c < 3 && grid[r][c] === grid[r][c + 1]) return false;
+                        if (r < 3 && grid[r][c] === grid[r + 1][c]) return false;
+                    }
+                }
+                return true;
+            }
+
+            // 检查是否达到 2048
+            function checkWin() {
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < 4; c++) {
+                        if (grid[r][c] >= 2048) return true;
+                    }
+                }
+                return false;
+            }
+
+            // 重新开始
+            function resetGame() {
+                grid = Array(4).fill().map(() => Array(4).fill(0));
+                score = 0;
+                gameActive = true;
+                gameOverOverlay.classList.remove('visible');
+                // 移除所有动画类
+                cells.forEach(el => el.classList.remove('tile-new', 'tile-merged'));
+                addRandomTile();
+                addRandomTile();
+                renderGrid();
+            }
+
+            // 键盘事件
+            function handleKeydown(e) {
+                const keyMap = {
+                    'ArrowUp': 'up',
+                    'ArrowDown': 'down',
+                    'ArrowLeft': 'left',
+                    'ArrowRight': 'right'
+                };
+                const dir = keyMap[e.key];
+                if (dir) {
+                    e.preventDefault();
+                    move(dir);
+                }
+            }
+
+            // 绑定
+            restartBtn.addEventListener('click', resetGame);
+            restartOverlayBtn.addEventListener('click', resetGame);
+            document.addEventListener('keydown', handleKeydown);
+
+            // 初始化
+            loadBest();
+            resetGame();
+        })();
+    </script>
+</body>
+</html>

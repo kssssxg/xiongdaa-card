@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="CSP" content="upgrade-insecure-requests">
+    <title>便签笔记 - xiong da</title>
+    <link rel="stylesheet" href="common.css">
+    <style>
+        /* ---- 便签笔记特有样式 ---- */
+
+        /* 顶部栏：搜索 + 导出 */
+        .notes-top-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .notes-top-bar .search-wrap {
+            flex: 1;
+            min-width: 160px;
+            position: relative;
+        }
+        .notes-top-bar .search-wrap i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255,255,255,0.35);
+            font-size: 0.85rem;
+            pointer-events: none;
+        }
+        .notes-top-bar .search-wrap input {
+            width: 100%;
+            padding: 10px 14px 10px 36px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 0.88rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+        .notes-top-bar .search-wrap input:focus {
+            border-color: var(--theme-accent);
+            background: rgba(255,255,255,0.12);
+        }
+        .notes-top-bar .search-wrap input::placeholder {
+            color: rgba(255,255,255,0.35);
+        }
+        .notes-top-bar .export-btn {
+            background: rgba(165,180,252,0.15);
+            border: 1px solid rgba(165,180,252,0.25);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            transition: all 0.25s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .notes-top-bar .export-btn:hover {
+            background: rgba(165,180,252,0.25);
+            border-color: var(--theme-accent);
+        }
+
+        /* 统计 */
+        .notes-stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 18px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+        }
+        .notes-stats span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .notes-stats .stat-num {
+            color: var(--theme-accent);
+            font-weight: 600;
+        }
+
+        /* 编辑面板 */
+        .note-editor {
+            background: rgba(0,0,0,0.15);
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s;
+        }
+        .note-editor.hidden {
+            display: none;
+        }
+        .note-editor .note-title-input {
+            width: 100%;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 10px;
+            outline: none;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+        .note-editor .note-title-input:focus {
+            border-color: var(--theme-accent);
+            background: rgba(255,255,255,0.12);
+        }
+        .note-editor .note-title-input::placeholder {
+            color: rgba(255,255,255,0.35);
+        }
+
+        /* 富文本 toolbar */
+        .note-toolbar {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            padding: 6px 8px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.06);
+            margin-bottom: 10px;
+        }
+        .note-toolbar .tb-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .note-toolbar .tb-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+        .note-toolbar .tb-btn.active {
+            background: rgba(165,180,252,0.2);
+            color: var(--theme-accent);
+        }
+        .note-toolbar .tb-divider {
+            width: 1px;
+            background: rgba(255,255,255,0.1);
+            margin: 4px 6px;
+        }
+
+        /* 内容 textarea */
+        .note-content-area {
+            width: 100%;
+            min-height: 180px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #fff;
+            padding: 12px 14px;
+            border-radius: 10px;
+            outline: none;
+            font-size: 0.92rem;
+            resize: vertical;
+            transition: all 0.3s;
+            line-height: 1.65;
+        }
+        .note-content-area:focus {
+            border-color: var(--theme-accent);
+            background: rgba(255,255,255,0.1);
+        }
+        .note-content-area::placeholder {
+            color: rgba(255,255,255,0.3);
+        }
+
+        .note-editor .editor-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 12px;
+        }
+        .note-editor .editor-actions .tool-btn {
+            padding: 8px 18px;
+            font-size: 0.82rem;
+        }
+
+        /* 添加按钮行 */
+        .add-note-row {
+            margin-bottom: 16px;
+        }
+        .add-note-row button {
+            width: 100%;
+            padding: 10px;
+        }
+
+        /* 笔记卡片网格 */
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 14px;
+        }
+        .notes-grid .note-empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .notes-grid .note-empty i {
+            font-size: 2.8rem;
+            display: block;
+            margin-bottom: 14px;
+            opacity: 0.35;
+        }
+
+        /* 单个笔记卡片 */
+        .note-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 16px 18px;
+            transition: all 0.25s;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .note-card:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        .note-card .note-card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            word-break: break-word;
+            line-height: 1.4;
+            padding-right: 32px; /* room for actions */
+        }
+        .note-card .note-card-preview {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            word-break: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            flex: 1;
+            margin-bottom: 10px;
+        }
+        .note-card .note-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.35);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-top: 10px;
+        }
+        .note-card .note-card-footer .note-card-time {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .note-card .note-card-footer .note-card-time i {
+            font-size: 0.65rem;
+        }
+
+        /* 笔记卡片操作按钮（hover 显示） */
+        .note-card .note-card-actions {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+        .note-card:hover .note-card-actions {
+            opacity: 1;
+        }
+        .note-card .note-card-actions .card-act {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: none;
+            background: rgba(0,0,0,0.4);
+            color: rgba(255,255,255,0.5);
+            cursor: pointer;
+            font-size: 0.7rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .note-card .note-card-actions .card-act:hover {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+        }
+        .note-card .note-card-actions .card-act.edit-act:hover {
+            background: rgba(96,165,250,0.2);
+            color: #60a5fa;
+        }
+        .note-card .note-card-actions .card-act.del-act:hover {
+            background: rgba(248,113,113,0.2);
+            color: #f87171;
+        }
+        .note-card .note-card-actions .card-act.export-act:hover {
+            background: rgba(52,211,153,0.2);
+            color: #34d399;
+        }
+
+        /* 移动端：操作按钮始终可见 */
+        @media (max-width: 600px) {
+            .note-card .note-card-actions {
+                opacity: 1;
+            }
+            .note-card .note-card-actions .card-act {
+                width: 34px;
+                height: 34px;
+                font-size: 0.8rem;
+            }
+            .notes-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .notes-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <video id="bg-video" autoplay muted loop playsinline></video>
+    <div id="bg-video-overlay"></div>
+
+    <a href="index.html" class="back-home-btn" title="返回工具首页"><i class="fas fa-arrow-left"></i></a>
+
+    <div id="toast"><i class="fas fa-info-circle" style="color: #a5b4fc;"></i><span id="toast-msg">提示信息</span></div>
+
+    <div class="glass-card tool-card">
+        <h1><i class="fas fa-sticky-note"></i> 便签笔记</h1>
+        <div class="tool-subtitle">随手记录灵感 · 自动保存 · 支持导出</div>
+
+        <!-- 统计 -->
+        <div class="notes-stats" id="notesStats">
+            <span>总计 <span class="stat-num" id="statTotal">0</span> 篇笔记</span>
+        </div>
+
+        <!-- 顶部栏：搜索 + 导出全部 -->
+        <div class="notes-top-bar">
+            <div class="search-wrap">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="搜索笔记标题或内容..." oninput="onSearchChange()">
+            </div>
+            <button class="export-btn" onclick="exportAllNotes()" title="导出全部笔记为 .txt 文件">
+                <i class="fas fa-file-export"></i> 导出全部
+            </button>
+        </div>
+
+        <!-- 编辑器面板 -->
+        <div id="noteEditor" class="note-editor hidden">
+            <input type="text" class="note-title-input" id="noteTitleInput" placeholder="输入笔记标题..." maxlength="200">
+            <div class="note-toolbar" id="noteToolbar">
+                <button class="tb-btn" onclick="formatText('bold')" title="加粗"><i class="fas fa-bold"></i></button>
+                <button class="tb-btn" onclick="formatText('italic')" title="斜体"><i class="fas fa-italic"></i></button>
+                <button class="tb-btn" onclick="formatText('underline')" title="下划线"><i class="fas fa-underline"></i></button>
+                <button class="tb-btn" onclick="formatText('strikethrough')" title="删除线"><i class="fas fa-strikethrough"></i></button>
+                <div class="tb-divider"></div>
+                <button class="tb-btn" onclick="formatText('h2')" title="标题"><i class="fas fa-heading"></i></button>
+                <button class="tb-btn" onclick="formatText('h3')" title="小标题"><i class="fas fa-heading" style="font-size:0.7rem;"></i></button>
+                <button class="tb-btn" onclick="formatText('ul')" title="无序列表"><i class="fas fa-list-ul"></i></button>
+                <button class="tb-btn" onclick="formatText('ol')" title="有序列表"><i class="fas fa-list-ol"></i></button>
+                <div class="tb-divider"></div>
+                <button class="tb-btn" onclick="formatText('blockquote')" title="引用"><i class="fas fa-quote-right"></i></button>
+                <button class="tb-btn" onclick="formatText('code')" title="代码"><i class="fas fa-code"></i></button>
+                <button class="tb-btn" onclick="formatText('hr')" title="分割线"><i class="fas fa-minus"></i></button>
+            </div>
+            <textarea class="note-content-area" id="noteContentInput" placeholder="在此输入笔记内容...&#10;&#10;支持简单的 Markdown 语法标记：&#10;**加粗** *斜体* ~~删除线~~ &#10;## 标题 &#10;- 列表项"></textarea>
+            <div class="editor-actions">
+                <button class="tool-btn" onclick="cancelEdit()"><i class="fas fa-times"></i> 取消</button>
+                <button class="tool-btn primary" id="saveNoteBtn" onclick="saveNote()"><i class="fas fa-save"></i> 保存笔记</button>
+            </div>
+        </div>
+
+        <!-- 添加按钮 -->
+        <div class="add-note-row">
+            <button class="tool-btn primary" id="showEditorBtn" onclick="showNewNote()" style="width:100%;padding:10px;">
+                <i class="fas fa-plus"></i> 新建笔记
+            </button>
+        </div>
+
+        <!-- 笔记网格 -->
+        <div class="notes-grid" id="notesGrid">
+            <div class="note-empty"><i class="fas fa-sticky-note"></i>还没有笔记<br><span style="font-size:0.75rem;">点击上方按钮创建第一篇笔记</span></div>
+        </div>
+    </div>
+
+    <div class="author-credit">
+        <p>© 2026 xiong da. All rights reserved.</p>
+        <p><a href="https://github.com/kssssxg/xiongdaa-card" target="_blank"><i class="fab fa-github"></i> GitHub Repository</a></p>
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        // ==================== 便签笔记应用 ====================
+
+        const STORAGE_KEY = 'xiongda_notes';
+        let notes = [];
+        let searchQuery = '';
+        let editingId = null;  // null = 新建, string = 编辑
+
+        // DOM 引用
+        const noteEditor = document.getElementById('noteEditor');
+        const noteTitleInput = document.getElementById('noteTitleInput');
+        const noteContentInput = document.getElementById('noteContentInput');
+        const saveNoteBtn = document.getElementById('saveNoteBtn');
+        const notesGrid = document.getElementById('notesGrid');
+        const searchInput = document.getElementById('searchInput');
+        const statTotal = document.getElementById('statTotal');
+
+        // ========== 数据操作 ==========
+
+        function loadNotes() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                notes = data ? JSON.parse(data) : [];
+            } catch (e) {
+                notes = [];
+            }
+            // 确保老数据有 tags 字段
+            notes.forEach(n => {
+                if (!n.createdAt) n.createdAt = Date.now();
+            });
+        }
+
+        function saveNotesToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+            } catch (e) {
+                showToast('存储空间不足，请删除部分笔记');
+            }
+        }
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
+        }
+
+        function formatDate(ts) {
+            const d = new Date(ts);
+            const pad = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        function getPlainText(html) {
+            // 从 content 中提取纯文本（预览用）
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            return temp.textContent || temp.innerText || '';
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ========== 格式化工具栏（Markdown 语法插入） ==========
+
+        function formatText(type) {
+            const ta = noteContentInput;
+            const start = ta.selectionStart;
+            const end = ta.selectionEnd;
+            const selected = ta.value.substring(start, end);
+            let before = '', after = '', placeholder = '';
+
+            switch (type) {
+                case 'bold':        before = '**'; after = '**'; placeholder = '加粗文字'; break;
+                case 'italic':      before = '*'; after = '*'; placeholder = '斜体文字'; break;
+                case 'underline':   before = '<u>'; after = '</u>'; placeholder = '下划线文字'; break;
+                case 'strikethrough': before = '~~'; after = '~~'; placeholder = '删除文字'; break;
+                case 'h2':          before = '## '; after = ''; placeholder = '标题文字'; break;
+                case 'h3':          before = '### '; after = ''; placeholder = '小标题文字'; break;
+                case 'ul':          before = '- '; after = ''; placeholder = '列表项'; break;
+                case 'ol':          before = '1. '; after = ''; placeholder = '列表项'; break;
+                case 'blockquote':  before = '> '; after = ''; placeholder = '引用内容'; break;
+                case 'code':        before = '`'; after = '`'; placeholder = '代码'; break;
+                case 'hr':          before = '\n---\n'; after = ''; placeholder = ''; break;
+                default: return;
+            }
+
+            const text = selected || placeholder;
+            const replacement = before + text + after;
+
+            ta.value = ta.value.substring(0, start) + replacement + ta.value.substring(end);
+            const cursorPos = start + before.length + (selected ? text.length : 0);
+            ta.selectionStart = ta.selectionEnd = cursorPos;
+            ta.focus();
+            autoSaveDraft();
+        }
+
+        // ========== 显示/隐藏编辑器 ==========
+
+        function showNewNote() {
+            editingId = null;
+            noteTitleInput.value = '';
+            noteContentInput.value = '';
+            saveNoteBtn.innerHTML = '<i class="fas fa-save"></i> 保存笔记';
+            noteEditor.classList.remove('hidden');
+            noteTitleInput.focus();
+            noteEditor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function showEditNote(id) {
+            const note = notes.find(n => n.id === id);
+            if (!note) { showToast('笔记不存在'); return; }
+            editingId = id;
+            noteTitleInput.value = note.title;
+            noteContentInput.value = note.content;
+            saveNoteBtn.innerHTML = '<i class="fas fa-save"></i> 更新笔记';
+            noteEditor.classList.remove('hidden');
+            noteTitleInput.focus();
+            noteEditor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function cancelEdit() {
+            noteEditor.classList.add('hidden');
+            editingId = null;
+            noteTitleInput.value = '';
+            noteContentInput.value = '';
+            clearDraft();
+        }
+
+        // ========== 保存笔记 ==========
+
+        function saveNote() {
+            const title = noteTitleInput.value.trim();
+            const content = noteContentInput.value.trim();
+
+            if (!title && !content) {
+                showToast('请输入笔记标题或内容');
+                return;
+            }
+
+            if (!title) {
+                // 没标题则用内容前 20 字做标题
+                const short = content.replace(/[*#>`~\n-]/g, '').trim().substring(0, 30);
+                noteTitleInput.value = short || '无标题笔记';
+            }
+
+            const finalTitle = noteTitleInput.value.trim();
+            const now = Date.now();
+
+            if (editingId) {
+                // 编辑已存在的笔记
+                const idx = notes.findIndex(n => n.id === editingId);
+                if (idx !== -1) {
+                    notes[idx].title = finalTitle;
+                    notes[idx].content = content;
+                    notes[idx].updatedAt = now;
+                }
+                showToast('笔记已更新');
+            } else {
+                // 新建
+                const note = {
+                    id: generateId(),
+                    title: finalTitle,
+                    content: content,
+                    createdAt: now,
+                    updatedAt: now
+                };
+                notes.unshift(note);
+                showToast('笔记已保存');
+            }
+
+            saveNotesToStorage();
+            noteEditor.classList.add('hidden');
+            editingId = null;
+            renderNotes();
+            clearDraft();
+        }
+
+        // ========== 删除笔记 ==========
+
+        function deleteNote(id) {
+            const note = notes.find(n => n.id === id);
+            if (!note) return;
+            if (!confirm(`确定要删除笔记「${note.title.substring(0, 30)}」吗？`)) return;
+            notes = notes.filter(n => n.id !== id);
+            saveNotesToStorage();
+            renderNotes();
+            showToast('笔记已删除');
+
+            // 如果正在编辑这个笔记，关闭编辑器
+            if (editingId === id) {
+                cancelEdit();
+            }
+        }
+
+        // ========== 导出 ==========
+
+        function exportSingleNote(id) {
+            const note = notes.find(n => n.id === id);
+            if (!note) { showToast('笔记不存在'); return; }
+            exportNoteAsTxt(note);
+        }
+
+        function exportNoteAsTxt(note) {
+            const title = note.title || '无标题';
+            const content = note.content || '';
+            const created = formatDate(note.createdAt);
+            const updated = note.updatedAt ? formatDate(note.updatedAt) : created;
+
+            const text = `标题：${title}\n创建时间：${created}\n更新时间：${updated}\n\n${content}`;
+
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${title}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`已导出：${title}.txt`);
+        }
+
+        function exportAllNotes() {
+            if (notes.length === 0) {
+                showToast('没有笔记可导出');
+                return;
+            }
+
+            // 筛选当前搜索结果
+            const filtered = getFilteredNotes();
+            if (filtered.length === 0) {
+                showToast('没有匹配的笔记可导出');
+                return;
+            }
+
+            const lines = filtered.map((note, i) => {
+                const title = note.title || '无标题';
+                const content = note.content || '';
+                const created = formatDate(note.createdAt);
+                const updated = note.updatedAt ? formatDate(note.updatedAt) : created;
+                return `===== 笔记 ${i+1} =====\n标题：${title}\n创建时间：${created}\n更新时间：${updated}\n\n${content}\n`;
+            });
+
+            const text = lines.join('\n---\n\n');
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `我的笔记_${formatDate(Date.now()).replace(/[: ]/g,'-')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`已导出 ${filtered.length} 篇笔记`);
+        }
+
+        // ========== 搜索 ==========
+
+        function onSearchChange() {
+            searchQuery = searchInput.value.trim().toLowerCase();
+            renderNotes();
+        }
+
+        function getFilteredNotes() {
+            if (!searchQuery) return notes;
+            return notes.filter(n => {
+                const title = (n.title || '').toLowerCase();
+                const content = (n.content || '').toLowerCase();
+                return title.includes(searchQuery) || content.includes(searchQuery);
+            });
+        }
+
+        // ========== 渲染笔记网格 ==========
+
+        function renderNotes() {
+            const filtered = getFilteredNotes();
+
+            // 更新统计
+            statTotal.textContent = notes.length;
+
+            if (filtered.length === 0) {
+                if (searchQuery) {
+                    notesGrid.innerHTML = `<div class="note-empty"><i class="fas fa-search"></i>没有找到匹配的笔记<br><span style="font-size:0.75rem;">试试其他关键词</span></div>`;
+                } else {
+                    notesGrid.innerHTML = `<div class="note-empty"><i class="fas fa-sticky-note"></i>还没有笔记<br><span style="font-size:0.75rem;">点击上方按钮创建第一篇笔记</span></div>`;
+                }
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(note => {
+                const preview = getPlainText(note.content).substring(0, 120) || '(空内容)';
+                const created = formatDate(note.createdAt);
+
+                html += `
+                    <div class="note-card" onclick="showEditNote('${note.id}')">
+                        <div class="note-card-actions" onclick="event.stopPropagation()">
+                            <button class="card-act export-act" onclick="exportSingleNote('${note.id}')" title="导出为 .txt"><i class="fas fa-file-export"></i></button>
+                            <button class="card-act edit-act" onclick="showEditNote('${note.id}')" title="编辑"><i class="fas fa-pen"></i></button>
+                            <button class="card-act del-act" onclick="deleteNote('${note.id}')" title="删除"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                        <div class="note-card-title">${escapeHtml(note.title || '无标题')}</div>
+                        <div class="note-card-preview">${escapeHtml(preview)}</div>
+                        <div class="note-card-footer">
+                            <span class="note-card-time"><i class="far fa-clock"></i> ${created}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            notesGrid.innerHTML = html;
+        }
+
+        // ========== 草稿自动保存 ==========
+
+        const DRAFT_KEY = 'xiongda_note_draft';
+
+        function autoSaveDraft() {
+            const title = noteTitleInput.value;
+            const content = noteContentInput.value;
+            try {
+                localStorage.setItem(DRAFT_KEY, JSON.stringify({
+                    title: title,
+                    content: content,
+                    editingId: editingId
+                }));
+            } catch (e) {}
+        }
+
+        function loadDraft() {
+            try {
+                const data = localStorage.getItem(DRAFT_KEY);
+                if (data) {
+                    const draft = JSON.parse(data);
+                    noteTitleInput.value = draft.title || '';
+                    noteContentInput.value = draft.content || '';
+                    editingId = draft.editingId || null;
+                    if (draft.title || draft.content) {
+                        saveNoteBtn.innerHTML = editingId ? '<i class="fas fa-save"></i> 更新笔记' : '<i class="fas fa-save"></i> 保存笔记';
+                        noteEditor.classList.remove('hidden');
+                        showToast('已恢复上次编辑的草稿');
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function clearDraft() {
+            try {
+                localStorage.removeItem(DRAFT_KEY);
+            } catch (e) {}
+        }
+
+        // ========== 自动保存（编辑时定时保存） ==========
+
+        let autoSaveTimer = null;
+        noteTitleInput.addEventListener('input', function() {
+            if (!noteEditor.classList.contains('hidden')) {
+                clearTimeout(autoSaveTimer);
+                autoSaveTimer = setTimeout(autoSaveDraft, 500);
+            }
+        });
+        noteContentInput.addEventListener('input', function() {
+            if (!noteEditor.classList.contains('hidden')) {
+                clearTimeout(autoSaveTimer);
+                autoSaveTimer = setTimeout(autoSaveDraft, 500);
+            }
+        });
+
+        // ========== 点击特效 ==========
+        document.addEventListener('click', createClickEffect);
+        document.addEventListener('touchstart', function(e) {
+            const touch = e.touches[0];
+            createClickEffect({ clientX: touch.clientX, clientY: touch.clientY });
+        }, { passive: true });
+
+        // ========== 初始化 ==========
+        loadNotes();
+        renderNotes();
+
+        // 延迟加载草稿（等 DOM 和渲染稳定）
+        setTimeout(loadDraft, 300);
+    </script>
+</body>
+</html>
