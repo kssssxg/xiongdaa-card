@@ -100,6 +100,113 @@ xiongdaa-card/
 const BLOG_API = '你的博客API';  // ← 替换为你的博客 JSON API
 ```
 
+#### 📋 博客 JSON 配置文档
+
+页面期望的博客 JSON API 返回以下格式的数据：
+
+```json
+{
+  "posts": [
+    {
+      "title": "文章标题",
+      "url": "https://yourblog.com/post/1",
+      "date": "2026-06-20",
+      "excerpt": "文章摘要，最多显示 100 个字符",
+      "tags": ["标签1", "标签2"]
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "pageSize": 10
+}
+```
+
+#### 🔍 字段说明
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `posts` | Array | ✅ | 文章列表数组 |
+| `posts[].title` | String | ✅ | 文章标题 |
+| `posts[].url` | String | ✅ | 文章链接（完整 URL） |
+| `posts[].date` | String | ✅ | 发布日期（格式：YYYY-MM-DD） |
+| `posts[].excerpt` | String | ❌ | 文章摘要（可选，为空时显示标题） |
+| `posts[].tags` | Array | ❌ | 标签数组（可选） |
+| `total` | Number | ❌ | 文章总数（可选） |
+| `page` | Number | ❌ | 当前页码（可选） |
+| `pageSize` | Number | ❌ | 每页数量（可选） |
+
+#### 📝 完整示例
+
+```json
+{
+  "posts": [
+    {
+      "title": "我的第一篇博客",
+      "url": "https://xiongdaa.me/blog/post-1",
+      "date": "2026-06-20",
+      "excerpt": "这是第一篇博客的摘要内容，用来展示在个人主页上。",
+      "tags": ["生活", "随笔"]
+    },
+    {
+      "title": "ESP32-S3 嵌入式开发笔记",
+      "url": "https://xiongdaa.me/blog/esp32-s3-dev",
+      "date": "2026-06-18",
+      "excerpt": "记录 ESP32-S3 的嵌入式开发过程，包括 GPIO 控制、WiFi 连接等。",
+      "tags": ["嵌入式", "ESP32", "开发"]
+    },
+    {
+      "title": "前端玻璃拟态设计实践",
+      "url": "https://xiongdaa.me/blog/glassmorphism",
+      "date": "2026-06-15",
+      "excerpt": "",
+      "tags": ["前端", "CSS", "设计"]
+    }
+  ],
+  "total": 3,
+  "page": 1,
+  "pageSize": 10
+}
+```
+
+#### 🛠️ 如何生成博客 JSON
+
+**方式一：静态博客生成**
+```bash
+# 如果使用 Hexo/Hugo/Jekyll 等静态博客
+# 在构建时生成 posts.json 文件
+hexo generate --json
+# 或手动编写 posts.json 放在博客根目录
+```
+
+**方式二：自建 API 接口**
+```javascript
+// Node.js + Express 示例
+app.get('/api/posts', async (req, res) => {
+  const posts = await db.query('SELECT * FROM posts ORDER BY date DESC LIMIT 10');
+  res.json({
+    posts: posts.map(p => ({
+      title: p.title,
+      url: `https://yourblog.com${p.slug}`,
+      date: p.created_at.split('T')[0],
+      excerpt: p.excerpt,
+      tags: p.tags.split(',')
+    })),
+    total: posts.length
+  });
+});
+```
+
+**方式三：第三方聚合 API**
+- 使用 RSS 转 JSON 服务（如 `https://rss2json.com/`）
+- 使用静态博客托管平台的 API
+
+#### ⚠️ 注意事项
+
+1. **CORS 跨域**：确保 API 支持 CORS，允许从 GitHub Pages 域名访问
+2. **HTTPS**：GitHub Pages 是 HTTPS，API 也必须是 HTTPS
+3. **缓存**：建议在 API 响应中添加缓存头，减少请求频率
+4. **错误处理**：API 失败时页面会显示错误提示，请确保 API 稳定可用
+
 **推荐的博客 JSON API 源：**
 - 自建博客的 JSON 导出接口
 - 第三方博客聚合 API
