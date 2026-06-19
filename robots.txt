@@ -1,0 +1,5 @@
+# robots.txt for xiongdaa.me
+User-agent: *
+Allow: /
+
+Sitemap: https://xiongdaa.me/sitemap.xml
