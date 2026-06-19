@@ -24,7 +24,7 @@
 
 ### 🌐 在线预览
 
-- **GitHub Pages**: https://xiongdaa.me/xiongdaa-card/
+- **GitHub Pages**: https://kssssxg.github.io/xiongdaa-card/
 
 > 💡 每次 `push` 或创建 `PR` 到 `main` 分支后，页面会自动重新部署，约 1-2 分钟生效。
 
@@ -45,7 +45,7 @@ git push origin main
 ```
 
 - **触发条件**: 每次 `push` 或创建 `PR` 到 `main` 分支
-- **部署地址**: https://xiongdaa.me/xiongdaa-card/
+- **部署地址**: https://kssssxg.github.io/xiongdaa-card/
 - **生效时间**: 约 1-2 分钟
 
 ### 部署到其他平台
